@@ -16,6 +16,7 @@ Usage:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from typing import Any
@@ -28,6 +29,7 @@ from app.agents.query_agent.response_formatter import (
     format_success,
 )
 from app.agents.query_agent.result_summarizer import ResultSummarizer
+from app.services.cache.query_cache import QueryCache
 from app.services.nl2sql.sql_generator import SQLGenerator
 from app.services.nl2sql.sql_validator import SQLValidator
 from app.tools.database_tool import DatabaseTool, QueryError
@@ -47,6 +49,7 @@ class QueryAgent:
         self._sql_validator = SQLValidator(strict_columns=False)
         self._db_tool = DatabaseTool()
         self._summarizer = ResultSummarizer(provider_name=provider_name)
+        self._cache = QueryCache()
         logger.info("QueryAgent initialised")
 
     async def run(
@@ -69,6 +72,13 @@ class QueryAgent:
         dict  Standardised response (see response_formatter).
         """
         start = time.perf_counter()
+
+        # ---- Cache check — skip LLM + DB on cache hit ----
+        cached = await self._cache.get(question)
+        if cached is not None:
+            cached["cache_hit"] = True
+            cached["execution_time_ms"] = round((time.perf_counter() - start) * 1000, 2)
+            return cached
 
         # ---- Step 1: Generate SQL ----
         try:
@@ -147,7 +157,7 @@ class QueryAgent:
             total_ms,
         )
 
-        return format_success(
+        response = format_success(
             question=question,
             generated_sql=generated_sql,
             rows=result.rows,
@@ -157,3 +167,9 @@ class QueryAgent:
             summary=summary,
             confidence=confidence,
         )
+
+        # Populate cache in the background — do not block the response.
+        asyncio.create_task(self._cache.set(question, response))
+
+        response["cache_hit"] = False
+        return response

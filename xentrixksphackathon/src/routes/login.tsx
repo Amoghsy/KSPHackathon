@@ -110,7 +110,7 @@ function LoginPage() {
                 id="u"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="e.g. arjun.rao"
+                placeholder="username"
                 autoComplete="username"
                 disabled={isLoading}
               />

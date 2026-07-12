@@ -50,7 +50,48 @@ export const useAuthStore = create<AuthState>()(
           const resp = await loginUser(credentials);
 
           const role = (credentials.role ?? "Investigator") as Role;
-          const displayName = DISPLAY_NAMES[role] ?? credentials.username;
+          
+          // Formulate name from username by replacing separators and capitalizing
+          let rawName = credentials.username
+            .split(/[._-]/)
+            .filter(Boolean)
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ");
+
+          // Avoid duplicate prefixes if already entered in username
+          const lowercaseName = rawName.toLowerCase();
+          if (lowercaseName.startsWith("sp ")) {
+            rawName = rawName.slice(3);
+          } else if (lowercaseName.startsWith("insp ")) {
+            rawName = rawName.slice(5);
+          } else if (lowercaseName.startsWith("dr ")) {
+            rawName = rawName.slice(3);
+          } else if (lowercaseName.startsWith("insp. ")) {
+            rawName = rawName.slice(6);
+          } else if (lowercaseName.startsWith("dr. ")) {
+            rawName = rawName.slice(4);
+          }
+
+          // Prepend correct role prefix
+          let displayName = rawName;
+          if (role === "Supervisor") {
+            displayName = `SP ${rawName}`;
+          } else if (role === "Investigator") {
+            displayName = `Insp. ${rawName}`;
+          } else if (role === "Policymaker") {
+            displayName = `Dr. ${rawName}`;
+          }
+
+          // Generate stable badge number based on username hash
+          let hash = 0;
+          const cleanUsername = credentials.username.toLowerCase();
+          for (let i = 0; i < cleanUsername.length; i++) {
+            hash = cleanUsername.charCodeAt(i) + ((hash << 5) - hash);
+          }
+          const badgeCode = Math.abs(hash % 90000) + 10000;
+          const badgeNo = credentials.username.toUpperCase().startsWith("KSP-")
+            ? credentials.username.toUpperCase()
+            : `KSP-${badgeCode}`;
 
           set({
             user: {
@@ -58,7 +99,7 @@ export const useAuthStore = create<AuthState>()(
               name: displayName,
               username: resp.username ?? credentials.username,
               role: (resp.role as Role) ?? role,
-              badgeNo: "KSP-" + Math.floor(10000 + Math.random() * 89999),
+              badgeNo: badgeNo,
               station: "SCRB HQ, Bengaluru",
             },
             token: resp.access_token,

@@ -78,8 +78,7 @@ class GeminiProvider(BaseLLMProvider):
             os.getenv("LLM_TIMEOUT", str(_DEFAULT_TIMEOUT))
         )
         self._max_retries = max_retries if max_retries is not None else _MAX_RETRIES
-
-        self._client = genai.Client(api_key=resolved_key)
+        self._api_key = resolved_key
 
         logger.info(
             "GeminiProvider initialised  model=%s  temp=%s  max_tokens=%s  timeout=%ss",
@@ -174,12 +173,15 @@ class GeminiProvider(BaseLLMProvider):
 
         last_error: LLMError | None = None
 
+        # Instantiate a fresh Client inside the active event loop of the current request
+        client = genai.Client(api_key=self._api_key)
+
         for attempt in range(1, self._max_retries + 1):
             start = time.perf_counter()
             try:
+                # Use the native async client — no thread-pool overhead.
                 response = await asyncio.wait_for(
-                    asyncio.to_thread(
-                        self._client.models.generate_content,
+                    client.aio.models.generate_content(
                         model=effective_model,
                         contents=contents,
                         config=gen_config,

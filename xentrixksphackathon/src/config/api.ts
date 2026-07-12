@@ -9,21 +9,21 @@ export const ENDPOINTS = {
   LOGIN: "/auth/login",
 
   // Chat / Orchestrator
-  CHAT: "/chat",
+  CHAT: "/chat/",
 
   // Conversations
-  CONVERSATIONS: "/conversations",
+  CONVERSATIONS: "/conversations/",
   CONVERSATION: (id: string) => `/conversations/${id}`,
 
   // Dashboard
-  DASHBOARD: "/dashboard",
+  DASHBOARD: "/dashboard/",
 
   // Cases / FIRs
-  CASES: "/cases",
+  CASES: "/cases/",
   CASE: (id: string) => `/cases/${id}`,
 
   // Accused / Offenders
-  ACCUSED: "/accused",
+  ACCUSED: "/accused/",
   ACCUSED_DETAIL: (id: string) => `/accused/${id}`,
 
   // Health

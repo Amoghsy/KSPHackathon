@@ -4,6 +4,7 @@ app/agents/orchestrator/orchestrator.py — Upgraded request orchestrator.
 
 from __future__ import annotations
 
+import asyncio
 import datetime
 import logging
 import uuid
@@ -65,7 +66,7 @@ class Orchestrator:
             question,
         )
 
-        # 1. Load or Create Redis session
+        # 1. Load Redis session (async — does not block anything else yet)
         conv_context = await self.conversation_manager.get_conversation(conv_id)
         if not conv_context:
             logger.info(
@@ -75,7 +76,7 @@ class Orchestrator:
                 conv_id, user_id=user_id
             )
 
-        # 2. Inject Context to resolve follow-up questions
+        # 2. Inject context to resolve follow-up questions
         resolved_question = self.context_injector.inject(
             question, conv_context.entity_memory, conv_context.last_question
         )
@@ -93,8 +94,11 @@ class Orchestrator:
                 "error": str(exc),
                 "error_type": "agent_not_found",
             }
-            await self._log_conversation(
-                session, question, resolved_question, response, req_id, conv_id, user_id
+            # Fire-and-forget audit log — don't block the error response
+            asyncio.create_task(
+                self._log_conversation(
+                    None, question, resolved_question, response, req_id, conv_id, user_id
+                )
             )
             return response
 
@@ -111,8 +115,10 @@ class Orchestrator:
                 "error_type": "internal_error",
                 "retryable": False,
             }
-            await self._log_conversation(
-                session, question, resolved_question, response, req_id, conv_id, user_id
+            asyncio.create_task(
+                self._log_conversation(
+                    None, question, resolved_question, response, req_id, conv_id, user_id
+                )
             )
             return response
 
@@ -122,14 +128,13 @@ class Orchestrator:
         response["conversation_id"] = conv_id
         response["resolved_question"] = resolved_question
 
-        # 4. Extract entities from the completed response and update session state
+        # 4. Extract entities and build message objects (sync — cheap)
         try:
             resolved_entities = self.entity_resolver.resolve(
                 resolved_question, response
             )
             entities_dict = resolved_entities.dict(exclude_none=True)
 
-            # Build user/assistant message pair
             user_msg = {
                 "role": "user",
                 "content": question,
@@ -144,27 +149,43 @@ class Orchestrator:
                 "resolved_entities": entities_dict,
             }
 
-            # Update Redis session
-            await self.conversation_manager.update_conversation(
-                conv_id,
-                messages=conv_context.conversation_history + [user_msg, assistant_msg],
-                resolved_entities=entities_dict,
-                last_generated_sql=response.get("generated_sql"),
-                last_question=question,
-            )
-        except Exception as exc:
-            logger.error("Failed to update Redis conversation session: %s", exc)
+            # 5. Fire-and-forget: Redis session update + audit log — user gets response NOW.
+            async def _persist() -> None:
+                """Background task: update session and write audit log concurrently."""
+                try:
+                    await asyncio.gather(
+                        self.conversation_manager.update_conversation(
+                            conv_id,
+                            messages=conv_context.conversation_history + [user_msg, assistant_msg],
+                            resolved_entities=entities_dict,
+                            last_generated_sql=response.get("generated_sql"),
+                            last_question=question,
+                        ),
+                        self._log_conversation(
+                            None, question, resolved_question, response,
+                            req_id, conv_id, user_id,
+                        ),
+                    )
+                except Exception as bg_exc:
+                    logger.error("Background persist task failed: %s", bg_exc)
 
-        # 5. Log conversation safely
-        await self._log_conversation(
-            session, question, resolved_question, response, req_id, conv_id, user_id
-        )
+            asyncio.create_task(_persist())
+
+        except Exception as exc:
+            logger.error("Failed to build persist task: %s", exc)
+            # Still log the conversation even if entity resolution failed
+            asyncio.create_task(
+                self._log_conversation(
+                    None, question, resolved_question, response, req_id, conv_id, user_id
+                )
+            )
 
         return response
 
+
     async def _log_conversation(
         self,
-        session: AsyncSession,
+        session: AsyncSession | None,
         question: str,
         resolved_question: str,
         response: dict[str, Any],
@@ -188,11 +209,9 @@ class Orchestrator:
                 user_id,
             )
 
-            # Rollback if transaction failed to clear errors before writing audit log
-            if session.in_transaction():
-                await session.rollback()
+            from app.db.session import SessionLocal
 
-            async with session.begin():
+            async with SessionLocal() as db_session:
                 audit = AuditLog(
                     question=question,
                     generated_sql=response.get("generated_sql"),
@@ -202,10 +221,7 @@ class Orchestrator:
                     request_id=req_id,
                     timestamp=datetime.datetime.utcnow(),
                 )
-                session.add(audit)
+                db_session.add(audit)
+                await db_session.commit()
         except Exception as exc:
             logger.warning("Failed to write audit log to database: %s", exc)
-            try:
-                await session.rollback()
-            except Exception:
-                pass
