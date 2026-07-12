@@ -1,0 +1,27 @@
+# Web framework
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+
+# Database
+sqlalchemy==2.0.36
+alembic==1.14.0
+psycopg[binary]==3.2.3
+
+# Settings & environment
+pydantic-settings==2.6.1
+python-dotenv==1.0.1
+
+# Cache
+redis==5.2.0
+
+# Seeding
+faker==33.3.0
+
+# Authentication
+bcrypt==4.2.0
+pyjwt==2.10.1
+python-multipart==0.0.19
+
+# AI Foundation (Day 2)
+google-genai>=1.0.0
+sqlparse==0.5.3
