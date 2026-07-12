@@ -13,6 +13,8 @@ import type {
   Case,
   Accused,
   AccusedResponse,
+  UserResponse,
+  UserCreatePayload,
 } from "./types";
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
@@ -85,4 +87,18 @@ export async function listAccused(): Promise<AccusedResponse> {
 
 export async function getAccused(id: string): Promise<Accused> {
   return apiGet<Accused>(ENDPOINTS.ACCUSED_DETAIL(id));
+}
+
+// ─── Administrative Users ───────────────────────────────────────────────────
+
+export async function listUsers(): Promise<UserResponse[]> {
+  return apiGet<UserResponse[]>(ENDPOINTS.USERS);
+}
+
+export async function createUser(body: UserCreatePayload): Promise<UserResponse> {
+  return apiPost<UserResponse>(ENDPOINTS.USERS, body);
+}
+
+export async function deleteUser(id: number): Promise<void> {
+  return apiDelete<void>(ENDPOINTS.USER(id));
 }

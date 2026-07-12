@@ -7,10 +7,13 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app")({
   ssr: false,
-  beforeLoad: () => {
+  beforeLoad: ({ location }) => {
     if (typeof window === "undefined") return;
     const user = useAuthStore.getState().user;
     if (!user) throw redirect({ to: "/login" });
+    if (user.role === "Admin" && location.pathname !== "/admin" && location.pathname !== "/settings") {
+      throw redirect({ to: "/admin" });
+    }
   },
   component: AppShell,
 });

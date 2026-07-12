@@ -357,11 +357,18 @@ function ChatPage() {
         <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin px-5 py-6 space-y-5">
           {/* Empty state */}
           {messages.length === 0 && !loading && !chatError && (
-            <div className="flex flex-col items-center justify-center h-full py-20 text-center text-muted-foreground">
-              <Bot className="h-10 w-10 mb-3 text-primary/40" />
-              <p className="text-sm font-medium">Ask a question to start the conversation</p>
-              <p className="text-xs mt-1 max-w-xs">
-                e.g. "Show theft cases in Mysuru" or "Who are the top accused this month?"
+            <div className="flex flex-col items-center justify-center h-full py-20 text-center text-muted-foreground animate-in fade-in duration-500">
+              <div className="relative mb-4">
+                <div className="absolute inset-0 rounded-2xl bg-primary/10 blur-xl animate-pulse" />
+                <img
+                  src="/logo.png"
+                  alt="KSP Logo"
+                  className="relative h-20 w-20 object-contain rounded-xl shadow-lg border border-border"
+                />
+              </div>
+              <p className="text-sm font-semibold text-foreground">KSP Crime Intelligence Assistant</p>
+              <p className="text-xs mt-1 text-muted-foreground max-w-xs">
+                Ask a question to query police databases, analyze suspect networks, or view crime trends.
               </p>
             </div>
           )}

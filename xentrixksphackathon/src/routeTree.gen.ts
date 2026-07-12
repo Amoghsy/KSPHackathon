@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as AdminLoginRouteImport } from './routes/admin-login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
 import { Route as AppSociologicalRouteImport } from './routes/_app.sociological'
@@ -20,6 +21,7 @@ import { Route as AppFinancialRouteImport } from './routes/_app.financial'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppAuditRouteImport } from './routes/_app.audit'
 import { Route as AppAlertsRouteImport } from './routes/_app.alerts'
+import { Route as AppAdminRouteImport } from './routes/_app.admin'
 import { Route as AppOffendersIndexRouteImport } from './routes/_app.offenders.index'
 import { Route as AppCasesIndexRouteImport } from './routes/_app.cases.index'
 import { Route as AppOffendersIdRouteImport } from './routes/_app.offenders.$id'
@@ -28,6 +30,11 @@ import { Route as AppCasesFirIdRouteImport } from './routes/_app.cases.$firId'
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/admin-login',
+  path: '/admin-login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -79,6 +86,11 @@ const AppAlertsRoute = AppAlertsRouteImport.update({
   path: '/alerts',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAdminRoute = AppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppOffendersIndexRoute = AppOffendersIndexRouteImport.update({
   id: '/offenders/',
   path: '/offenders/',
@@ -102,7 +114,9 @@ const AppCasesFirIdRoute = AppCasesFirIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
+  '/admin-login': typeof AdminLoginRoute
   '/login': typeof LoginRoute
+  '/admin': typeof AppAdminRoute
   '/alerts': typeof AppAlertsRoute
   '/audit': typeof AppAuditRoute
   '/dashboard': typeof AppDashboardRoute
@@ -117,7 +131,9 @@ export interface FileRoutesByFullPath {
   '/offenders/': typeof AppOffendersIndexRoute
 }
 export interface FileRoutesByTo {
+  '/admin-login': typeof AdminLoginRoute
   '/login': typeof LoginRoute
+  '/admin': typeof AppAdminRoute
   '/alerts': typeof AppAlertsRoute
   '/audit': typeof AppAuditRoute
   '/dashboard': typeof AppDashboardRoute
@@ -135,7 +151,9 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
+  '/admin-login': typeof AdminLoginRoute
   '/login': typeof LoginRoute
+  '/_app/admin': typeof AppAdminRoute
   '/_app/alerts': typeof AppAlertsRoute
   '/_app/audit': typeof AppAuditRoute
   '/_app/dashboard': typeof AppDashboardRoute
@@ -154,7 +172,9 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin-login'
     | '/login'
+    | '/admin'
     | '/alerts'
     | '/audit'
     | '/dashboard'
@@ -169,7 +189,9 @@ export interface FileRouteTypes {
     | '/offenders/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/admin-login'
     | '/login'
+    | '/admin'
     | '/alerts'
     | '/audit'
     | '/dashboard'
@@ -186,7 +208,9 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_app'
+    | '/admin-login'
     | '/login'
+    | '/_app/admin'
     | '/_app/alerts'
     | '/_app/audit'
     | '/_app/dashboard'
@@ -204,6 +228,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
+  AdminLoginRoute: typeof AdminLoginRoute
   LoginRoute: typeof LoginRoute
 }
 
@@ -214,6 +239,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin-login': {
+      id: '/admin-login'
+      path: '/admin-login'
+      fullPath: '/admin-login'
+      preLoaderRoute: typeof AdminLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -286,6 +318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAlertsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/admin': {
+      id: '/_app/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AppAdminRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/offenders/': {
       id: '/_app/offenders/'
       path: '/offenders'
@@ -318,6 +357,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppAdminRoute: typeof AppAdminRoute
   AppAlertsRoute: typeof AppAlertsRoute
   AppAuditRoute: typeof AppAuditRoute
   AppDashboardRoute: typeof AppDashboardRoute
@@ -334,6 +374,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAdminRoute: AppAdminRoute,
   AppAlertsRoute: AppAlertsRoute,
   AppAuditRoute: AppAuditRoute,
   AppDashboardRoute: AppDashboardRoute,
@@ -353,6 +394,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
+  AdminLoginRoute: AdminLoginRoute,
   LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport

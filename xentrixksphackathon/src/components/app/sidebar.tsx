@@ -11,8 +11,8 @@ import {
   AlertTriangle,
   ClipboardList,
   Settings as SettingsIcon,
-  Shield,
   ChevronLeft,
+  ShieldAlert,
 } from "lucide-react";
 import { useAuthStore, type Role } from "@/stores/auth";
 import { usePrefs } from "@/stores/prefs";
@@ -27,8 +27,18 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
-  { to: "/", labelKey: "chat", icon: MessageSquare },
-  { to: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
+  {
+    to: "/",
+    labelKey: "chat",
+    icon: MessageSquare,
+    roles: ["Investigator", "Analyst", "Supervisor", "Policymaker"],
+  },
+  {
+    to: "/dashboard",
+    labelKey: "dashboard",
+    icon: LayoutDashboard,
+    roles: ["Investigator", "Analyst", "Supervisor", "Policymaker"],
+  },
   {
     to: "/network",
     labelKey: "network",
@@ -41,8 +51,18 @@ const NAV: NavItem[] = [
     icon: Wallet,
     roles: ["Investigator", "Analyst", "Supervisor"],
   },
-  { to: "/map", labelKey: "map", icon: Map },
-  { to: "/sociological", labelKey: "sociological", icon: PieChart },
+  {
+    to: "/map",
+    labelKey: "map",
+    icon: Map,
+    roles: ["Investigator", "Analyst", "Supervisor", "Policymaker"],
+  },
+  {
+    to: "/sociological",
+    labelKey: "sociological",
+    icon: PieChart,
+    roles: ["Investigator", "Analyst", "Supervisor", "Policymaker"],
+  },
   {
     to: "/cases",
     labelKey: "cases",
@@ -55,9 +75,15 @@ const NAV: NavItem[] = [
     icon: Users,
     roles: ["Investigator", "Analyst", "Supervisor"],
   },
-  { to: "/alerts", labelKey: "alerts", icon: AlertTriangle },
+  {
+    to: "/alerts",
+    labelKey: "alerts",
+    icon: AlertTriangle,
+    roles: ["Investigator", "Analyst", "Supervisor", "Policymaker"],
+  },
   { to: "/audit", labelKey: "audit", icon: ClipboardList, roles: ["Supervisor"] },
   { to: "/settings", labelKey: "settings", icon: SettingsIcon },
+  { to: "/admin", labelKey: "admin", icon: ShieldAlert, roles: ["Admin"] },
 ];
 
 interface SidebarProps {
@@ -77,11 +103,16 @@ export function Sidebar({ forceExpanded, onNavigate }: SidebarProps = {}) {
   return (
     <aside
       className={cn(
-        "relative flex h-screen flex-col text-sidebar-foreground transition-[width] duration-300 border-r border-sidebar-border/60",
-        "bg-sidebar/85 backdrop-blur-2xl",
+        "relative flex h-screen flex-col text-sidebar-foreground transition-[width] duration-300 border-r border-white/10",
+        "backdrop-blur-xl",
         collapsed ? "w-16" : "w-64",
       )}
       style={{
+        background: `
+          radial-gradient(300px 300px at 0% 0%, oklch(0.4 0.1 220 / 0.45), transparent 80%),
+          radial-gradient(300px 300px at 100% 100%, oklch(0.45 0.1 190 / 0.35), transparent 80%),
+          linear-gradient(180deg, oklch(0.22 0.06 262 / 0.82) 0%, oklch(0.14 0.04 262 / 0.9) 100%)
+        `,
         boxShadow: "0 20px 60px -20px oklch(0 0 0 / 0.5)",
       }}
     >
@@ -96,13 +127,12 @@ export function Sidebar({ forceExpanded, onNavigate }: SidebarProps = {}) {
 
       <div className="flex items-center gap-2.5 px-4 py-4 border-b border-sidebar-border/60">
         <div
-          className="flex h-9 w-9 items-center justify-center rounded-lg shrink-0 text-sidebar-primary-foreground"
+          className="flex h-9 w-9 items-center justify-center rounded-lg shrink-0 overflow-hidden"
           style={{
-            background: "var(--gradient-teal)",
-            boxShadow: "0 4px 14px -4px oklch(0.65 0.12 190 / 0.5)",
+            boxShadow: "0 4px 14px -4px oklch(0.65 0.12 190 / 0.3)",
           }}
         >
-          <Shield className="h-5 w-5" />
+          <img src="/logo.png" alt="KSP Logo" className="h-full w-full object-cover" />
         </div>
         {!collapsed && (
           <div className="min-w-0">

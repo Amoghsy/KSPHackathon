@@ -95,13 +95,13 @@
   --chart-4: oklch(0.55 0.16 25);
   --chart-5: oklch(0.5 0.06 260);
 
-  --sidebar: oklch(0.26 0.06 262);
+  --sidebar: oklch(0.16 0.04 262); /* Rich deep midnight navy blue */
   --sidebar-foreground: oklch(0.94 0.01 250);
   --sidebar-primary: oklch(0.65 0.12 190);
   --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.32 0.08 262);
+  --sidebar-accent: oklch(0.24 0.06 262);
   --sidebar-accent-foreground: oklch(0.99 0 0);
-  --sidebar-border: oklch(0.3 0.05 262);
+  --sidebar-border: oklch(0.22 0.04 262);
   --sidebar-ring: oklch(0.65 0.12 190);
 
   /* Glass surfaces */
@@ -156,13 +156,13 @@
   --chart-3: oklch(0.78 0.15 75);
   --chart-4: oklch(0.62 0.18 25);
   --chart-5: oklch(0.65 0.03 260);
-  --sidebar: oklch(0.14 0.02 260);
+  --sidebar: oklch(0.12 0.03 262); /* Slightly darker solid midnight black-blue */
   --sidebar-foreground: oklch(0.94 0.01 250);
   --sidebar-primary: oklch(0.7 0.13 190);
-  --sidebar-primary-foreground: oklch(0.14 0.02 260);
-  --sidebar-accent: oklch(0.22 0.04 260);
+  --sidebar-primary-foreground: oklch(0.12 0.03 262);
+  --sidebar-accent: oklch(0.18 0.04 262);
   --sidebar-accent-foreground: oklch(0.95 0.01 250);
-  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-border: oklch(1 0 0 / 6%);
   --sidebar-ring: oklch(0.7 0.13 190);
 
   --glass-bg: color-mix(in oklab, oklch(0.22 0.03 260) 62%, transparent);

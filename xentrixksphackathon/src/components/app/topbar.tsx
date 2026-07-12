@@ -44,7 +44,7 @@ export function Topbar() {
         "grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 sm:gap-3 px-3 sm:px-4",
       )}
     >
-      {/* Left cluster: mobile hamburger */}
+      {/* Left cluster: mobile hamburger & logo */}
       <div className="flex items-center gap-2 shrink-0">
         <button
           onClick={() => setMobileNavOpen(true)}
@@ -53,6 +53,12 @@ export function Topbar() {
         >
           <Menu className="h-5 w-5" />
         </button>
+        <div className="flex items-center gap-2 pr-1 sm:pr-2">
+          <img src="/logo.png" alt="KSP Logo" className="h-7 w-7 object-contain rounded-md" />
+          <span className="font-semibold text-xs sm:text-sm tracking-tight text-foreground whitespace-nowrap">
+            KSP Intelligence
+          </span>
+        </div>
       </div>
 
       {/* Middle: search */}

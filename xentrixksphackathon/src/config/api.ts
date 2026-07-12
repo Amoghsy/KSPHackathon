@@ -8,6 +8,10 @@ export const ENDPOINTS = {
   // Auth
   LOGIN: "/auth/login",
 
+  // Administrative Users
+  USERS: "/users/",
+  USER: (id: number) => `/users/${id}`,
+
   // Chat / Orchestrator
   CHAT: "/chat/",
 

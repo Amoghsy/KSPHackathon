@@ -5,7 +5,7 @@ import { persist } from "zustand/middleware";
 import { loginUser } from "@/lib/api/services";
 import type { LoginRequest } from "@/lib/api/types";
 
-export type Role = "Investigator" | "Analyst" | "Supervisor" | "Policymaker";
+export type Role = "Investigator" | "Analyst" | "Supervisor" | "Policymaker" | "Admin";
 
 export interface AuthUser {
   id: string;
@@ -80,6 +80,8 @@ export const useAuthStore = create<AuthState>()(
             displayName = `Insp. ${rawName}`;
           } else if (role === "Policymaker") {
             displayName = `Dr. ${rawName}`;
+          } else if (role === "Admin") {
+            displayName = `Admin ${rawName}`;
           }
 
           // Generate stable badge number based on username hash

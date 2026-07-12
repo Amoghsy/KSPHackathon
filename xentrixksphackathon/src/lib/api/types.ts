@@ -140,3 +140,17 @@ export interface AccusedResponse {
   accused: Accused[];
   count: number;
 }
+
+// ─── Administrative Users ───────────────────────────────────────────────────
+
+export interface UserResponse {
+  id: number;
+  username: string;
+  role: string;
+}
+
+export interface UserCreatePayload {
+  username: string;
+  password: string;
+  role: string;
+}

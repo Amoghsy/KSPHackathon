@@ -64,11 +64,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Starting %s [env=%s]", settings.app_name, settings.app_env)
 
     try:
-        from app.db.init_db import verify_db_connection
+        from app.db.init_db import verify_db_connection, seed_default_admin
 
         await verify_db_connection()
+        await seed_default_admin()
     except Exception as exc:  # noqa: BLE001
-        logger.warning("DB not reachable at startup: %s", exc)
+        logger.warning("DB initialization/seeding failed at startup: %s", exc)
 
     yield  # ← application is live
 
