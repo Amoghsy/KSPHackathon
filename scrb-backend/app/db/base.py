@@ -10,4 +10,5 @@ from sqlalchemy.orm import DeclarativeBase
 
 class Base(DeclarativeBase):
     """Root base class for all ORM models."""
+
     pass

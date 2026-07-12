@@ -16,12 +16,9 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from sqlalchemy import inspect as sa_inspect
-
-from app.db.base import Base
-
 # Force all models to register with Base.metadata.
 import app.models  # noqa: F401
+from app.db.base import Base
 
 logger = logging.getLogger(__name__)
 
@@ -45,10 +42,12 @@ def _get_table_info(table_name: str, metadata: Any) -> dict:
     foreign_keys = []
     for fk_constraint in table.foreign_key_constraints:
         for fk in fk_constraint.elements:
-            foreign_keys.append({
-                "column": fk.parent.name,
-                "references": f"{fk.column.table.name}.{fk.column.name}",
-            })
+            foreign_keys.append(
+                {
+                    "column": fk.parent.name,
+                    "references": f"{fk.column.table.name}.{fk.column.name}",
+                }
+            )
 
     primary_keys = [col.name for col in table.primary_key.columns]
 
@@ -91,9 +90,7 @@ def get_schema_context() -> str:
         for col in tbl["columns"]:
             pk_marker = " [PK]" if col["primary_key"] else ""
             null_marker = " (nullable)" if col["nullable"] else " (NOT NULL)"
-            lines.append(
-                f"  - {col['name']}: {col['type']}{pk_marker}{null_marker}"
-            )
+            lines.append(f"  - {col['name']}: {col['type']}{pk_marker}{null_marker}")
 
         if tbl["foreign_keys"]:
             for fk in tbl["foreign_keys"]:
@@ -108,9 +105,13 @@ def get_schema_context() -> str:
     lines.append("accused_master.case_master_id → case_master.case_master_id")
     lines.append("victim_master.case_master_id → case_master.case_master_id")
     lines.append("financial_transaction.case_master_id → case_master.case_master_id")
-    lines.append("financial_transaction.accused_master_id → accused_master.accused_master_id")
+    lines.append(
+        "financial_transaction.accused_master_id → accused_master.accused_master_id"
+    )
     lines.append("")
 
     result = "\n".join(lines)
-    logger.debug("Schema context generated (%d chars, %d tables)", len(result), len(tables))
+    logger.debug(
+        "Schema context generated (%d chars, %d tables)", len(result), len(tables)
+    )
     return result

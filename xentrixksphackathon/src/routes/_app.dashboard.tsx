@@ -54,18 +54,30 @@ function DashboardPage() {
               <Skeleton key={i} className="h-24 rounded-md" />
             ))
           : data.kpis.map((k) => (
-              <StatCard key={k.label} label={k.label} value={k.value.toLocaleString()} delta={k.delta} />
+              <StatCard
+                key={k.label}
+                label={k.label}
+                value={k.value.toLocaleString()}
+                delta={k.delta}
+              />
             ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-        <Panel title="Crime-type trend — last 12 months" caption="Monthly FIR counts, top 4 categories">
+        <Panel
+          title="Crime-type trend — last 12 months"
+          caption="Monthly FIR counts, top 4 categories"
+        >
           <div className="h-72">
             {data ? (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data.monthlyTrend}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                  <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="var(--color-muted-foreground)" />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fontSize: 11 }}
+                    stroke="var(--color-muted-foreground)"
+                  />
                   <YAxis tick={{ fontSize: 11 }} stroke="var(--color-muted-foreground)" />
                   <Tooltip
                     contentStyle={{
@@ -130,7 +142,11 @@ function DashboardPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data.districtCounts} layout="vertical" margin={{ left: 40 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                  <XAxis type="number" tick={{ fontSize: 11 }} stroke="var(--color-muted-foreground)" />
+                  <XAxis
+                    type="number"
+                    tick={{ fontSize: 11 }}
+                    stroke="var(--color-muted-foreground)"
+                  />
                   <YAxis
                     dataKey="district"
                     type="category"
@@ -178,7 +194,8 @@ function DashboardPage() {
                   </li>
                 );
               })}
-              {!alerts && Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 my-2" />)}
+              {!alerts &&
+                Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 my-2" />)}
             </ul>
           </Panel>
         </div>

@@ -27,11 +27,11 @@ from app.services.llm.base import BaseLLMProvider, LLMError, LLMResponse
 logger = logging.getLogger(__name__)
 
 # Defaults — overridable per-call, per-constructor, or via env.
-_DEFAULT_MODEL = "gemini-2.5-flash"
+_DEFAULT_MODEL = "gemini-3.5-flash"
 _DEFAULT_TEMPERATURE = 0.0
 _DEFAULT_MAX_TOKENS = 4096
-_DEFAULT_TIMEOUT = 60.0
-_MAX_RETRIES = 3
+_DEFAULT_TIMEOUT = 45.0
+_MAX_RETRIES = 2
 _RETRY_BACKOFF = 1.0
 
 
@@ -65,21 +65,28 @@ class GeminiProvider(BaseLLMProvider):
 
         self._model = model or os.getenv("LLM_MODEL", _DEFAULT_MODEL)
         self._temperature = (
-            temperature if temperature is not None
+            temperature
+            if temperature is not None
             else float(os.getenv("LLM_TEMPERATURE", str(_DEFAULT_TEMPERATURE)))
         )
         self._max_tokens = (
-            max_tokens if max_tokens is not None
+            max_tokens
+            if max_tokens is not None
             else int(os.getenv("LLM_MAX_TOKENS", str(_DEFAULT_MAX_TOKENS)))
         )
-        self._timeout = timeout or float(os.getenv("LLM_TIMEOUT", str(_DEFAULT_TIMEOUT)))
+        self._timeout = timeout or float(
+            os.getenv("LLM_TIMEOUT", str(_DEFAULT_TIMEOUT))
+        )
         self._max_retries = max_retries if max_retries is not None else _MAX_RETRIES
 
         self._client = genai.Client(api_key=resolved_key)
 
         logger.info(
             "GeminiProvider initialised  model=%s  temp=%s  max_tokens=%s  timeout=%ss",
-            self._model, self._temperature, self._max_tokens, self._timeout,
+            self._model,
+            self._temperature,
+            self._max_tokens,
+            self._timeout,
         )
 
     # ------------------------------------------------------------------
@@ -185,19 +192,24 @@ class GeminiProvider(BaseLLMProvider):
             except asyncio.TimeoutError:
                 logger.warning(
                     "Gemini timeout after %.1fs (attempt %d/%d)",
-                    self._timeout, attempt, self._max_retries,
+                    self._timeout,
+                    attempt,
+                    self._max_retries,
                 )
                 last_error = LLMError(
                     error=f"Request timed out after {self._timeout}s.",
-                    error_type="timeout", retryable=True,
+                    error_type="timeout",
+                    retryable=True,
                 )
 
             except Exception as exc:  # noqa: BLE001
                 last_error = self._classify_error(exc)
                 logger.warning(
                     "Gemini error (attempt %d/%d): [%s] %s",
-                    attempt, self._max_retries,
-                    last_error.error_type, last_error.error,
+                    attempt,
+                    self._max_retries,
+                    last_error.error_type,
+                    last_error.error,
                 )
                 if not last_error.retryable:
                     return last_error
@@ -208,12 +220,15 @@ class GeminiProvider(BaseLLMProvider):
 
         return last_error or LLMError(
             error="All retry attempts exhausted.",
-            error_type="exhausted", retryable=False,
+            error_type="exhausted",
+            retryable=False,
         )
 
     @staticmethod
     def _parse_response(
-        response: Any, model: str, elapsed_ms: float,
+        response: Any,
+        model: str,
+        elapsed_ms: float,
     ) -> LLMResponse:
         content_text = ""
         if response.candidates:
@@ -244,13 +259,18 @@ class GeminiProvider(BaseLLMProvider):
             latency_ms=round(elapsed_ms, 2),
             raw={
                 "model": model,
-                "candidates_count": len(response.candidates) if response.candidates else 0,
+                "candidates_count": (
+                    len(response.candidates) if response.candidates else 0
+                ),
             },
         )
         logger.info(
             "LLM OK  model=%s  in=%d  out=%d  stop=%s  %.0fms",
-            result.model, result.input_tokens, result.output_tokens,
-            result.stop_reason, result.latency_ms,
+            result.model,
+            result.input_tokens,
+            result.output_tokens,
+            result.stop_reason,
+            result.latency_ms,
         )
         return result
 
@@ -258,28 +278,45 @@ class GeminiProvider(BaseLLMProvider):
     def _classify_error(exc: Exception) -> LLMError:
         msg = str(exc).lower()
 
-        if "api key" in msg or "401" in msg or "permission" in msg or "forbidden" in msg:
+        if (
+            "api key" in msg
+            or "401" in msg
+            or "permission" in msg
+            or "forbidden" in msg
+        ):
             return LLMError(
                 error="Invalid or missing GEMINI_API_KEY.",
-                error_type="authentication", retryable=False,
+                error_type="authentication",
+                retryable=False,
             )
-        if "429" in msg or "quota" in msg or "rate" in msg or "resource_exhausted" in msg:
+        if (
+            "429" in msg
+            or "quota" in msg
+            or "rate" in msg
+            or "resource_exhausted" in msg
+        ):
             return LLMError(
                 error="Gemini API rate limit or quota exceeded.",
-                error_type="rate_limit", retryable=True,
+                error_type="rate_limit",
+                retryable=True,
             )
         if any(c in msg for c in ("500", "503", "502", "504", "internal")):
             return LLMError(
                 error=f"Gemini API server error: {exc}",
-                error_type="server_error", retryable=True,
+                error_type="server_error",
+                retryable=True,
             )
-        if any(kw in msg for kw in ("connection", "network", "dns", "refused", "reset")):
+        if any(
+            kw in msg for kw in ("connection", "network", "dns", "refused", "reset")
+        ):
             return LLMError(
                 error="Network error connecting to Gemini API.",
-                error_type="connection", retryable=True,
+                error_type="connection",
+                retryable=True,
             )
         logger.exception("Gemini unexpected error: %s", exc)
         return LLMError(
             error=f"Unexpected error: {exc}",
-            error_type="unknown", retryable=False,
+            error_type="unknown",
+            retryable=False,
         )

@@ -11,10 +11,10 @@ import abc
 from dataclasses import dataclass, field
 from typing import Any
 
-
 # ---------------------------------------------------------------------------
 # Shared structured response objects
 # ---------------------------------------------------------------------------
+
 
 @dataclass(frozen=True, slots=True)
 class LLMResponse:
@@ -59,6 +59,7 @@ class LLMError:
 # ---------------------------------------------------------------------------
 # Abstract provider
 # ---------------------------------------------------------------------------
+
 
 class BaseLLMProvider(abc.ABC):
     """

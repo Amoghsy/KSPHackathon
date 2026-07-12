@@ -96,7 +96,11 @@ function AlertsPage() {
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={forecast.points}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                <XAxis dataKey="week" tick={{ fontSize: 11 }} stroke="var(--color-muted-foreground)" />
+                <XAxis
+                  dataKey="week"
+                  tick={{ fontSize: 11 }}
+                  stroke="var(--color-muted-foreground)"
+                />
                 <YAxis tick={{ fontSize: 11 }} stroke="var(--color-muted-foreground)" />
                 <Tooltip
                   contentStyle={{
@@ -143,11 +147,11 @@ function AlertsPage() {
         </div>
         {forecast && (
           <div className="mt-3 text-xs text-muted-foreground border-t border-border pt-3">
-            <span className="font-medium text-foreground">Auto-commentary:</span> {forecast.commentary}
+            <span className="font-medium text-foreground">Auto-commentary:</span>{" "}
+            {forecast.commentary}
           </div>
         )}
       </div>
-
 
       {isLoading && (
         <div className="space-y-3">

@@ -25,8 +25,7 @@ const en = {
   // chat page
   chatTitle: "Chat Assistant",
   chatBadge: "Explainable NL → SQL",
-  chatSubtitle:
-    "Natural-language queries against the Karnataka SCRB crime records database.",
+  chatSubtitle: "Natural-language queries against the Karnataka SCRB crime records database.",
   history: "History",
   exportPdf: "Export PDF",
   send: "Send",
@@ -34,8 +33,7 @@ const en = {
   analysing: "Assistant is analysing the request…",
   explainabilityNote:
     "Responses include the generated SQL and row count for explainability. Every query is audited.",
-  translationNote:
-    "Response translation requires backend integration — UI labels only for now.",
+  translationNote: "Response translation requires backend integration — UI labels only for now.",
   historyTitle: "Conversation history",
   showReasoning: "Show reasoning",
   voiceUnsupported: "Voice input not supported in this browser",
@@ -70,8 +68,7 @@ const kn: typeof en = {
 
   chatTitle: "ಚಾಟ್ ಸಹಾಯಕ",
   chatBadge: "ವಿವರಿಸಬಹುದಾದ NL → SQL",
-  chatSubtitle:
-    "ಕರ್ನಾಟಕ SCRB ಅಪರಾಧ ದಾಖಲೆಗಳ ಡೇಟಾಬೇಸ್ ವಿರುದ್ಧ ಸ್ವಾಭಾವಿಕ-ಭಾಷಾ ಪ್ರಶ್ನೆಗಳು.",
+  chatSubtitle: "ಕರ್ನಾಟಕ SCRB ಅಪರಾಧ ದಾಖಲೆಗಳ ಡೇಟಾಬೇಸ್ ವಿರುದ್ಧ ಸ್ವಾಭಾವಿಕ-ಭಾಷಾ ಪ್ರಶ್ನೆಗಳು.",
   history: "ಇತಿಹಾಸ",
   exportPdf: "PDF ರಫ್ತು",
   send: "ಕಳುಹಿಸಿ",
@@ -79,8 +76,7 @@ const kn: typeof en = {
   analysing: "ಸಹಾಯಕ ವಿಶ್ಲೇಷಿಸುತ್ತಿದೆ…",
   explainabilityNote:
     "ಪ್ರತಿ ಪ್ರತಿಕ್ರಿಯೆಯು ರಚಿಸಲಾದ SQL ಮತ್ತು ಸಾಲುಗಳ ಎಣಿಕೆಯನ್ನು ಒಳಗೊಂಡಿದೆ. ಎಲ್ಲಾ ಪ್ರಶ್ನೆಗಳು ಆಡಿಟ್ ಆಗಿವೆ.",
-  translationNote:
-    "ಪ್ರತಿಕ್ರಿಯೆ ಅನುವಾದವು ಬ್ಯಾಕೆಂಡ್ ಸಂಯೋಜನೆಗೆ ಅಗತ್ಯವಿದೆ — ಇದೀಗ UI ಲೇಬಲ್‌ಗಳು ಮಾತ್ರ.",
+  translationNote: "ಪ್ರತಿಕ್ರಿಯೆ ಅನುವಾದವು ಬ್ಯಾಕೆಂಡ್ ಸಂಯೋಜನೆಗೆ ಅಗತ್ಯವಿದೆ — ಇದೀಗ UI ಲೇಬಲ್‌ಗಳು ಮಾತ್ರ.",
   historyTitle: "ಸಂಭಾಷಣೆ ಇತಿಹಾಸ",
   showReasoning: "ತಾರ್ಕಿಕತೆ ತೋರಿಸಿ",
   voiceUnsupported: "ಈ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಧ್ವನಿ ಇನ್‌ಪುಟ್ ಬೆಂಬಲಿತವಾಗಿಲ್ಲ",

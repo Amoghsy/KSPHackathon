@@ -20,7 +20,12 @@ function CaseDetailPage() {
     queryFn: () => getFIR(firId),
   });
 
-  if (isLoading) return <div className="p-6"><Skeleton className="h-64" /></div>;
+  if (isLoading)
+    return (
+      <div className="p-6">
+        <Skeleton className="h-64" />
+      </div>
+    );
   if (!fir) return <div className="p-6 text-muted-foreground">Case not found.</div>;
 
   return (
@@ -36,7 +41,9 @@ function CaseDetailPage() {
         subtitle={`${fir.station} · ${fir.district} · Registered ${fir.date}`}
         actions={
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="border font-medium">{fir.status}</Badge>
+            <Badge variant="outline" className="border font-medium">
+              {fir.status}
+            </Badge>
             <Badge>{fir.gravity}</Badge>
           </div>
         }
@@ -108,7 +115,9 @@ function CaseDetailPage() {
           <Card title="Applicable acts & sections">
             <div className="flex flex-wrap gap-2">
               {fir.actsSections.map((a) => (
-                <Badge key={a} variant="secondary" className="font-mono">{a}</Badge>
+                <Badge key={a} variant="secondary" className="font-mono">
+                  {a}
+                </Badge>
               ))}
             </div>
           </Card>
@@ -154,12 +163,14 @@ function CaseDetailPage() {
                         : "bg-background border-border text-muted-foreground",
                     )}
                   >
-                    {t.done ? <Check className="h-3 w-3" /> : <span className="text-[10px]">{i + 1}</span>}
+                    {t.done ? (
+                      <Check className="h-3 w-3" />
+                    ) : (
+                      <span className="text-[10px]">{i + 1}</span>
+                    )}
                   </span>
                   <div className="text-sm font-medium">{t.label}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {t.date || "Pending"}
-                  </div>
+                  <div className="text-xs text-muted-foreground">{t.date || "Pending"}</div>
                 </li>
               ))}
             </ol>

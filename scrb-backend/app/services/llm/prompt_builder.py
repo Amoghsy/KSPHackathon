@@ -85,6 +85,7 @@ Provide a concise natural-language summary of these results.
 # Builder
 # ---------------------------------------------------------------------------
 
+
 class PromptBuilder:
     """
     Builds structured prompts for NL→SQL and result summarisation.
@@ -144,7 +145,9 @@ class PromptBuilder:
         """
         # Truncate rows for the prompt (first 30 rows max to stay in context).
         display_rows = rows[:30]
-        rows_text = self._format_rows(display_rows) if display_rows else "(empty result set)"
+        rows_text = (
+            self._format_rows(display_rows) if display_rows else "(empty result set)"
+        )
 
         system = _SUMMARIZER_SYSTEM_TEMPLATE.safe_substitute()
         user = _SUMMARIZER_USER_TEMPLATE.safe_substitute(

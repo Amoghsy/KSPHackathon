@@ -37,7 +37,15 @@ const CHART_COLORS = [
   "var(--color-chart-5)",
 ];
 
-function Panel({ title, caption, children }: { title: string; caption?: string; children: React.ReactNode }) {
+function Panel({
+  title,
+  caption,
+  children,
+}: {
+  title: string;
+  caption?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="rounded-xl glass p-4">
       <div className="mb-3">
@@ -64,7 +72,10 @@ function SociologicalPage() {
       />
 
       <div className="mb-4">
-        <Badge variant="outline" className="gap-1.5 border-warning/40 bg-warning/10 text-warning-foreground">
+        <Badge
+          variant="outline"
+          className="gap-1.5 border-warning/40 bg-warning/10 text-warning-foreground"
+        >
           <ShieldAlert className="h-3.5 w-3.5" />
           Illustrative data — demographic fields are role-masked in production
         </Badge>
@@ -77,7 +88,11 @@ function SociologicalPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data.byAge}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                  <XAxis dataKey="band" tick={{ fontSize: 11 }} stroke="var(--color-muted-foreground)" />
+                  <XAxis
+                    dataKey="band"
+                    tick={{ fontSize: 11 }}
+                    stroke="var(--color-muted-foreground)"
+                  />
                   <YAxis tick={{ fontSize: 11 }} stroke="var(--color-muted-foreground)" />
                   <Tooltip
                     contentStyle={{
@@ -147,7 +162,12 @@ function SociologicalPage() {
                   domain={[20, 100]}
                   tick={{ fontSize: 11 }}
                   stroke="var(--color-muted-foreground)"
-                  label={{ value: "Socio-economic index", position: "insideBottom", offset: -8, fontSize: 11 }}
+                  label={{
+                    value: "Socio-economic index",
+                    position: "insideBottom",
+                    offset: -8,
+                    fontSize: 11,
+                  }}
                 />
                 <YAxis
                   type="number"
@@ -165,9 +185,7 @@ function SociologicalPage() {
                     border: "1px solid var(--color-border)",
                     background: "var(--color-card)",
                   }}
-                  labelFormatter={(_: unknown, payload) =>
-                    payload?.[0]?.payload?.district ?? ""
-                  }
+                  labelFormatter={(_: unknown, payload) => payload?.[0]?.payload?.district ?? ""}
                 />
                 <Scatter data={data.bySocioEconomic} fill="var(--color-primary)" />
               </ScatterChart>
@@ -180,12 +198,11 @@ function SociologicalPage() {
 
       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
         {isLoading || !data
-          ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-md" />)
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-24 rounded-md" />
+            ))
           : data.callouts.map((c) => (
-              <div
-                key={c.title}
-                className="rounded-xl glass p-4 border-l-2 border-l-primary"
-              >
+              <div key={c.title} className="rounded-xl glass p-4 border-l-2 border-l-primary">
                 <div className="text-sm font-semibold">{c.title}</div>
                 <div className="text-xs text-muted-foreground mt-1 leading-relaxed">{c.detail}</div>
               </div>

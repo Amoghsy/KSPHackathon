@@ -6,7 +6,7 @@ All v1 endpoints are imported and mounted here.
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import accused, auth, cases, chat, dashboard
+from app.api.v1.endpoints import accused, auth, cases, chat, conversations, dashboard
 
 api_router = APIRouter()
 
@@ -15,4 +15,6 @@ api_router.include_router(cases.router, prefix="/cases", tags=["cases"])
 api_router.include_router(accused.router, prefix="/accused", tags=["accused"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
-
+api_router.include_router(
+    conversations.router, prefix="/conversations", tags=["conversations"]
+)

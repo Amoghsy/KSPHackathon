@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState, lazy, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -127,10 +128,20 @@ function NetworkPage() {
 
         {/* Zoom controls */}
         <div className="absolute bottom-4 right-4 flex flex-col gap-1">
-          <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => graphRef.current?.zoom((graphRef.current?.zoom() ?? 1) * 1.4, 300)}>
+          <Button
+            size="icon"
+            variant="outline"
+            className="h-8 w-8"
+            onClick={() => graphRef.current?.zoom((graphRef.current?.zoom() ?? 1) * 1.4, 300)}
+          >
             <ZoomIn className="h-4 w-4" />
           </Button>
-          <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => graphRef.current?.zoom((graphRef.current?.zoom() ?? 1) / 1.4, 300)}>
+          <Button
+            size="icon"
+            variant="outline"
+            className="h-8 w-8"
+            onClick={() => graphRef.current?.zoom((graphRef.current?.zoom() ?? 1) / 1.4, 300)}
+          >
             <ZoomOut className="h-4 w-4" />
           </Button>
         </div>
@@ -146,7 +157,10 @@ function NetworkPage() {
                 <div className="text-sm font-semibold">{selected.label}</div>
                 <div className="text-[11px] text-muted-foreground font-mono">{selected.id}</div>
               </div>
-              <button onClick={() => setSelected(null)} className="text-muted-foreground hover:text-foreground">
+              <button
+                onClick={() => setSelected(null)}
+                className="text-muted-foreground hover:text-foreground"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -154,7 +168,13 @@ function NetworkPage() {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Connections</span>
                 <Badge variant="secondary">
-                  {data?.links.filter((l: any) => l.source.id === selected.id || l.source === selected.id || l.target.id === selected.id || l.target === selected.id).length ?? 0}
+                  {data?.links.filter(
+                    (l: any) =>
+                      l.source.id === selected.id ||
+                      l.source === selected.id ||
+                      l.target.id === selected.id ||
+                      l.target === selected.id,
+                  ).length ?? 0}
                 </Badge>
               </div>
               <div className="flex justify-between">
@@ -162,7 +182,9 @@ function NetworkPage() {
                 <span className="capitalize">{selected.kind}</span>
               </div>
             </div>
-            <Button size="sm" className="w-full mt-4">Expand connections</Button>
+            <Button size="sm" className="w-full mt-4">
+              Expand connections
+            </Button>
           </aside>
         )}
       </div>

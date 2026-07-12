@@ -18,6 +18,7 @@ class CaseRepository:
         """Count total cases."""
         # Simple count for health/dashboard check
         from sqlalchemy import func
+
         stmt = select(func.count()).select_from(CaseMaster)
         result = await self.db.execute(stmt)
         return result.scalar() or 0

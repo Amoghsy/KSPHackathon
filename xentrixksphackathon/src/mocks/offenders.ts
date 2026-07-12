@@ -41,13 +41,7 @@ export function generateOffenders(count = 48): Offender[] {
       risk,
       modusOperandi: Array.from({ length: int(2, 4) }, () => pick(MO_TAGS)),
       aliases: [name.split(" ")[0]],
-      lastKnown: pick([
-        "Bengaluru Urban",
-        "Mysuru",
-        "Mangaluru",
-        "Belagavi",
-        "Kalaburagi",
-      ]),
+      lastKnown: pick(["Bengaluru Urban", "Mysuru", "Mangaluru", "Belagavi", "Kalaburagi"]),
       factors: [
         { label: "Prior convictions", value: int(20, 90) },
         { label: "Case severity", value: int(30, 95) },

@@ -10,7 +10,9 @@ from __future__ import annotations
 class QueryAgentError(Exception):
     """Base exception for all Query Agent failures."""
 
-    def __init__(self, message: str, error_type: str, *, retryable: bool = False) -> None:
+    def __init__(
+        self, message: str, error_type: str, *, retryable: bool = False
+    ) -> None:
         super().__init__(message)
         self.error_type = error_type
         self.retryable = retryable
@@ -19,7 +21,9 @@ class QueryAgentError(Exception):
 class SQLGenerationError(QueryAgentError):
     """Gemini failed to produce valid SQL."""
 
-    def __init__(self, message: str = "Failed to generate SQL from the question.") -> None:
+    def __init__(
+        self, message: str = "Failed to generate SQL from the question."
+    ) -> None:
         super().__init__(message, error_type="sql_generation_failed", retryable=True)
 
 

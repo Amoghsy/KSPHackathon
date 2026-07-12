@@ -70,20 +70,44 @@ function CasesPage() {
           />
         </div>
         <div className="w-48">
-          <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
-            <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+          <Select
+            value={status}
+            onValueChange={(v) => {
+              setStatus(v);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="All">All statuses</SelectItem>
-              {STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              {STATUSES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
         <div className="w-56">
-          <Select value={district} onValueChange={(v) => { setDistrict(v); setPage(1); }}>
-            <SelectTrigger><SelectValue placeholder="District" /></SelectTrigger>
+          <Select
+            value={district}
+            onValueChange={(v) => {
+              setDistrict(v);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="District" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="All">All districts</SelectItem>
-              {DISTRICTS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+              {DISTRICTS.map((d) => (
+                <SelectItem key={d} value={d}>
+                  {d}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -108,7 +132,9 @@ function CasesPage() {
               {isLoading &&
                 Array.from({ length: 8 }).map((_, i) => (
                   <tr key={i} className="border-b border-border">
-                    <td colSpan={8} className="p-2"><Skeleton className="h-6" /></td>
+                    <td colSpan={8} className="p-2">
+                      <Skeleton className="h-6" />
+                    </td>
                   </tr>
                 ))}
               {!isLoading && data?.items.length === 0 && (
@@ -135,7 +161,10 @@ function CasesPage() {
                   <td className="px-3 py-2">{f.district}</td>
                   <td className="px-3 py-2">{f.crimeHead}</td>
                   <td className="px-3 py-2">
-                    <Badge variant="outline" className={cn("border font-medium", statusBadge(f.status))}>
+                    <Badge
+                      variant="outline"
+                      className={cn("border font-medium", statusBadge(f.status))}
+                    >
                       {f.status}
                     </Badge>
                   </td>
@@ -146,10 +175,26 @@ function CasesPage() {
           </table>
         </div>
         <div className="flex items-center justify-between px-3 py-2 border-t border-border text-xs text-muted-foreground">
-          <span>Page {page} of {totalPages}</span>
+          <span>
+            Page {page} of {totalPages}
+          </span>
           <div className="flex gap-1">
-            <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>Prev</Button>
-            <Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Next</Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page === 1}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              Prev
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </Button>
           </div>
         </div>
       </div>

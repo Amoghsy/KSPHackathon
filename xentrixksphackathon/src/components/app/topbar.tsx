@@ -22,7 +22,12 @@ export function Topbar() {
   const navigate = useNavigate();
   const t = useT();
 
-  const initials = user?.name.split(" ").map((n) => n[0]).slice(-2).join("") ?? "?";
+  const initials =
+    user?.name
+      .split(" ")
+      .map((n) => n[0])
+      .slice(-2)
+      .join("") ?? "?";
 
   const roleColor: Record<string, string> = {
     Supervisor: "bg-primary text-primary-foreground",
@@ -116,7 +121,12 @@ export function Topbar() {
                 <span className="text-xs font-medium truncate max-w-[120px]">{user?.name}</span>
                 <span className="text-[10px] text-muted-foreground truncate">{user?.badgeNo}</span>
               </div>
-              <Badge className={cn("hidden xl:inline-flex ml-1 text-[10px]", roleColor[user?.role ?? ""])}>
+              <Badge
+                className={cn(
+                  "hidden xl:inline-flex ml-1 text-[10px]",
+                  roleColor[user?.role ?? ""],
+                )}
+              >
                 {user?.role}
               </Badge>
             </button>

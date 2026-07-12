@@ -11,8 +11,9 @@ import sys
 from logging.config import fileConfig
 from pathlib import Path
 
-from alembic import context
 from sqlalchemy import engine_from_config, pool
+
+from alembic import context
 
 # ---------------------------------------------------------------------------
 # Make sure the project root is on sys.path so `app.*` imports resolve
@@ -22,15 +23,14 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+# Import all models so their tables are registered on Base.metadata.
+# Add new model imports here as they are created (Day 2+).
+import app.models  # noqa: F401, E402
 # ---------------------------------------------------------------------------
 # Pull in application settings and the declarative base.
 # ---------------------------------------------------------------------------
 from app.config import settings  # noqa: E402
 from app.db.base import Base  # noqa: E402
-
-# Import all models so their tables are registered on Base.metadata.
-# Add new model imports here as they are created (Day 2+).
-import app.models  # noqa: F401, E402
 
 # ---------------------------------------------------------------------------
 # Alembic Config object (gives access to values within alembic.ini).

@@ -32,7 +32,9 @@ async def handle_chat(
     question: str,
     session: AsyncSession,
     *,
+    conversation_id: str | None = None,
     request_id: str | None = None,
+    user_id: int | None = None,
 ) -> dict[str, Any]:
     """
     Process a chat request through the orchestrator pipeline.
@@ -43,12 +45,22 @@ async def handle_chat(
         User's natural-language question.
     session : AsyncSession
         Active database session.
+    conversation_id : str, optional
+        Unique conversation session ID.
     request_id : str, optional
         Correlation ID for tracing.
+    user_id : int, optional
+        Authenticated user ID.
 
     Returns
     -------
     dict  Standardised response from the orchestrator / agent.
     """
     orchestrator = _get_orchestrator()
-    return await orchestrator.handle(question, session, request_id=request_id)
+    return await orchestrator.handle(
+        question,
+        session,
+        conversation_id=conversation_id,
+        request_id=request_id,
+        user_id=user_id,
+    )

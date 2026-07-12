@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 import re
 
-from app.services.llm.base import LLMError, LLMResponse
+from app.services.llm.base import LLMError
 from app.services.llm.llm_factory import LLMFactory
 from app.services.llm.prompt_builder import PromptBuilder
 from app.services.nl2sql.examples import format_examples_for_prompt
@@ -107,7 +107,9 @@ class SQLGenerator:
 
         logger.info(
             "SQL generated  tokens_in=%d  tokens_out=%d  latency=%.0fms",
-            result.input_tokens, result.output_tokens, result.latency_ms,
+            result.input_tokens,
+            result.output_tokens,
+            result.latency_ms,
         )
         logger.debug("Generated SQL: %s", sql)
         return sql

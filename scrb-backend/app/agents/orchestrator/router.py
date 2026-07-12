@@ -16,7 +16,7 @@ Usage:
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, Type
+from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -59,9 +59,7 @@ class AgentRegistry:
         key = name.lower()
         if key not in self._agents:
             available = ", ".join(sorted(self._agents)) or "(none)"
-            raise KeyError(
-                f"Unknown agent '{key}'. Registered agents: {available}"
-            )
+            raise KeyError(f"Unknown agent '{key}'. Registered agents: {available}")
         return self._agents[key](**kwargs)
 
     def available_agents(self) -> list[str]:

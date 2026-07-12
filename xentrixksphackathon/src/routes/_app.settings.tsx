@@ -74,14 +74,18 @@ function SettingsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-medium">Dark mode</div>
-                <div className="text-xs text-muted-foreground">Best for low-light control rooms.</div>
+                <div className="text-xs text-muted-foreground">
+                  Best for low-light control rooms.
+                </div>
               </div>
               <Switch checked={theme === "dark"} onCheckedChange={toggleTheme} />
             </div>
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-medium">Critical alert notifications</div>
-                <div className="text-xs text-muted-foreground">Push critical alerts to this session.</div>
+                <div className="text-xs text-muted-foreground">
+                  Push critical alerts to this session.
+                </div>
               </div>
               <Switch defaultChecked />
             </div>

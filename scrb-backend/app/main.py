@@ -7,9 +7,14 @@ Start the server:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import logging.config
 import sys
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -60,6 +65,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     try:
         from app.db.init_db import verify_db_connection
+
         await verify_db_connection()
     except Exception as exc:  # noqa: BLE001
         logger.warning("DB not reachable at startup: %s", exc)
@@ -89,7 +95,7 @@ app = FastAPI(
 # ---------------------------------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://localhost:8080"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -105,7 +111,9 @@ async def health() -> dict:
     Database connection test health check.
     """
     from fastapi import HTTPException
+
     from app.db.init_db import verify_db_connection
+
     try:
         await verify_db_connection()
         return {
@@ -116,8 +124,7 @@ async def health() -> dict:
         }
     except Exception as exc:
         raise HTTPException(
-            status_code=503,
-            detail=f"Database connection failed: {str(exc)}"
+            status_code=503, detail=f"Database connection failed: {str(exc)}"
         )
 
 
@@ -131,7 +138,7 @@ def read_root() -> dict:
         "message": f"Welcome to {settings.app_name}",
         "docs": "/docs",
         "health": "/health",
-        "version": "v1"
+        "version": "v1",
     }
 
 

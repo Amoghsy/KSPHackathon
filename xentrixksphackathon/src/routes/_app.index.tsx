@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { format } from "date-fns";
 import {
   Send,
@@ -12,6 +12,10 @@ import {
   Bot,
   User as UserIcon,
   X,
+  Trash2,
+  Loader2,
+  AlertCircle,
+  Plus,
 } from "lucide-react";
 import {
   BarChart,
@@ -25,20 +29,22 @@ import {
   CartesianGrid,
 } from "recharts";
 import jsPDF from "jspdf";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
-import { MockBadge } from "@/components/app/mock-badge";
-import { useT } from "@/lib/i18n";
 import {
-  SEED_SESSION,
-  HISTORY_SESSIONS,
-  type ChatMessage,
-  type RichData,
-  type AgentKind,
-} from "@/mocks/chat";
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
+import type { ChatMessage, RichData, AgentKind } from "@/types/chat";
 import { askAssistant, detectContextRef, extractAccusedId } from "@/services/assistant";
+import { listConversations, deleteConversation } from "@/lib/api/services";
+import { queryKeys } from "@/lib/api/query-keys";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/")({
@@ -57,27 +63,59 @@ const AGENT_COLORS: Record<AgentKind, string> = {
 };
 
 // Feature-detect SpeechRecognition
-function getSpeechRecognition(): any | null {
+function getSpeechRecognition(): unknown | null {
   if (typeof window === "undefined") return null;
-  return (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || null;
+  return (
+    (window as unknown as Record<string, unknown>).SpeechRecognition ||
+    (window as unknown as Record<string, unknown>).webkitSpeechRecognition ||
+    null
+  );
 }
 
 function ChatPage() {
   const t = useT();
-  const [messages, setMessages] = useState<ChatMessage[]>(SEED_SESSION.messages);
+  const queryClient = useQueryClient();
+
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [listening, setListening] = useState(false);
   const [contextEntity, setContextEntity] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<unknown>(null);
 
   const SR = useMemo(() => getSpeechRecognition(), []);
   const speechSupported = !!SR;
 
   const SUGGESTIONS = [t("s1"), t("s2"), t("s3"), t("s4"), t("s5")];
+
+  // ─── Conversation History (TanStack Query) ────────────────────────────────
+  const { data: conversations, isLoading: conversationsLoading } = useQuery({
+    queryKey: queryKeys.conversations(),
+    queryFn: () => listConversations({ limit: 30, sort_by: "updated_at", sort_order: "desc" }),
+    enabled: historyOpen,
+    staleTime: 60_000,
+  });
+
+  // ─── Delete Conversation Mutation ─────────────────────────────────────────
+  const deleteMutation = useMutation({
+    mutationFn: deleteConversation,
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.conversations() });
+      if (conversationId === id) {
+        setConversationId(null);
+        setMessages([]);
+      }
+      toast.success("Conversation deleted");
+    },
+    onError: () => {
+      toast.error("Failed to delete conversation");
+    },
+  });
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -87,11 +125,10 @@ function ChatPage() {
     inputRef.current?.focus();
   }, []);
 
-  // Detect if the input references a prior entity → show context chip
+  // Context entity detection
   useEffect(() => {
     if (!input.trim()) return;
     if (!detectContextRef(input)) return;
-    // find last assistant message that mentions an accused id
     for (let i = messages.length - 1; i >= 0; i--) {
       const m = messages[i];
       if (m.role !== "assistant") continue;
@@ -105,26 +142,43 @@ function ChatPage() {
 
   function stopListening() {
     try {
-      recognitionRef.current?.stop();
-    } catch {}
+      (recognitionRef.current as { stop: () => void })?.stop();
+    } catch (e) {
+      console.warn("Speech recognition stop failed:", e);
+    }
     setListening(false);
   }
 
   function startListening() {
     if (!SR) return;
-    const rec = new SR();
+    const SRClass = SR as new () => {
+      lang: string;
+      interimResults: boolean;
+      continuous: boolean;
+      onresult: (ev: unknown) => void;
+      onerror: (ev: unknown) => void;
+      onend: () => void;
+      start: () => void;
+    };
+    const rec = new SRClass();
     rec.lang = "en-US";
     rec.interimResults = true;
     rec.continuous = false;
-    rec.onresult = (ev: any) => {
+    rec.onresult = (ev: unknown) => {
+      const event = ev as {
+        resultIndex: number;
+        results: { [i: number]: [{ transcript: string }] };
+      };
       let finalText = "";
-      for (let i = ev.resultIndex; i < ev.results.length; i++) {
-        finalText += ev.results[i][0].transcript;
+      for (let i = event.resultIndex; i < Object.keys(event.results).length; i++) {
+        finalText += event.results[i][0].transcript;
       }
       setInput((prev) => (prev ? prev.trimEnd() + " " : "") + finalText.trim());
     };
-    rec.onerror = (ev: any) => {
-      toast.error("Voice input error", { description: ev.error ?? "Unknown error" });
+    rec.onerror = (ev: unknown) => {
+      toast.error("Voice input error", {
+        description: (ev as { error?: string }).error ?? "Unknown error",
+      });
       setListening(false);
     };
     rec.onend = () => setListening(false);
@@ -132,30 +186,58 @@ function ChatPage() {
     setListening(true);
     try {
       rec.start();
-    } catch (e) {
+    } catch {
       setListening(false);
     }
   }
 
-  async function send(text: string) {
-    const q = text.trim();
-    if (!q || loading) return;
-    const userMsg: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      text: q,
-      ts: new Date().toISOString(),
-    };
-    setMessages((m) => [...m, userMsg]);
-    setInput("");
-    setLoading(true);
-    try {
-      const reply = await askAssistant(q);
-      setMessages((m) => [...m, reply]);
-    } finally {
-      setLoading(false);
-      setTimeout(() => inputRef.current?.focus(), 50);
-    }
+  const send = useCallback(
+    async (text: string) => {
+      const q = text.trim();
+      if (!q || loading) return;
+      setChatError(null);
+
+      const userMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "user",
+        text: q,
+        ts: new Date().toISOString(),
+      };
+      setMessages((m) => [...m, userMsg]);
+      setInput("");
+      setLoading(true);
+
+      try {
+        const reply = await askAssistant(q, conversationId);
+        // Capture the conversation_id from the response
+        const replyWithId = reply as ChatMessage & { conversationId?: string };
+        if (replyWithId.conversationId && !conversationId) {
+          setConversationId(replyWithId.conversationId);
+          // Invalidate so the sidebar shows the new conversation
+          queryClient.invalidateQueries({ queryKey: queryKeys.conversations() });
+        }
+        setMessages((m) => [...m, { ...reply, id: reply.id }]);
+      } catch (err: unknown) {
+        const message =
+          (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
+          (err as { message?: string })?.message ??
+          "The assistant encountered an error. Please try again.";
+        setChatError(message);
+        toast.error("Chat failed", { description: message });
+      } finally {
+        setLoading(false);
+        setTimeout(() => inputRef.current?.focus(), 50);
+      }
+    },
+    [loading, conversationId, queryClient],
+  );
+
+  function startNewConversation() {
+    setConversationId(null);
+    setMessages([]);
+    setChatError(null);
+    setContextEntity(null);
+    inputRef.current?.focus();
   }
 
   function exportPdf() {
@@ -166,7 +248,10 @@ function ChatPage() {
     const pageHeight = doc.internal.pageSize.getHeight();
     const usable = pageWidth - marginX * 2;
 
-    const addLine = (text: string, opts?: { size?: number; bold?: boolean; color?: [number, number, number] }) => {
+    const addLine = (
+      text: string,
+      opts?: { size?: number; bold?: boolean; color?: [number, number, number] },
+    ) => {
       const size = opts?.size ?? 10;
       doc.setFont("helvetica", opts?.bold ? "bold" : "normal");
       doc.setFontSize(size);
@@ -183,7 +268,10 @@ function ChatPage() {
       }
     };
 
-    addLine(SEED_SESSION.title, { size: 16, bold: true });
+    addLine(`Chat Session${conversationId ? ` — ${conversationId.slice(0, 8)}` : ""}`, {
+      size: 16,
+      bold: true,
+    });
     addLine(`Exported ${format(new Date(), "d MMM yyyy · HH:mm")}`, {
       size: 9,
       color: [110, 110, 110],
@@ -217,10 +305,7 @@ function ChatPage() {
           y += 11;
         }
         if (m.rows !== undefined) {
-          addLine(`(${m.rows} row${m.rows === 1 ? "" : "s"})`, {
-            size: 9,
-            color: [130, 130, 130],
-          });
+          addLine(`(${m.rows} row${m.rows === 1 ? "" : "s"})`, { size: 9, color: [130, 130, 130] });
         }
       }
       y += 10;
@@ -243,11 +328,18 @@ function ChatPage() {
               <Badge variant="secondary" className="text-[10px] font-medium">
                 {t("chatBadge")}
               </Badge>
-              <MockBadge />
+              {conversationId && (
+                <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground">
+                  {conversationId.slice(0, 8)}…
+                </Badge>
+              )}
             </div>
             <div className="text-xs text-muted-foreground mt-0.5">{t("chatSubtitle")}</div>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={startNewConversation} className="gap-1.5">
+              <Plus className="h-3.5 w-3.5" /> New Chat
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -263,12 +355,34 @@ function ChatPage() {
         </div>
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin px-5 py-6 space-y-5">
+          {/* Empty state */}
+          {messages.length === 0 && !loading && !chatError && (
+            <div className="flex flex-col items-center justify-center h-full py-20 text-center text-muted-foreground">
+              <Bot className="h-10 w-10 mb-3 text-primary/40" />
+              <p className="text-sm font-medium">Ask a question to start the conversation</p>
+              <p className="text-xs mt-1 max-w-xs">
+                e.g. "Show theft cases in Mysuru" or "Who are the top accused this month?"
+              </p>
+            </div>
+          )}
+
           {messages.map((m) => (
             <MessageRow key={m.id} m={m} />
           ))}
+
           {loading && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
               <Bot className="h-4 w-4" /> {t("analysing")}
+            </div>
+          )}
+
+          {chatError && (
+            <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <div>
+                <div className="font-medium">Query failed</div>
+                <div className="text-xs mt-0.5 text-destructive/80">{chatError}</div>
+              </div>
             </div>
           )}
         </div>
@@ -324,7 +438,11 @@ function ChatPage() {
                       <button
                         onClick={() => {
                           if (!speechSupported) return;
-                          listening ? stopListening() : startListening();
+                          if (listening) {
+                            stopListening();
+                          } else {
+                            startListening();
+                          }
                         }}
                         disabled={!speechSupported}
                         className={cn(
@@ -353,13 +471,21 @@ function ChatPage() {
                 </span>
               </div>
             </div>
-            <Button onClick={() => send(input)} disabled={loading || !input.trim()} className="h-11 px-4">
-              <Send className="h-4 w-4 mr-1.5" /> {t("send")}
+            <Button
+              onClick={() => send(input)}
+              disabled={loading || !input.trim()}
+              className="h-11 px-4"
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-1.5" /> {t("send")}
+                </>
+              )}
             </Button>
           </div>
-          <div className="text-[11px] text-muted-foreground mt-2">
-            {t("explainabilityNote")}
-          </div>
+          <div className="text-[11px] text-muted-foreground mt-2">{t("explainabilityNote")}</div>
           <div className="text-[11px] text-muted-foreground/80 italic mt-1">
             {t("translationNote")}
           </div>
@@ -368,23 +494,83 @@ function ChatPage() {
 
       {historyOpen && (
         <aside className="w-72 border-l border-border bg-card overflow-y-auto scrollbar-thin animate-in slide-in-from-right duration-200">
-          <div className="px-4 py-3 border-b border-border">
+          <div className="px-4 py-3 border-b border-border flex items-center justify-between">
             <div className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
               {t("historyTitle")}
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => setHistoryOpen(false)}
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
           </div>
-          <ul className="p-2 space-y-1">
-            {HISTORY_SESSIONS.map((s) => (
-              <li key={s.id}>
-                <button className="w-full text-left rounded px-3 py-2 hover:bg-accent">
-                  <div className="text-sm font-medium truncate">{s.title}</div>
-                  <div className="text-[11px] text-muted-foreground">
-                    {format(new Date(s.updatedAt), "d MMM · HH:mm")}
+
+          {conversationsLoading ? (
+            <div className="p-3 space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-14 rounded" />
+              ))}
+            </div>
+          ) : !conversations || conversations.length === 0 ? (
+            <div className="px-4 py-8 text-center text-xs text-muted-foreground">
+              No past conversations yet.
+            </div>
+          ) : (
+            <ul className="p-2 space-y-1">
+              {conversations.map((s) => (
+                <li key={s.conversation_id}>
+                  <div
+                    className={cn(
+                      "w-full text-left rounded px-3 py-2 hover:bg-accent group flex items-start gap-2 cursor-pointer",
+                      conversationId === s.conversation_id && "bg-accent",
+                    )}
+                    onClick={() => {
+                      setConversationId(s.conversation_id);
+                      setMessages([]);
+                      setChatError(null);
+                      // Load last message into the view if available
+                      if (s.conversation_history?.length > 0) {
+                        const hydratedMessages: ChatMessage[] = s.conversation_history.map(
+                          (h, i) => ({
+                            id: `${s.conversation_id}-${i}`,
+                            role: h.role,
+                            text: h.content,
+                            ts: new Date(h.timestamp * 1000).toISOString(),
+                            sql: h.generated_sql ?? undefined,
+                          }),
+                        );
+                        setMessages(hydratedMessages);
+                      }
+                    }}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">
+                        {s.last_question
+                          ? s.last_question.slice(0, 40) + (s.last_question.length > 40 ? "…" : "")
+                          : s.conversation_id.slice(0, 16) + "…"}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {format(new Date(s.updated_at * 1000), "d MMM · HH:mm")}
+                      </div>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteMutation.mutate(s.conversation_id);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/10 hover:text-destructive"
+                      aria-label="Delete conversation"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                </button>
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+          )}
         </aside>
       )}
     </div>
@@ -450,7 +636,7 @@ function MessageRow({ m }: { m: ChatMessage }) {
 
         {!isUser && showSql && m.sql && (
           <pre className="mt-2 rounded border border-border bg-muted/60 p-3 text-[11px] font-mono leading-relaxed overflow-x-auto text-foreground">
-{m.sql}
+            {m.sql}
           </pre>
         )}
       </div>
@@ -468,7 +654,9 @@ function RichCard({ data }: { data: RichData }) {
     const up = (data.delta ?? 0) >= 0;
     return (
       <div className="rounded border border-border bg-background p-3 text-foreground">
-        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{data.title}</div>
+        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+          {data.title}
+        </div>
         <div className="mt-1 flex items-baseline gap-2">
           <span className="text-2xl font-semibold tabular-nums">{data.value}</span>
           {data.unit && <span className="text-xs text-muted-foreground">{data.unit}</span>}

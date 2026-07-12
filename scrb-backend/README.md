@@ -190,3 +190,59 @@ pytest
 
 All application endpoints live under `/api/v1/`.  
 The `/health` endpoint is at the root for infrastructure tooling compatibility.
+
+---
+
+## Day 3: Conversational Memory & Session Management
+
+### Conversation Architecture
+The conversation flow coordinates the request through the following steps:
+1. **API Entry**: User triggers `POST /api/v1/chat` with an optional `conversation_id`.
+2. **Orchestrator**: Generates a request ID and resolves the Redis session via `ConversationManager`.
+3. **Context Injection**: Deterministically rewrites the user query using past context memory (`ContextInjector`).
+4. **Agent Execution**: Calls `QueryAgent` with the resolved question.
+5. **Entity Resolution**: Extracts entities from the query and response rows deterministically (`EntityResolver`).
+6. **Session Storage**: Updates conversation history, last generated SQL, and resolved entities in Redis.
+7. **Safe Logging**: Records request-response details to PostgreSQL `audit_log` without blocking responses.
+
+### Redis Data Structure
+Sessions are stored under `session:{conversation_id}` prefix as serialized JSON representing:
+- `conversation_id`: unique session identifier
+- `user_id`: optional user identifier
+- `created_at` & `updated_at`: timestamps
+- `last_question` & `last_generated_sql`: tracks the last turn metadata
+- `conversation_history`: list of message turns (messages with roles `user` and `assistant`)
+- `resolved_entities`: dict mapping tracking parameters (`last_case`, `last_accused`, `last_victim`, `last_station`, `last_district`, `last_crime_type`, `last_date_range`).
+
+### Conversation Lifecycle & Expiry
+- **Expiration**: Keys are written with a default Time-To-Live (TTL) of 24 hours (86,400 seconds). Any session update resets this timer.
+- **Methods**: Exposed via `ConversationManager`:
+  - `create_session(conversation_id, user_id=None)`: Starts tracking a new conversation.
+  - `get_session(conversation_id)`: Loads conversation data.
+  - `update_session(conversation_id, context)`: Updates stored state.
+  - `append_message(conversation_id, message)`: Records turn history.
+  - `delete_session(conversation_id)`: Removes the session.
+  - `expire_session(conversation_id, seconds)`: Updates custom key TTL.
+
+### Context Injection & Entity Resolution Flow
+1. **Extraction**: After an agent execution, `EntityResolver` parses:
+   - Accused IDs matching regex `\bA\d+\b`
+   - Victim IDs matching regex `\bV\d+\b`
+   - Case/FIR IDs matching regex `\b(?:FIR|case|no)\b[\s-]*#?([A-Za-z0-9_/]+)\b`
+   - Districts matching known Karnataka districts (e.g. `Mysuru`, `Bengaluru`).
+   - Crime Types (e.g. `Theft`, `Robbery`, `Cyber Crime`).
+2. **Rewriting**: When a follow-up query is received, `ContextInjector` checks if the query contains references like `he`, `she`, `his`, `her`, `that case`, `only solved ones`, or a short filter phrase like `Only Bengaluru`.
+3. **Reconstruction**: It rewrites the query into a fully-qualified natural language statement incorporating these parameters so the `QueryAgent` receives the full context without requiring user repetition.
+
+### API Documentation
+All endpoints are fully integrated with Swagger/OpenAPI docs at `http://localhost:8000/docs`:
+- `GET /api/v1/conversations`: Fetch all sessions with pagination (`limit`, `offset`) and sorting (`sort_by`, `sort_order`).
+- `GET /api/v1/conversations/{conversation_id}`: Retrieve detailed session parameters and history.
+- `PATCH /api/v1/conversations/{conversation_id}`: Update metadata manually.
+- `DELETE /api/v1/conversations/{conversation_id}`: Delete a session key from storage.
+- `POST /api/v1/chat`: Conversational chat endpoint accepting an optional `conversation_id` inside the request body.
+
+### Known Limitations
+- In-memory fallback is used in environments where Redis is not active/available (e.g., local unit test runs) to prevent backend failure.
+- Deterministic extraction uses keyword lookup; complex phrase parsing without explicitly defined keywords is not supported.
+

@@ -8,11 +8,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
-    from app.models.police_station import PoliceStation
-    from app.models.crime_type import CrimeType
     from app.models.accused import AccusedMaster
-    from app.models.victim import VictimMaster
+    from app.models.crime_type import CrimeType
     from app.models.financial_transaction import FinancialTransaction
+    from app.models.police_station import PoliceStation
+    from app.models.victim import VictimMaster
 
 
 class CaseMaster(Base):
@@ -25,12 +25,10 @@ class CaseMaster(Base):
 
     # Foreign Keys
     police_station_id: Mapped[int | None] = mapped_column(
-        ForeignKey("police_station.police_station_id", ondelete="SET NULL"),
-        index=True
+        ForeignKey("police_station.police_station_id", ondelete="SET NULL"), index=True
     )
     crime_type_id: Mapped[int | None] = mapped_column(
-        ForeignKey("crime_type.crime_type_id", ondelete="SET NULL"),
-        index=True
+        ForeignKey("crime_type.crime_type_id", ondelete="SET NULL"), index=True
     )  # TODO Confirm ER Schema
 
     # Non-ForeignKey fields (TODO Confirm ER Schema for lookup values)
@@ -55,14 +53,11 @@ class CaseMaster(Base):
     police_station: Mapped["PoliceStation"] = relationship(back_populates="cases")
     crime_type: Mapped["CrimeType"] = relationship(back_populates="cases")
     accused: Mapped[list["AccusedMaster"]] = relationship(
-        back_populates="case",
-        cascade="all, delete-orphan"
+        back_populates="case", cascade="all, delete-orphan"
     )
     victims: Mapped[list["VictimMaster"]] = relationship(
-        back_populates="case",
-        cascade="all, delete-orphan"
+        back_populates="case", cascade="all, delete-orphan"
     )
     financial_transactions: Mapped[list["FinancialTransaction"]] = relationship(
-        back_populates="case",
-        cascade="all, delete-orphan"
+        back_populates="case", cascade="all, delete-orphan"
     )

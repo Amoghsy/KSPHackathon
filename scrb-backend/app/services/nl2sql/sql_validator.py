@@ -22,19 +22,15 @@ import re
 from dataclasses import dataclass, field
 
 import sqlparse
-from sqlparse.sql import (
-    Identifier,
-    IdentifierList,
-    Parenthesis,
-    Where,
-)
-from sqlparse.tokens import Keyword, DML, DDL
+from sqlparse.sql import Identifier, IdentifierList, Parenthesis, Where
+from sqlparse.tokens import DDL, DML, Keyword
 
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Structured response
 # ---------------------------------------------------------------------------
+
 
 @dataclass(frozen=True, slots=True)
 class ValidationResult:
@@ -157,6 +153,7 @@ _BLOCKED_PATTERN = re.compile(
 # Validator
 # ---------------------------------------------------------------------------
 
+
 class SQLValidator:
     """
     Validates AI-generated SQL before it reaches the database.
@@ -210,7 +207,9 @@ class SQLValidator:
 
         # 1. Non-empty
         if not sql or not sql.strip():
-            return ValidationResult(valid=False, sql="", errors=["Empty SQL statement."])
+            return ValidationResult(
+                valid=False, sql="", errors=["Empty SQL statement."]
+            )
 
         normalised = sql.strip().rstrip(";").strip()
 
@@ -226,7 +225,9 @@ class SQLValidator:
 
         if not parsed_statements:
             return ValidationResult(
-                valid=False, sql=normalised, errors=["SQL parse returned no statements."]
+                valid=False,
+                sql=normalised,
+                errors=["SQL parse returned no statements."],
             )
 
         # Only allow a single statement.
@@ -360,9 +361,17 @@ class SQLValidator:
 
             # After FROM / JOIN, next meaningful token(s) are table identifiers.
             if token.ttype is Keyword and token.normalized.upper() in {
-                "FROM", "JOIN", "INNER JOIN", "LEFT JOIN", "RIGHT JOIN",
-                "FULL JOIN", "CROSS JOIN", "LEFT OUTER JOIN", "RIGHT OUTER JOIN",
-                "FULL OUTER JOIN", "NATURAL JOIN",
+                "FROM",
+                "JOIN",
+                "INNER JOIN",
+                "LEFT JOIN",
+                "RIGHT JOIN",
+                "FULL JOIN",
+                "CROSS JOIN",
+                "LEFT OUTER JOIN",
+                "RIGHT OUTER JOIN",
+                "FULL OUTER JOIN",
+                "NATURAL JOIN",
             }:
                 expect_table = True
                 continue
@@ -403,7 +412,9 @@ class SQLValidator:
         return None
 
     def _extract_columns(
-        self, stmt: sqlparse.sql.Statement, cte_aliases: set[str] | None = None,
+        self,
+        stmt: sqlparse.sql.Statement,
+        cte_aliases: set[str] | None = None,
     ) -> set[str]:
         """
         Best-effort extraction of column names from the SQL.
@@ -439,7 +450,9 @@ class SQLValidator:
                     if isinstance(ident, Identifier):
                         real = ident.get_real_name()
                         if real and real != "*" and real.lower() not in self._tables:
-                            if not any(isinstance(t, Parenthesis) for t in ident.tokens):
+                            if not any(
+                                isinstance(t, Parenthesis) for t in ident.tokens
+                            ):
                                 parts = real.split(".")
                                 col_name = parts[-1].lower()
                                 columns.add(col_name)

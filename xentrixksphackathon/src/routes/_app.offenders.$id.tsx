@@ -23,23 +23,37 @@ function OffenderDetailPage() {
     queryFn: () => similarOffenders(id),
   });
 
-  if (isLoading) return <div className="p-6"><Skeleton className="h-64" /></div>;
+  if (isLoading)
+    return (
+      <div className="p-6">
+        <Skeleton className="h-64" />
+      </div>
+    );
   if (!o) return <div className="p-6 text-muted-foreground">Offender not found.</div>;
 
   const riskCol =
-    o.risk === "High" ? "bg-destructive text-destructive-foreground"
-      : o.risk === "Medium" ? "bg-warning text-warning-foreground"
-      : "bg-success text-success-foreground";
+    o.risk === "High"
+      ? "bg-destructive text-destructive-foreground"
+      : o.risk === "Medium"
+        ? "bg-warning text-warning-foreground"
+        : "bg-success text-success-foreground";
 
   return (
     <div className="p-6 max-w-[1400px] mx-auto">
-      <Link to="/offenders" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mb-3">
+      <Link
+        to="/offenders"
+        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mb-3"
+      >
         <ArrowLeft className="h-3.5 w-3.5" /> Back to offender list
       </Link>
       <PageHeader
         title={o.name}
         subtitle={`${o.id} · Age ${o.age} · Last known: ${o.lastKnown}`}
-        actions={<Badge className={riskCol}>{o.risk} risk · {o.riskScore}/100</Badge>}
+        actions={
+          <Badge className={riskCol}>
+            {o.risk} risk · {o.riskScore}/100
+          </Badge>
+        }
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -57,7 +71,14 @@ function OffenderDetailPage() {
                   </div>
                   <div className="h-2 rounded bg-muted overflow-hidden">
                     <div
-                      className={cn("h-full", f.value > 70 ? "bg-destructive" : f.value > 45 ? "bg-warning" : "bg-success")}
+                      className={cn(
+                        "h-full",
+                        f.value > 70
+                          ? "bg-destructive"
+                          : f.value > 45
+                            ? "bg-warning"
+                            : "bg-success",
+                      )}
                       style={{ width: `${f.value}%` }}
                     />
                   </div>
@@ -72,7 +93,9 @@ function OffenderDetailPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               {o.modusOperandi.map((m) => (
-                <Badge key={m} variant="secondary">{m}</Badge>
+                <Badge key={m} variant="secondary">
+                  {m}
+                </Badge>
               ))}
             </div>
           </div>
@@ -85,7 +108,9 @@ function OffenderDetailPage() {
               {Array.from({ length: Math.min(o.linkedCases, 6) }).map((_, i) => (
                 <li key={i} className="py-2 flex justify-between">
                   <span className="font-mono text-xs">{`104430006202600${String(i + 21).padStart(3, "0")}`}</span>
-                  <span className="text-muted-foreground text-xs">2026-0{(i % 6) + 1}-1{i}</span>
+                  <span className="text-muted-foreground text-xs">
+                    2026-0{(i % 6) + 1}-1{i}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -116,9 +141,11 @@ function OffenderDetailPage() {
                   <Badge
                     className={cn(
                       "text-[10px]",
-                      s.risk === "High" ? "bg-destructive text-destructive-foreground"
-                        : s.risk === "Medium" ? "bg-warning text-warning-foreground"
-                        : "bg-success text-success-foreground",
+                      s.risk === "High"
+                        ? "bg-destructive text-destructive-foreground"
+                        : s.risk === "Medium"
+                          ? "bg-warning text-warning-foreground"
+                          : "bg-success text-success-foreground",
                     )}
                   >
                     {s.risk}

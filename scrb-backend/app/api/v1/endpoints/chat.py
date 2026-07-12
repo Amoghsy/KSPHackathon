@@ -15,6 +15,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import get_current_user, oauth2_scheme
 from app.db.session import get_db
 from app.schemas.chat import ChatErrorResponse, ChatRequest, ChatResponse
 from app.services.chat_service import handle_chat
@@ -45,6 +46,7 @@ router = APIRouter()
 async def chat_endpoint(
     request: ChatRequest,
     db: AsyncSession = Depends(get_db),
+    token: str | None = Depends(oauth2_scheme),
 ) -> dict:
     """
     Accept a natural-language question and return AI-powered analytics.
@@ -60,8 +62,20 @@ async def chat_endpoint(
 
     logger.info(
         "Chat request  request_id=%s  question=%.200s",
-        request_id, request.question,
+        request_id,
+        request.question,
     )
+
+    # Extract user ID if authenticated
+    user_id = None
+    if token:
+        try:
+            current_user = await get_current_user(token)
+            user_id = current_user.get("id")
+        except HTTPException:
+            # If token is invalid, we do not interrupt the request
+            # since authentication is optional for now / log failures shouldn't block
+            pass
 
     # Rate limiting hook (stub — implement with Redis in Day 3+).
     # await _check_rate_limit(request_id)
@@ -70,7 +84,9 @@ async def chat_endpoint(
         response = await handle_chat(
             question=request.question,
             session=db,
+            conversation_id=request.conversation_id,
             request_id=request_id,
+            user_id=user_id,
         )
     except Exception as exc:  # noqa: BLE001
         logger.exception("Chat endpoint unhandled error: %s", exc)

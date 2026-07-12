@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState, lazy, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -164,9 +165,7 @@ function FinancialPage() {
             size="icon"
             variant="outline"
             className="h-8 w-8"
-            onClick={() =>
-              graphRef.current?.zoom((graphRef.current?.zoom() ?? 1) * 1.4, 300)
-            }
+            onClick={() => graphRef.current?.zoom((graphRef.current?.zoom() ?? 1) * 1.4, 300)}
           >
             <ZoomIn className="h-4 w-4" />
           </Button>
@@ -174,9 +173,7 @@ function FinancialPage() {
             size="icon"
             variant="outline"
             className="h-8 w-8"
-            onClick={() =>
-              graphRef.current?.zoom((graphRef.current?.zoom() ?? 1) / 1.4, 300)
-            }
+            onClick={() => graphRef.current?.zoom((graphRef.current?.zoom() ?? 1) / 1.4, 300)}
           >
             <ZoomOut className="h-4 w-4" />
           </Button>
@@ -191,9 +188,7 @@ function FinancialPage() {
                   {selectedNode.kind}
                 </div>
                 <div className="text-sm font-semibold">{selectedNode.label}</div>
-                <div className="text-[11px] text-muted-foreground font-mono">
-                  {selectedNode.id}
-                </div>
+                <div className="text-[11px] text-muted-foreground font-mono">{selectedNode.id}</div>
               </div>
               <button
                 onClick={() => setSelectedNode(null)}
@@ -232,8 +227,8 @@ function FinancialPage() {
                   Transaction
                 </div>
                 <div className="text-sm font-semibold">
-                  {(selectedLink.source?.label ?? selectedLink.source)} →{" "}
-                  {(selectedLink.target?.label ?? selectedLink.target)}
+                  {selectedLink.source?.label ?? selectedLink.source} →{" "}
+                  {selectedLink.target?.label ?? selectedLink.target}
                 </div>
               </div>
               <button

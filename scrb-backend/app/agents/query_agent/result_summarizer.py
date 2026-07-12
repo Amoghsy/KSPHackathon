@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from app.services.llm.base import LLMError, LLMResponse
+from app.services.llm.base import LLMError
 from app.services.llm.llm_factory import LLMFactory
 from app.services.llm.prompt_builder import PromptBuilder
 
@@ -55,7 +55,7 @@ class ResultSummarizer:
         result = await self._provider.generate(
             user_prompt,
             system=system_prompt,
-            temperature=0.3,   # slightly creative for natural language
+            temperature=0.3,  # slightly creative for natural language
             max_tokens=1024,
         )
 
@@ -69,7 +69,9 @@ class ResultSummarizer:
 
         logger.info(
             "Summary generated  tokens_in=%d  tokens_out=%d  latency=%.0fms",
-            result.input_tokens, result.output_tokens, result.latency_ms,
+            result.input_tokens,
+            result.output_tokens,
+            result.latency_ms,
         )
         return summary
 

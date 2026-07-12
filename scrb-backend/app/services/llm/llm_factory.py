@@ -30,7 +30,8 @@ _DEFAULT_PROVIDER = "gemini"
 
 
 def register_provider(
-    name: str, factory: Callable[..., BaseLLMProvider],
+    name: str,
+    factory: Callable[..., BaseLLMProvider],
 ) -> None:
     """
     Register an LLM provider factory.
@@ -73,8 +74,7 @@ class LLMFactory:
         if name not in _REGISTRY:
             available = ", ".join(sorted(_REGISTRY)) or "(none)"
             raise ValueError(
-                f"Unknown LLM provider '{name}'. "
-                f"Registered providers: {available}"
+                f"Unknown LLM provider '{name}'. " f"Registered providers: {available}"
             )
 
         instance = _REGISTRY[name](**kwargs)
@@ -91,9 +91,11 @@ class LLMFactory:
 # Auto-register built-in providers.
 # ---------------------------------------------------------------------------
 
+
 def _register_builtins() -> None:
     """Register the Gemini provider (always available)."""
     from app.services.llm.gemini_provider import GeminiProvider  # noqa: F811
+
     register_provider("gemini", GeminiProvider)
 
 

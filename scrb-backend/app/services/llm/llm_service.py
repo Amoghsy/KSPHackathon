@@ -75,7 +75,7 @@ class LLMError:
 # ---------------------------------------------------------------------------
 
 # Defaults — can be overridden per-call or via env vars.
-_DEFAULT_MODEL = "gemini-2.5-flash"
+_DEFAULT_MODEL = "gemini-3.5-flash"
 _DEFAULT_TEMPERATURE = 0.0
 _DEFAULT_MAX_TOKENS = 4096
 _DEFAULT_TIMEOUT = 60.0  # seconds
@@ -328,7 +328,9 @@ class LLMService:
                     latency_ms=round(elapsed_ms, 2),
                     raw={
                         "model": effective_model,
-                        "candidates_count": len(response.candidates) if response.candidates else 0,
+                        "candidates_count": (
+                            len(response.candidates) if response.candidates else 0
+                        ),
                     },
                 )
 
@@ -390,7 +392,12 @@ class LLMService:
         msg = str(exc).lower()
 
         # Authentication / API key errors.
-        if "api key" in msg or "401" in msg or "permission" in msg or "forbidden" in msg:
+        if (
+            "api key" in msg
+            or "401" in msg
+            or "permission" in msg
+            or "forbidden" in msg
+        ):
             return LLMError(
                 error="Invalid or missing GEMINI_API_KEY.",
                 error_type="authentication",
@@ -398,7 +405,12 @@ class LLMService:
             )
 
         # Quota / rate limit errors.
-        if "429" in msg or "quota" in msg or "rate" in msg or "resource_exhausted" in msg:
+        if (
+            "429" in msg
+            or "quota" in msg
+            or "rate" in msg
+            or "resource_exhausted" in msg
+        ):
             return LLMError(
                 error="Gemini API rate limit or quota exceeded. Please retry later.",
                 error_type="rate_limit",
@@ -406,7 +418,13 @@ class LLMService:
             )
 
         # Server errors (5xx).
-        if "500" in msg or "503" in msg or "502" in msg or "504" in msg or "internal" in msg:
+        if (
+            "500" in msg
+            or "503" in msg
+            or "502" in msg
+            or "504" in msg
+            or "internal" in msg
+        ):
             return LLMError(
                 error=f"Gemini API server error: {exc}",
                 error_type="server_error",

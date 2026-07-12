@@ -30,8 +30,7 @@ function AppShell() {
             left: "-5%",
             width: "520px",
             height: "520px",
-            background:
-              "radial-gradient(circle, oklch(0.5 0.14 220 / 0.55), transparent 70%)",
+            background: "radial-gradient(circle, oklch(0.5 0.14 220 / 0.55), transparent 70%)",
           }}
         />
         <div
@@ -41,8 +40,7 @@ function AppShell() {
             right: "-8%",
             width: "600px",
             height: "600px",
-            background:
-              "radial-gradient(circle, oklch(0.65 0.12 190 / 0.4), transparent 70%)",
+            background: "radial-gradient(circle, oklch(0.65 0.12 190 / 0.4), transparent 70%)",
           }}
         />
         <div
@@ -52,8 +50,7 @@ function AppShell() {
             left: "30%",
             width: "500px",
             height: "500px",
-            background:
-              "radial-gradient(circle, oklch(0.4 0.1 262 / 0.35), transparent 70%)",
+            background: "radial-gradient(circle, oklch(0.4 0.1 262 / 0.35), transparent 70%)",
           }}
         />
       </div>

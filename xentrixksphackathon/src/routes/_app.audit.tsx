@@ -80,7 +80,12 @@ function AuditPage() {
             Showing {start + 1}–{Math.min(start + PAGE_SIZE, rows.length)} of {rows.length}
           </span>
           <div className="flex gap-1">
-            <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page === 1}
+              onClick={() => setPage((p) => p - 1)}
+            >
               Prev
             </Button>
             <Button

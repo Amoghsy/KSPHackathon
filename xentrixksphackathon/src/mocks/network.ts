@@ -19,9 +19,7 @@ export function generateNetwork(): { nodes: GraphNode[]; links: GraphLink[] } {
 
   // Ring cluster around A12
   const ring = ["A12", "A15", "A19", "A22", "A27", "A31"];
-  ring.forEach((id, i) =>
-    nodes.push({ id, label: `Accused ${id}`, kind: "accused" }),
-  );
+  ring.forEach((id, i) => nodes.push({ id, label: `Accused ${id}`, kind: "accused" }));
   const cases = ["C201", "C204", "C219", "C231"];
   cases.forEach((id) => nodes.push({ id, label: id, kind: "case" }));
   const locs = ["L-Whitefield", "L-KRPuram", "L-Marathahalli"];
@@ -49,7 +47,8 @@ export function generateNetwork(): { nodes: GraphNode[]; links: GraphLink[] } {
   for (let i = 0; i < 12; i++) {
     const id = `A${100 + i}`;
     nodes.push({ id, label: `Accused ${id}`, kind: "accused" });
-    const target = Math.random() > 0.5 ? ring[int(0, ring.length - 1)] : cases[int(0, cases.length - 1)];
+    const target =
+      Math.random() > 0.5 ? ring[int(0, ring.length - 1)] : cases[int(0, cases.length - 1)];
     links.push({ source: id, target });
   }
 

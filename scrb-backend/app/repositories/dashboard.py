@@ -1,8 +1,8 @@
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.case import CaseMaster
 from app.models.accused import AccusedMaster
+from app.models.case import CaseMaster
 from app.models.victim import VictimMaster
 
 

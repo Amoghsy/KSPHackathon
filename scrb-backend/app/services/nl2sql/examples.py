@@ -25,7 +25,6 @@ class NLSQLExample:
 # ---------------------------------------------------------------------------
 
 FEW_SHOT_EXAMPLES: list[NLSQLExample] = [
-
     # 1. Simple filter by crime type and location
     NLSQLExample(
         question="Show all theft cases in Mysuru during 2025.",
@@ -43,7 +42,6 @@ FEW_SHOT_EXAMPLES: list[NLSQLExample] = [
             "LIMIT 100"
         ),
     ),
-
     # 2. Repeat offenders
     NLSQLExample(
         question="Which accused appeared in more than three FIRs?",
@@ -56,7 +54,6 @@ FEW_SHOT_EXAMPLES: list[NLSQLExample] = [
             "LIMIT 100"
         ),
     ),
-
     # 3. Recent robberies in a city
     NLSQLExample(
         question="Show robbery cases reported in Bengaluru last month.",
@@ -73,7 +70,6 @@ FEW_SHOT_EXAMPLES: list[NLSQLExample] = [
             "LIMIT 100"
         ),
     ),
-
     # 4. Case count by district
     NLSQLExample(
         question="How many cases were registered per district in 2025?",
@@ -88,7 +84,6 @@ FEW_SHOT_EXAMPLES: list[NLSQLExample] = [
             "LIMIT 100"
         ),
     ),
-
     # 5. Suspicious financial transactions
     NLSQLExample(
         question="Show all suspicious financial transactions above 1 lakh.",
@@ -102,7 +97,6 @@ FEW_SHOT_EXAMPLES: list[NLSQLExample] = [
             "LIMIT 100"
         ),
     ),
-
     # 6. Victim demographics
     NLSQLExample(
         question="List all victims under 18 years old.",
@@ -116,7 +110,6 @@ FEW_SHOT_EXAMPLES: list[NLSQLExample] = [
             "LIMIT 100"
         ),
     ),
-
     # 7. Cases with coordinates (geo queries)
     NLSQLExample(
         question="Find cases with GPS coordinates near latitude 12.97, longitude 77.59.",
@@ -130,7 +123,6 @@ FEW_SHOT_EXAMPLES: list[NLSQLExample] = [
             "LIMIT 100"
         ),
     ),
-
     # 8. Crime type breakdown
     NLSQLExample(
         question="What are the top 10 most common crime types?",
@@ -143,7 +135,6 @@ FEW_SHOT_EXAMPLES: list[NLSQLExample] = [
             "LIMIT 10"
         ),
     ),
-
     # 9. Accused linked to financial transactions
     NLSQLExample(
         question="Show accused persons involved in suspicious transactions.",
@@ -158,7 +149,6 @@ FEW_SHOT_EXAMPLES: list[NLSQLExample] = [
             "LIMIT 100"
         ),
     ),
-
     # 10. Police station workload
     NLSQLExample(
         question="Which police stations have the most cases this year?",
@@ -173,7 +163,6 @@ FEW_SHOT_EXAMPLES: list[NLSQLExample] = [
             "LIMIT 100"
         ),
     ),
-
     # 11. Cases without accused
     NLSQLExample(
         question="Find cases that have no accused persons linked.",
@@ -186,7 +175,6 @@ FEW_SHOT_EXAMPLES: list[NLSQLExample] = [
             "LIMIT 100"
         ),
     ),
-
     # 12. Monthly crime trend
     NLSQLExample(
         question="Show the monthly crime count for 2025.",
@@ -201,7 +189,6 @@ FEW_SHOT_EXAMPLES: list[NLSQLExample] = [
             "LIMIT 100"
         ),
     ),
-
     # 13. Total transaction value per case
     NLSQLExample(
         question="What is the total transaction amount per case?",
@@ -214,7 +201,6 @@ FEW_SHOT_EXAMPLES: list[NLSQLExample] = [
             "LIMIT 100"
         ),
     ),
-
     # 14. Cases by gender of accused
     NLSQLExample(
         question="How many accused persons are there by gender?",
@@ -226,7 +212,6 @@ FEW_SHOT_EXAMPLES: list[NLSQLExample] = [
             "LIMIT 100"
         ),
     ),
-
     # 15. Search by brief facts keyword
     NLSQLExample(
         question="Find cases mentioning 'kidnapping' in brief facts.",

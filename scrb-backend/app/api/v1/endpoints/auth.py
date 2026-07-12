@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 
 from app.schemas.auth import LoginRequest, TokenResponse
 from app.services.auth import AuthService
@@ -16,6 +16,6 @@ async def login(credentials: LoginRequest):
     token_details = await service.authenticate_user_placeholder(
         username=credentials.username,
         password=credentials.password,
-        role=credentials.role
+        role=credentials.role,
     )
     return token_details

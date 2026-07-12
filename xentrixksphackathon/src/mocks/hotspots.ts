@@ -29,7 +29,6 @@ const POS: Record<string, [number, number]> = {
   Hassan: [46.79, 77.52],
 };
 
-
 const CRIME_DOM = ["Theft", "Vehicle Theft", "Cybercrime", "Robbery", "Cheating"];
 
 export function generateHotspots(): Hotspot[] {

@@ -13,7 +13,7 @@ Usage (FastAPI dependency injection):
 
 from collections.abc import AsyncGenerator
 
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import settings
 
@@ -29,10 +29,7 @@ if not settings.database_url.startswith("sqlite"):
     engine_kwargs["pool_size"] = 10
     engine_kwargs["max_overflow"] = 20
 
-engine = create_async_engine(
-    settings.database_url,
-    **engine_kwargs
-)
+engine = create_async_engine(settings.database_url, **engine_kwargs)
 
 # ---------------------------------------------------------------------------
 # Async Session factory
@@ -42,7 +39,7 @@ SessionLocal = async_sessionmaker(
     autocommit=False,
     autoflush=False,
     class_=AsyncSession,
-    expire_on_commit=False,      # keep attributes accessible after commit
+    expire_on_commit=False,  # keep attributes accessible after commit
 )
 
 

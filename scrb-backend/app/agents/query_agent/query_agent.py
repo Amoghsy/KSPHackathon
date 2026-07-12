@@ -22,14 +22,6 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.agents.query_agent.exceptions import (
-    DatabaseUnavailableError,
-    LLMUnavailableError,
-    SQLExecutionError,
-    SQLGenerationError,
-    SQLValidationError,
-    SummaryError,
-)
 from app.agents.query_agent.response_formatter import (
     compute_confidence,
     format_error,
@@ -38,7 +30,7 @@ from app.agents.query_agent.response_formatter import (
 from app.agents.query_agent.result_summarizer import ResultSummarizer
 from app.services.nl2sql.sql_generator import SQLGenerator
 from app.services.nl2sql.sql_validator import SQLValidator
-from app.tools.database_tool import DatabaseTool, QueryError, QueryResult
+from app.tools.database_tool import DatabaseTool, QueryError
 
 logger = logging.getLogger(__name__)
 
@@ -150,7 +142,9 @@ class QueryAgent:
         total_ms = (time.perf_counter() - start) * 1000
         logger.info(
             "QueryAgent OK  rows=%d  confidence=%.2f  total=%.0fms",
-            result.row_count, confidence, total_ms,
+            result.row_count,
+            confidence,
+            total_ms,
         )
 
         return format_success(

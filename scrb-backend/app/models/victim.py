@@ -14,15 +14,16 @@ class VictimMaster(Base):
 
     victim_master_id: Mapped[int] = mapped_column(primary_key=True)
     case_master_id: Mapped[int] = mapped_column(
-        ForeignKey("case_master.case_master_id", ondelete="CASCADE"),
-        index=True
+        ForeignKey("case_master.case_master_id", ondelete="CASCADE"), index=True
     )
     victim_name: Mapped[str] = mapped_column(String(255), index=True)
 
     # Optional fields (TODO Confirm ER Schema)
     age_year: Mapped[int | None] = mapped_column()  # TODO Confirm ER Schema
     gender_id: Mapped[int | None] = mapped_column()  # TODO Confirm ER Schema
-    victim_police: Mapped[bool | None] = mapped_column(Boolean, default=False)  # TODO Confirm ER Schema
+    victim_police: Mapped[bool | None] = mapped_column(
+        Boolean, default=False
+    )  # TODO Confirm ER Schema
 
     # Relationships
     case: Mapped["CaseMaster"] = relationship(back_populates="victims")

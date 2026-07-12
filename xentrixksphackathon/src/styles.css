@@ -111,14 +111,16 @@
   --glass-highlight: color-mix(in oklab, white 90%, transparent);
 
   /* Gradients */
-  --gradient-app: radial-gradient(1200px 700px at 8% -10%, oklch(0.92 0.04 220 / 0.55), transparent 60%),
+  --gradient-app:
+    radial-gradient(1200px 700px at 8% -10%, oklch(0.92 0.04 220 / 0.55), transparent 60%),
     radial-gradient(1000px 600px at 100% 0%, oklch(0.9 0.05 190 / 0.4), transparent 55%),
     linear-gradient(180deg, oklch(0.98 0.005 247) 0%, oklch(0.94 0.015 240) 100%);
   --gradient-primary: linear-gradient(135deg, oklch(0.32 0.08 262), oklch(0.5 0.11 220));
   --gradient-teal: linear-gradient(135deg, oklch(0.65 0.12 190), oklch(0.55 0.11 210));
 
   /* Shadows */
-  --shadow-elegant: 0 10px 30px -12px oklch(0.32 0.08 262 / 0.25), 0 2px 6px -2px oklch(0.32 0.08 262 / 0.08);
+  --shadow-elegant:
+    0 10px 30px -12px oklch(0.32 0.08 262 / 0.25), 0 2px 6px -2px oklch(0.32 0.08 262 / 0.08);
   --shadow-glow: 0 0 0 1px oklch(0.65 0.12 190 / 0.3), 0 8px 24px -8px oklch(0.65 0.12 190 / 0.35);
   --shadow-inset-hairline: inset 0 1px 0 0 color-mix(in oklab, white 60%, transparent);
 }
@@ -168,7 +170,8 @@
   --glass-border: color-mix(in oklab, white 12%, transparent);
   --glass-highlight: color-mix(in oklab, white 8%, transparent);
 
-  --gradient-app: radial-gradient(1200px 700px at 8% -10%, oklch(0.35 0.08 230 / 0.35), transparent 60%),
+  --gradient-app:
+    radial-gradient(1200px 700px at 8% -10%, oklch(0.35 0.08 230 / 0.35), transparent 60%),
     radial-gradient(1000px 600px at 100% 0%, oklch(0.4 0.09 190 / 0.28), transparent 55%),
     linear-gradient(180deg, oklch(0.14 0.02 260) 0%, oklch(0.1 0.02 260) 100%);
   --shadow-elegant: 0 10px 30px -12px oklch(0 0 0 / 0.55), 0 2px 6px -2px oklch(0 0 0 / 0.35);
@@ -180,7 +183,8 @@
   * {
     border-color: var(--color-border);
   }
-  html, body {
+  html,
+  body {
     min-height: 100%;
   }
   body {
@@ -191,7 +195,10 @@
     font-feature-settings: "cv02", "cv11";
     -webkit-font-smoothing: antialiased;
   }
-  h1, h2, h3, h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
     letter-spacing: -0.015em;
   }
 }

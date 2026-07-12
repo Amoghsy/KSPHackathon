@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 # Structured response objects
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True, slots=True)
 class QueryResult:
     """Successful query execution result."""
@@ -72,6 +73,7 @@ _BLOCKED_PATTERN = re.compile(
 # ---------------------------------------------------------------------------
 # Service
 # ---------------------------------------------------------------------------
+
 
 class DatabaseTool:
     """
@@ -178,7 +180,9 @@ class DatabaseTool:
             safe_message = self._sanitise_error(exc)
             logger.error(
                 "Query FAILED after %.1fms: %s — SQL=%.200s",
-                elapsed_ms, safe_message, sql,
+                elapsed_ms,
+                safe_message,
+                sql,
             )
             return QueryError(error=safe_message, error_type="execution")
 
@@ -195,7 +199,9 @@ class DatabaseTool:
         msg = str(exc)
 
         # Strip connection strings / passwords that might appear.
-        msg = re.sub(r"(postgresql|postgres|psycopg)\S*", "[redacted]", msg, flags=re.IGNORECASE)
+        msg = re.sub(
+            r"(postgresql|postgres|psycopg)\S*", "[redacted]", msg, flags=re.IGNORECASE
+        )
 
         # Trim to a reasonable length.
         if len(msg) > 500:

@@ -43,24 +43,56 @@ export const CRIME_HEADS = [
   "Fraud",
 ];
 
-export const STATUSES = [
-  "Under Investigation",
-  "Charge Sheeted",
-  "Closed",
-  "Undetected",
-] as const;
+export const STATUSES = ["Under Investigation", "Charge Sheeted", "Closed", "Undetected"] as const;
 
 export const GRAVITY = ["Low", "Medium", "High", "Grievous"] as const;
 
 const FIRST_NAMES = [
-  "Arjun", "Priya", "Ravi", "Suresh", "Meera", "Karthik", "Divya", "Rahul",
-  "Anitha", "Manoj", "Lakshmi", "Vikram", "Sneha", "Rajesh", "Kavya",
-  "Prakash", "Deepa", "Shreya", "Ganesh", "Nithya", "Harish", "Sunitha",
-  "Vinay", "Rohit", "Anusha", "Basava", "Chetan", "Mahesh",
+  "Arjun",
+  "Priya",
+  "Ravi",
+  "Suresh",
+  "Meera",
+  "Karthik",
+  "Divya",
+  "Rahul",
+  "Anitha",
+  "Manoj",
+  "Lakshmi",
+  "Vikram",
+  "Sneha",
+  "Rajesh",
+  "Kavya",
+  "Prakash",
+  "Deepa",
+  "Shreya",
+  "Ganesh",
+  "Nithya",
+  "Harish",
+  "Sunitha",
+  "Vinay",
+  "Rohit",
+  "Anusha",
+  "Basava",
+  "Chetan",
+  "Mahesh",
 ];
 const LAST_NAMES = [
-  "Kumar", "Rao", "Shetty", "Reddy", "Naik", "Patil", "Gowda", "Iyer",
-  "Hegde", "Bhat", "Kulkarni", "Murthy", "Nayak", "Singh", "Prasad",
+  "Kumar",
+  "Rao",
+  "Shetty",
+  "Reddy",
+  "Naik",
+  "Patil",
+  "Gowda",
+  "Iyer",
+  "Hegde",
+  "Bhat",
+  "Kulkarni",
+  "Murthy",
+  "Nayak",
+  "Singh",
+  "Prasad",
 ];
 
 export function firNumber(i: number, year = 2026) {

@@ -36,9 +36,7 @@ export function PageHeader({
         <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground truncate">
           {title}
         </h1>
-        {subtitle && (
-          <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
-        )}
+        {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
       </div>
       {actions && <div className="flex items-center gap-2 shrink-0 flex-wrap">{actions}</div>}
     </div>

@@ -56,17 +56,25 @@ function MapPage() {
           <div className="space-y-2">
             <Label>Crime type</Label>
             <Select defaultValue="All">
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="All">All types</SelectItem>
-                {CRIME_HEADS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                {CRIME_HEADS.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
             <Label>Date range</Label>
             <Select defaultValue="30">
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="7">Last 7 days</SelectItem>
                 <SelectItem value="30">Last 30 days</SelectItem>
@@ -78,20 +86,32 @@ function MapPage() {
           <div className="space-y-2">
             <Label>District</Label>
             <Select defaultValue="All">
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="All">All districts</SelectItem>
-                {DISTRICTS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                {DISTRICTS.map((d) => (
+                  <SelectItem key={d} value={d}>
+                    {d}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
             <Label>Gravity</Label>
             <Select defaultValue="All">
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="All">All</SelectItem>
-                {GRAVITY.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                {GRAVITY.map((g) => (
+                  <SelectItem key={g} value={g}>
+                    {g}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -104,7 +124,8 @@ function MapPage() {
               <div className="flex-1 h-2 rounded-full bg-gradient-to-r from-[rgba(80,144,192,0.6)] via-[rgba(212,192,80,0.75)] to-[rgba(192,80,77,0.85)]" />
             </div>
             <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
-              <span>Low</span><span>High</span>
+              <span>Low</span>
+              <span>High</span>
             </div>
           </div>
         </aside>
@@ -114,7 +135,11 @@ function MapPage() {
           {isLoading || !data ? (
             <Skeleton className="absolute inset-4" />
           ) : (
-            <svg viewBox="0 0 100 120" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+            <svg
+              viewBox="0 0 100 120"
+              className="w-full h-full"
+              preserveAspectRatio="xMidYMid meet"
+            >
               {/* Karnataka state outline (simplified from GADM boundary) */}
               <path
                 d={KARNATAKA_PATH}
@@ -126,7 +151,11 @@ function MapPage() {
 
               {/* Hotspot circles */}
               {data.map((h) => (
-                <g key={h.district} className="cursor-pointer" onClick={() => setSelected(h.district)}>
+                <g
+                  key={h.district}
+                  className="cursor-pointer"
+                  onClick={() => setSelected(h.district)}
+                >
                   <circle
                     cx={h.x}
                     cy={h.y}
@@ -163,7 +192,12 @@ function MapPage() {
               <div className="text-xs mt-1">
                 Dominant: <span className="font-medium">{sel.dominant}</span>
               </div>
-              <div className={cn("text-xs mt-0.5 font-medium", sel.trend >= 0 ? "text-destructive" : "text-success")}>
+              <div
+                className={cn(
+                  "text-xs mt-0.5 font-medium",
+                  sel.trend >= 0 ? "text-destructive" : "text-success",
+                )}
+              >
                 {sel.trend >= 0 ? "▲" : "▼"} {Math.abs(sel.trend)}% vs prior period
               </div>
               <button

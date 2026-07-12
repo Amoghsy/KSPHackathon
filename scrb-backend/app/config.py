@@ -8,7 +8,11 @@ Import `settings` anywhere you need configuration:
     print(settings.app_name)
 """
 
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Load environment variables from .env file into os.environ
+load_dotenv()
 
 
 class Settings(BaseSettings):
@@ -27,7 +31,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
-        extra="ignore",          # silently ignore unknown env vars
+        extra="ignore",  # silently ignore unknown env vars
     )
 
 
