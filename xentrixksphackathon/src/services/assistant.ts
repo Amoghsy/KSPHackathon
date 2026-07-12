@@ -39,10 +39,12 @@ function mapAgent(agentName?: string): AgentKind | undefined {
 export async function askAssistant(
   question: string,
   conversationId?: string | null,
+  responseLanguage?: string | null,
 ): Promise<ChatMessage & { conversationId?: string }> {
   const resp = await sendChatMessage({
     question,
     conversation_id: conversationId ?? null,
+    response_language: responseLanguage ?? null,
   });
 
   if (resp.status === "error") {

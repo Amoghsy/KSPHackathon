@@ -27,6 +27,10 @@ class ChatRequest(BaseModel):
         default=None,
         description="Optional conversation ID to maintain session context.",
     )
+    response_language: Optional[str] = Field(
+        default="auto",
+        description="Requested response language: auto, en, kn",
+    )
 
 
 # ---------------------------------------------------------------------------

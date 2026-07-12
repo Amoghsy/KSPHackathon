@@ -8,6 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
+import { useLanguage } from "../context/LanguageContext";
+
 export const Route = createFileRoute("/_app/settings")({
   head: () => ({ meta: [{ title: "Settings — Crime Intelligence Assistant" }] }),
   component: SettingsPage,
@@ -15,7 +17,8 @@ export const Route = createFileRoute("/_app/settings")({
 
 function SettingsPage() {
   const user = useAuthStore((s) => s.user);
-  const { lang, setLang, theme, toggleTheme } = usePrefs();
+  const { language, setLanguage } = useLanguage();
+  const { theme, toggleTheme } = usePrefs();
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <PageHeader title="Settings" subtitle="Profile, language and notification preferences." />
@@ -48,23 +51,32 @@ function SettingsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-medium">Language</div>
-                <div className="text-xs text-muted-foreground">Interface language for labels.</div>
+                <div className="text-xs text-muted-foreground">Interface language and query response preferences.</div>
               </div>
               <div className="flex rounded-md border border-input overflow-hidden text-xs">
                 <button
-                  onClick={() => setLang("en")}
+                  onClick={() => setLanguage("auto")}
                   className={
                     "px-3 py-1.5 font-medium " +
-                    (lang === "en" ? "bg-primary text-primary-foreground" : "hover:bg-accent")
+                    (language === "auto" ? "bg-primary text-primary-foreground" : "hover:bg-accent")
+                  }
+                >
+                  Auto Detect
+                </button>
+                <button
+                  onClick={() => setLanguage("en")}
+                  className={
+                    "px-3 py-1.5 font-medium " +
+                    (language === "en" ? "bg-primary text-primary-foreground" : "hover:bg-accent")
                   }
                 >
                   English
                 </button>
                 <button
-                  onClick={() => setLang("kn")}
+                  onClick={() => setLanguage("kn")}
                   className={
                     "px-3 py-1.5 font-medium " +
-                    (lang === "kn" ? "bg-primary text-primary-foreground" : "hover:bg-accent")
+                    (language === "kn" ? "bg-primary text-primary-foreground" : "hover:bg-accent")
                   }
                 >
                   ಕನ್ನಡ

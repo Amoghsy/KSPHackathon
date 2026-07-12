@@ -34,12 +34,13 @@ class ResultSummarizer:
         sql: str,
         rows: list[dict[str, Any]],
         row_count: int,
+        response_language: str = "auto",
     ) -> str:
         """
         Generate a natural-language summary of the query results.
 
-        Returns
-        -------
+        Parameters
+        ----------
         str  A concise summary. Returns a canned message when no rows.
         """
         if row_count == 0 or not rows:
@@ -50,6 +51,7 @@ class ResultSummarizer:
             sql=sql,
             rows=rows,
             row_count=row_count,
+            response_language=response_language,
         )
 
         result = await self._provider.generate(

@@ -66,6 +66,7 @@ paragraph for complex results.
 4. Use natural language. Do not output raw SQL, JSON, or code.
 5. Mention key numbers, names, and dates from the data.
 6. If data contains aggregates, highlight the most significant findings.
+7. Preferred Response Language: $lang_instruction
 """)
 
 _SUMMARIZER_USER_TEMPLATE = Template("""\
@@ -135,6 +136,7 @@ class PromptBuilder:
         sql: str,
         rows: list[dict],
         row_count: int,
+        response_language: str = "auto",
     ) -> tuple[str, str]:
         """
         Build system + user prompts for result summarisation.
@@ -149,7 +151,14 @@ class PromptBuilder:
             self._format_rows(display_rows) if display_rows else "(empty result set)"
         )
 
-        system = _SUMMARIZER_SYSTEM_TEMPLATE.safe_substitute()
+        if response_language == "kn":
+            lang_instruction = "Respond only in Kannada. Do not translate after generation. Generate directly in Kannada."
+        elif response_language == "en":
+            lang_instruction = "Respond only in English. Do not translate after generation. Generate directly in English."
+        else:
+            lang_instruction = "Respond in the language predominantly used by the user. Do not translate after generation. Generate directly in that language."
+
+        system = _SUMMARIZER_SYSTEM_TEMPLATE.safe_substitute(lang_instruction=lang_instruction)
         user = _SUMMARIZER_USER_TEMPLATE.safe_substitute(
             question=question,
             sql=sql,

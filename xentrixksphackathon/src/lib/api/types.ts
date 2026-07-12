@@ -20,6 +20,7 @@ export interface LoginResponse {
 export interface ChatRequest {
   question: string;
   conversation_id?: string | null;
+  response_language?: string | null;
 }
 
 export interface ChatRow {
@@ -73,6 +74,7 @@ export interface ConversationSession {
   last_generated_sql?: string | null;
   conversation_history: ConversationMessage[];
   resolved_entities: ResolvedEntities;
+  preferred_language: string;
 }
 
 // ─── Dashboard ──────────────────────────────────────────────────────────────

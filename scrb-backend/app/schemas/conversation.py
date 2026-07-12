@@ -17,6 +17,7 @@ class ConversationUpdate(BaseModel):
     resolved_entities: Optional[Dict[str, Optional[str]]] = Field(
         None, description="Updated resolved entities dict"
     )
+    preferred_language: Optional[str] = Field(None, description="Updated language preference")
 
 
 class ConversationResponse(BaseModel):
@@ -40,6 +41,7 @@ class ConversationResponse(BaseModel):
     conversation_history: List[Dict[str, Any]] = Field(
         ..., description="List of messages (user and assistant)"
     )
+    preferred_language: str = Field("auto", description="Preferred response language")
 
     class Config:
         from_attributes = True

@@ -56,6 +56,8 @@ class QueryAgent:
         self,
         question: str,
         session: AsyncSession,
+        *,
+        response_language: str = "auto",
     ) -> dict[str, Any]:
         """
         Execute the full query pipeline.
@@ -135,6 +137,7 @@ class QueryAgent:
                 sql=generated_sql,
                 rows=result.rows,
                 row_count=result.row_count,
+                response_language=response_language,
             )
         except Exception as exc:  # noqa: BLE001
             logger.warning("Summary generation failed: %s", exc)

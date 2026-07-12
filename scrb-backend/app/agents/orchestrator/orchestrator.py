@@ -52,6 +52,7 @@ class Orchestrator:
         conversation_id: str | None = None,
         request_id: str | None = None,
         user_id: int | None = None,
+        response_language: str = "auto",
     ) -> dict[str, Any]:
         """
         Process a user request end-to-end.
@@ -75,6 +76,9 @@ class Orchestrator:
             conv_context = await self.conversation_manager.create_conversation(
                 conv_id, user_id=user_id
             )
+        
+        # Update preference in context
+        conv_context.preferred_language = response_language
 
         # 2. Inject context to resolve follow-up questions
         resolved_question = self.context_injector.inject(
@@ -103,7 +107,7 @@ class Orchestrator:
             return response
 
         try:
-            response = await agent.run(resolved_question, session)
+            response = await agent.run(resolved_question, session, response_language=response_language)
         except Exception as exc:
             logger.exception(
                 "Agent '%s' raised an unexpected error: %s", agent_name, exc
@@ -160,6 +164,7 @@ class Orchestrator:
                             resolved_entities=entities_dict,
                             last_generated_sql=response.get("generated_sql"),
                             last_question=question,
+                            preferred_language=response_language,
                         ),
                         self._log_conversation(
                             None, question, resolved_question, response,

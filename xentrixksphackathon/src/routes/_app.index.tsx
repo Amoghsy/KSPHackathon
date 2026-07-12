@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useLanguage } from "../context/LanguageContext";
 import { format } from "date-fns";
 import {
   Send,
@@ -75,6 +76,7 @@ function getSpeechRecognition(): unknown | null {
 function ChatPage() {
   const t = useT();
   const queryClient = useQueryClient();
+  const { language, setLanguage, recognitionLanguage } = useLanguage();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -86,7 +88,9 @@ function ChatPage() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const recognitionRef = useRef<unknown>(null);
+  const recognitionRef = useRef<any>(null);
+  const silenceTimerRef = useRef<any>(null);
+  const initialInputRef = useRef("");
 
   const SR = useMemo(() => getSpeechRecognition(), []);
   const speechSupported = !!SR;
@@ -140,62 +144,124 @@ function ChatPage() {
     }
   }, [input, messages]);
 
-  function stopListening() {
+  const stopListening = useCallback(() => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
     try {
-      (recognitionRef.current as { stop: () => void })?.stop();
+      (recognitionRef.current as any)?.stop();
     } catch (e) {
       console.warn("Speech recognition stop failed:", e);
     }
     setListening(false);
-  }
+  }, []);
 
-  function startListening() {
+  const startListening = useCallback(() => {
     if (!SR) return;
-    const SRClass = SR as new () => {
-      lang: string;
-      interimResults: boolean;
-      continuous: boolean;
-      onresult: (ev: unknown) => void;
-      onerror: (ev: unknown) => void;
-      onend: () => void;
-      start: () => void;
+
+    // Capture initial textbox content
+    initialInputRef.current = input;
+
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+    }
+
+    const resetSilenceTimer = () => {
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+      }
+      silenceTimerRef.current = setTimeout(() => {
+        stopListening();
+        toast.info("Voice input stopped", {
+          description: "Listening timed out due to inactivity.",
+        });
+      }, 8000);
     };
+
+    const SRClass = SR as new () => any;
     const rec = new SRClass();
-    rec.lang = "en-US";
+    rec.lang = recognitionLanguage;
     rec.interimResults = true;
     rec.continuous = false;
-    rec.onresult = (ev: unknown) => {
-      const event = ev as {
-        resultIndex: number;
-        results: { [i: number]: [{ transcript: string }] };
-      };
-      let finalText = "";
-      for (let i = event.resultIndex; i < Object.keys(event.results).length; i++) {
-        finalText += event.results[i][0].transcript;
+
+    rec.onresult = (ev: any) => {
+      resetSilenceTimer();
+      let finalTranscript = "";
+      let interimTranscript = "";
+
+      for (let i = 0; i < ev.results.length; ++i) {
+        if (ev.results[i].isFinal) {
+          finalTranscript += ev.results[i][0].transcript;
+        } else {
+          interimTranscript += ev.results[i][0].transcript;
+        }
       }
-      setInput((prev) => (prev ? prev.trimEnd() + " " : "") + finalText.trim());
+
+      const fullTranscript = (finalTranscript + interimTranscript).trim();
+      const base = initialInputRef.current ? initialInputRef.current.trim() : "";
+      setInput(base ? base + " " + fullTranscript : fullTranscript);
     };
-    rec.onerror = (ev: unknown) => {
-      toast.error("Voice input error", {
-        description: (ev as { error?: string }).error ?? "Unknown error",
-      });
+
+    rec.onerror = (ev: any) => {
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+      const err = ev.error;
+      if (err === "not-allowed") {
+        toast.error("Microphone access denied", {
+          description: "Please allow microphone access in your browser settings to use voice input.",
+        });
+      } else if (err === "no-speech") {
+        toast.warning("No speech detected", {
+          description: "Speak clearly into your microphone.",
+        });
+      } else {
+        toast.error("Voice input error", {
+          description: err ?? "Unknown error occurred",
+        });
+      }
       setListening(false);
     };
-    rec.onend = () => setListening(false);
+
+    rec.onend = () => {
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+      setListening(false);
+    };
+
     recognitionRef.current = rec;
     setListening(true);
+    resetSilenceTimer();
+
     try {
       rec.start();
     } catch {
       setListening(false);
     }
-  }
+  }, [SR, recognitionLanguage, stopListening, input]);
+
+  // Clean up silence timer on unmount
+  useEffect(() => {
+    return () => {
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+      }
+    };
+  }, []);
 
   const send = useCallback(
     async (text: string) => {
       const q = text.trim();
       if (!q || loading) return;
       setChatError(null);
+
+      if (listening) {
+        stopListening();
+      }
 
       const userMsg: ChatMessage = {
         id: crypto.randomUUID(),
@@ -208,7 +274,7 @@ function ChatPage() {
       setLoading(true);
 
       try {
-        const reply = await askAssistant(q, conversationId);
+        const reply = await askAssistant(q, conversationId, language);
         // Capture the conversation_id from the response
         const replyWithId = reply as ChatMessage & { conversationId?: string };
         if (replyWithId.conversationId && !conversationId) {
@@ -453,14 +519,17 @@ function ChatPage() {
                         }}
                         disabled={!speechSupported}
                         className={cn(
-                          "h-8 w-8 rounded flex items-center justify-center hover:bg-accent relative",
+                          "h-8 w-8 rounded flex items-center justify-center hover:bg-accent relative transition-all",
                           !speechSupported && "opacity-40 cursor-not-allowed",
-                          listening && "bg-destructive/10 text-destructive",
+                          listening && "bg-destructive/20 text-destructive scale-105",
                         )}
                       >
-                        <Mic className="h-4 w-4" />
+                        <Mic className={cn("h-4 w-4", listening && "animate-pulse")} />
                         {listening && (
-                          <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-destructive animate-pulse ring-2 ring-card" />
+                          <>
+                            <span className="absolute inset-0 rounded bg-destructive/30 animate-ping" />
+                            <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-destructive ring-2 ring-card animate-bounce" />
+                          </>
                         )}
                       </button>
                     </TooltipTrigger>
@@ -473,8 +542,8 @@ function ChatPage() {
                     </TooltipContent>
                   </UITooltip>
                 </TooltipProvider>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase tracking-wider">
-                  EN
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase tracking-wider font-mono">
+                  {recognitionLanguage.split("-")[0]}
                 </span>
               </div>
             </div>
@@ -538,6 +607,10 @@ function ChatPage() {
                       setConversationId(s.conversation_id);
                       setMessages([]);
                       setChatError(null);
+                      // Restore preferred language
+                      if (s.preferred_language) {
+                        setLanguage(s.preferred_language as any);
+                      }
                       // Load last message into the view if available
                       if (s.conversation_history?.length > 0) {
                         const hydratedMessages: ChatMessage[] = s.conversation_history.map(

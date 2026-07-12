@@ -55,6 +55,7 @@ class ConversationManager:
         resolved_entities: Optional[Dict[str, Any]] = None,
         last_generated_sql: Optional[str] = None,
         last_question: Optional[str] = None,
+        preferred_language: Optional[str] = None,
         expiry: int = 86400,
     ) -> Optional[ConversationContext]:
         """
@@ -65,6 +66,7 @@ class ConversationManager:
         - If resolved_entities is provided, it merges them into current entity memory.
         - If last_generated_sql is provided, it updates the SQL query history.
         - If last_question is provided, it updates the last user question.
+        - If preferred_language is provided, it updates the language preference.
         """
         context = await self.store.load(conversation_id)
         if not context:
@@ -80,6 +82,8 @@ class ConversationManager:
             context.last_generated_sql = last_generated_sql
         if last_question is not None:
             context.last_question = last_question
+        if preferred_language is not None:
+            context.preferred_language = preferred_language
 
         context.updated_at = time.time()
         await self.store.save(context, expiry=expiry)

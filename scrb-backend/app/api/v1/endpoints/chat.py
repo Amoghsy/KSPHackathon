@@ -87,6 +87,7 @@ async def chat_endpoint(
             conversation_id=request.conversation_id,
             request_id=request_id,
             user_id=user_id,
+            response_language=request.response_language,
         )
     except Exception as exc:  # noqa: BLE001
         logger.exception("Chat endpoint unhandled error: %s", exc)

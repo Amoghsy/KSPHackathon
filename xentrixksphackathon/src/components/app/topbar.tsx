@@ -15,10 +15,12 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
+import { LanguageSelector } from "./LanguageSelector";
+
 export function Topbar() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
-  const { lang, setLang, theme, toggleTheme, setMobileNavOpen } = usePrefs();
+  const { theme, toggleTheme, setMobileNavOpen } = usePrefs();
   const navigate = useNavigate();
   const t = useT();
 
@@ -77,26 +79,7 @@ export function Topbar() {
 
       {/* Right cluster */}
       <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-        <div className="hidden sm:flex items-center h-9 rounded-md border border-input/70 bg-background/40 backdrop-blur-md overflow-hidden text-xs">
-          <button
-            onClick={() => setLang("en")}
-            className={cn(
-              "h-full px-2.5 font-medium flex items-center transition-colors",
-              lang === "en" ? "bg-primary text-primary-foreground" : "hover:bg-accent",
-            )}
-          >
-            EN
-          </button>
-          <button
-            onClick={() => setLang("kn")}
-            className={cn(
-              "h-full px-2.5 font-medium flex items-center transition-colors",
-              lang === "kn" ? "bg-primary text-primary-foreground" : "hover:bg-accent",
-            )}
-          >
-            KN
-          </button>
-        </div>
+        <LanguageSelector />
 
         <button
           onClick={toggleTheme}

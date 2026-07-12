@@ -35,6 +35,7 @@ async def handle_chat(
     conversation_id: str | None = None,
     request_id: str | None = None,
     user_id: int | None = None,
+    response_language: str = "auto",
 ) -> dict[str, Any]:
     """
     Process a chat request through the orchestrator pipeline.
@@ -51,6 +52,8 @@ async def handle_chat(
         Correlation ID for tracing.
     user_id : int, optional
         Authenticated user ID.
+    response_language : str, optional
+        Preferred response language (auto, en, kn).
 
     Returns
     -------
@@ -63,4 +66,5 @@ async def handle_chat(
         conversation_id=conversation_id,
         request_id=request_id,
         user_id=user_id,
+        response_language=response_language,
     )

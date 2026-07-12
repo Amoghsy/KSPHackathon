@@ -29,6 +29,7 @@ class ConversationContext:
         resolved_entities: Optional[Dict[str, Any] | EntityMemory] = None,
         messages: Optional[List[Dict[str, Any]]] = None,
         timestamp: Optional[float] = None,
+        preferred_language: Optional[str] = "auto",
     ) -> None:
         self.conversation_id = conversation_id
         self.user_id = user_id
@@ -38,6 +39,7 @@ class ConversationContext:
         self.last_question = last_question
         self.last_generated_sql = last_generated_sql
         self.conversation_history = conversation_history or messages or []
+        self.preferred_language = preferred_language or "auto"
 
         if isinstance(resolved_entities, EntityMemory):
             self.entity_memory = resolved_entities
@@ -81,6 +83,7 @@ class ConversationContext:
             "conversation_history": self.conversation_history,
             "messages": self.conversation_history,  # Keep for backward compatibility
             "resolved_entities": self.resolved_entities,
+            "preferred_language": self.preferred_language,
         }
         # Inject individual entity fields at root level for direct compatibility
         d.update(self.resolved_entities)
@@ -114,6 +117,7 @@ class ConversationContext:
             last_generated_sql=data.get("last_generated_sql"),
             conversation_history=history,
             resolved_entities=resolved_entities_data,
+            preferred_language=data.get("preferred_language", "auto"),
         )
 
 
