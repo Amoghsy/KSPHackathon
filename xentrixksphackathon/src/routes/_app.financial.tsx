@@ -31,9 +31,9 @@ const SUSPICIOUS_COLOR = "#DC2626";
 const NORMAL_LINK = "rgba(100,116,139,0.35)";
 
 function FinancialPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useQuery<any>({
     queryKey: ["financial-network"],
-    queryFn: getFinancialNetwork,
+    queryFn: () => getFinancialNetwork(),
   });
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<any>(null);
@@ -73,7 +73,7 @@ function FinancialPage() {
                 onClick={() => {
                   if (!data) return;
                   const node = data.nodes.find(
-                    (n) =>
+                    (n: any) =>
                       n.id.toLowerCase() === q.toLowerCase() ||
                       n.label.toLowerCase().includes(q.toLowerCase()),
                   );
