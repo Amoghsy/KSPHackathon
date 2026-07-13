@@ -15,7 +15,7 @@ export function int(min: number, max: number): number {
   return Math.floor(random() * (max - min + 1)) + min;
 }
 
-export function pick<T>(list: T[]): T {
+export function pick<T>(list: readonly T[]): T {
   return list[Math.floor(random() * list.length)];
 }
 

@@ -382,44 +382,6 @@ class GraphBuilder:
                 if tx.reason:
                     consolidated_transfers[edge_key]["reasons"].append(tx.reason)
 
-            # If transaction is linked to a case, add Case Node and link Account to Case
-            if tx.case_master_id and tx.case_master_id in case_map:
-                c = case_map[tx.case_master_id]
-                case_id = f"C{c.case_master_id}"
-
-                if case_id not in G_fin:
-                    G_fin.add_node(
-                        case_id,
-                        label=c.case_no or c.crime_no,
-                        kind="case",
-                        metadata={"case_no": c.case_no, "crime_no": c.crime_no},
-                    )
-
-                # Link Account to Case
-                G_fin.add_edge(
-                    tx.source_account,
-                    case_id,
-                    label="linked case",
-                    relationship="linked",
-                )
-
-                # Link Case to Location
-                if c.police_station:
-                    ps = c.police_station
-                    ps_id = f"PS_{ps.police_station_id}"
-                    if ps_id not in G_fin:
-                        G_fin.add_node(
-                            ps_id,
-                            label=ps.name,
-                            kind="location",
-                            metadata={"police_station_id": ps.police_station_id},
-                        )
-                    G_fin.add_edge(
-                        case_id,
-                        ps_id,
-                        label="occurred at",
-                        relationship="occurred at",
-                    )
 
         # Add transfer links to G_fin
         for (src, dest), data in consolidated_transfers.items():

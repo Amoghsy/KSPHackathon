@@ -32,6 +32,7 @@ export const ENDPOINTS = {
 
   // Network
   NETWORK: "/network/",
+  NETWORK_EXPAND: "/network/expand",
   NETWORK_ACCUSED: (id: string) => `/network/accused/${id}`,
   NETWORK_CASE: (id: string) => `/network/case/${id}`,
   NETWORK_COMMUNITY: "/network/community",

@@ -41,25 +41,126 @@ class GraphService:
             "focus_id": focus_id,
         }
 
-        # Check Cache
+        # 0. Check if Level 1 Dashboard View (no focus ID, no active filters)
+        is_level1 = not (district or crime_type or police_station or time_period or focus_id)
+        if is_level1:
+            cached_stats = await self.cache.get("dashboard_stats", {})
+            if cached_stats:
+                return {
+                    "graph": {"nodes": [], "links": []},
+                    **cached_stats
+                }
+
+            # If not cached, let's load all cases to compute global stats
+            cases = await self.repository.get_filtered_cases()
+            case_ids = [c.case_master_id for c in cases]
+            accused = await self.repository.get_accused_for_cases(case_ids)
+            accused_ids = [a.accused_master_id for a in accused]
+            victims = await self.repository.get_victims_for_cases(case_ids)
+            transactions = await self.repository.get_financial_transactions(
+                case_ids=case_ids, accused_ids=accused_ids
+            )
+
+            G_full = GraphBuilder.build_criminal_network(cases, accused, victims, transactions)
+            centrality = GraphAnalyzer.calculate_centrality(G_full)
+            communities = GraphAnalyzer.detect_communities(G_full, centrality["pagerank"])
+            repeat_offenders = GraphAnalyzer.detect_repeat_offenders(G_full, centrality["degree"])
+
+            node_degrees = dict(G_full.degree())
+            degree_values = list(node_degrees.values())
+            avg_degree = sum(degree_values) / len(degree_values) if degree_values else 0.0
+
+            most_connected = [
+                G_full.nodes[node].get("label", node)
+                for node, deg in node_degrees.items()
+                if deg > avg_degree and G_full.nodes[node].get("kind") == "accused"
+            ]
+
+            sorted_bet = sorted(
+                centrality["betweenness"].items(), key=lambda x: x[1], reverse=True
+            )
+            bridge_nodes = [
+                G_full.nodes[node].get("label", node)
+                for node, bet in sorted_bet[:5]
+                if bet > 0.0 and G_full.nodes[node].get("kind") == "accused"
+            ]
+
+            station_nodes = [
+                (node, deg) for node, deg in node_degrees.items()
+                if G_full.nodes[node].get("kind") == "location" 
+                and G_full.nodes[node].get("metadata", {}).get("type") == "police_station"
+            ]
+            most_connected_station = "Unknown Station"
+            if station_nodes:
+                best_station_node = max(station_nodes, key=lambda x: x[1])[0]
+                most_connected_station = G_full.nodes[best_station_node].get("label", "Unknown Station")
+
+            stats = {
+                "degree_centrality": centrality["degree"],
+                "betweenness_centrality": centrality["betweenness"],
+                "closeness_centrality": centrality["closeness"],
+                "pagerank": centrality["pagerank"],
+                "communities": communities[:5],  # Top 5
+                "repeat_offenders": repeat_offenders[:10],  # Top 10
+                "density": round(nx.density(G_full), 5),
+                "node_count": G_full.number_of_nodes(),
+                "edge_count": G_full.number_of_edges(),
+                "most_connected": most_connected[:10],
+                "bridge_nodes": bridge_nodes,
+                "crime_clusters": [c["members"] for c in communities if len(c["members"]) > 1],
+                "most_connected_police_station": most_connected_station,
+                "focus_reason": "Dashboard loaded. Choose investigation target.",
+                "center_node": None,
+            }
+            await self.cache.set("dashboard_stats", {}, stats)
+            return {
+                "graph": {"nodes": [], "links": []},
+                **stats
+            }
+
+        # Level 2: Target-focused Subgraph Extraction
+        # Try to retrieve from Cache (resolve focus_kind first for cache key)
+        cases_sample = []
+        if focus_id:
+            cases_sample = await self.repository.get_cases_by_focus_id(focus_id)
+        if cases_sample:
+            # We build a temp graph to figure out focus_kind for caching
+            temp_G = GraphBuilder.build_criminal_network(cases_sample[:1], [], [], [])
+            focus_clean = focus_id.strip()
+            focus_kind = "target"
+            if focus_clean in temp_G:
+                focus_kind = temp_G.nodes[focus_clean].get("kind", "target")
+            else:
+                for n, d in temp_G.nodes(data=True):
+                    if d.get("label", "").lower() == focus_clean.lower():
+                        focus_kind = d.get("kind", "target")
+                        break
+            filters["focus_kind"] = focus_kind
+
         cached_data = await self.cache.get("criminal_network", filters)
         if cached_data:
             return cached_data
 
-        # 1. Fetch live data
-        cases = await self.repository.get_filtered_cases(
-            district=district,
-            crime_type=crime_type,
-            police_station=police_station,
-            time_period=time_period,
-        )
+        # 1. Fetch live targeted data
+        if focus_id:
+            cases = await self.repository.get_cases_by_focus_id(focus_id)
+            if district and district != "All":
+                cases = [c for c in cases if c.police_station and c.police_station.district == district]
+            if police_station and police_station != "All":
+                cases = [c for c in cases if c.police_station and c.police_station.name == police_station]
+            if crime_type and crime_type != "All":
+                cases = [c for c in cases if c.crime_type and c.crime_type.name == crime_type]
+        else:
+            cases = await self.repository.get_filtered_cases(
+                district=district,
+                crime_type=crime_type,
+                police_station=police_station,
+                time_period=time_period,
+            )
+
         case_ids = [c.case_master_id for c in cases]
-
         accused = await self.repository.get_accused_for_cases(case_ids)
-        accused_ids = []
-        for a in accused:
-            accused_ids.append(a.accused_master_id)
-
+        accused_ids = [a.accused_master_id for a in accused]
         victims = await self.repository.get_victims_for_cases(case_ids)
         transactions = await self.repository.get_financial_transactions(
             case_ids=case_ids, accused_ids=accused_ids
@@ -72,66 +173,49 @@ class GraphService:
             cases, accused, victims, transactions
         )
 
-        # 2.5 Subgraph Extraction (Focused Investigation Graphs)
+        # 2.5 Resolve center node
         center_node = None
         focus_reason = ""
 
-        # First priority: explicit focus_id
         if focus_id:
             focus_id_clean = focus_id.strip()
             if focus_id_clean in G_full:
                 center_node = focus_id_clean
-                lbl = G_full.nodes[focus_id_clean].get("label", focus_id_clean)
-                kind = G_full.nodes[focus_id_clean].get("kind", "entity")
-                focus_reason = f"Focused investigation on {kind}: {lbl} ({focus_id_clean})"
             else:
-                # Search by label or metadata
                 for node, ndata in G_full.nodes(data=True):
                     lbl = ndata.get("label", "")
-                    kind = ndata.get("kind", "")
                     meta = ndata.get("metadata", {})
                     if (
                         focus_id_clean.lower() in lbl.lower()
                         or focus_id_clean.lower() == str(node).lower()
                         or focus_id_clean.lower() == str(meta.get("person_id", "")).lower()
-                        or focus_id_clean.lower() == str(meta.get("case_no", "")).lower()
-                        or focus_id_clean.lower() == str(meta.get("crime_no", "")).lower()
                     ):
                         center_node = node
-                        focus_reason = f"Focused investigation on {kind}: {lbl}"
                         break
 
-        # Second priority: filter-based center node (if no focus_id is provided but filters exist)
-        if not center_node:
-            if police_station:
-                for node, ndata in G_full.nodes(data=True):
-                    if (
-                        ndata.get("kind") == "location"
-                        and ndata.get("metadata", {}).get("type") == "police_station"
-                        and police_station.lower() in ndata.get("label", "").lower()
-                    ):
-                        center_node = node
-                        focus_reason = f"Focused investigation around Police Station: {ndata.get('label')}"
-                        break
-            
-            if not center_node and district:
-                dist_id = f"D_{normalize_name(district)}"
-                if dist_id in G_full:
-                    center_node = dist_id
-                    focus_reason = f"Focused investigation on District: {district}"
-                else:
-                    for node, ndata in G_full.nodes(data=True):
-                        if (
-                            ndata.get("kind") == "location"
-                            and ndata.get("metadata", {}).get("type") == "district"
-                            and district.lower() in ndata.get("label", "").lower()
-                        ):
-                            center_node = node
-                            focus_reason = f"Focused investigation on District: {ndata.get('label')}"
-                            break
+            if center_node:
+                lbl = G_full.nodes[center_node].get("label", center_node)
+                kind = G_full.nodes[center_node].get("kind", "entity")
+                focus_reason = f"Focused investigation on {kind}: {lbl}"
+            else:
+                focus_reason = f"Focused investigation: {focus_id}"
+        elif district and district != "All":
+            dist_id = f"D_{normalize_name(district)}"
+            if dist_id in G_full:
+                center_node = dist_id
+                focus_reason = f"Focused investigation on District: {district}"
+        elif police_station and police_station != "All":
+            for node, ndata in G_full.nodes(data=True):
+                if (
+                    ndata.get("kind") == "location"
+                    and ndata.get("metadata", {}).get("type") == "police_station"
+                    and police_station.lower() in ndata.get("label", "").lower()
+                ):
+                    center_node = node
+                    focus_reason = f"Focused investigation around Police Station: {ndata.get('label')}"
+                    break
 
-        # Third priority: if absolutely no filters and no focus_id, pick the highest risk/degree Accused
-        if not center_node:
+        if not center_node and G_full.number_of_nodes() > 0:
             accused_nodes = [
                 n for n, ndata in G_full.nodes(data=True) if ndata.get("kind") == "accused"
             ]
@@ -140,34 +224,18 @@ class GraphService:
                 lbl = G_full.nodes[center_node].get("label", "Unknown Accused")
                 focus_reason = f"Centered investigation on top repeat offender: {lbl}"
 
-        # Extract ego subgraph
-        if center_node:
-            kind = G_full.nodes[center_node].get("kind")
-            meta_type = G_full.nodes[center_node].get("metadata", {}).get("type", "")
-            
-            # Districts get a radius of 3 (District -> Police Stations -> Cases -> Accused)
-            # Other nodes (Accused, Case) get radius of 2 (e.g. Accused -> Case -> Victim/PS)
-            radius = 3 if (kind == "location" and meta_type == "district") else 2
-            G = nx.ego_graph(G_full, center_node, radius=radius)
-        else:
-            G = G_full
-            focus_reason = "Displaying global criminal network graph."
+        # 3. Enforce Strict Graph Trimming limits (max 40 nodes, 75 edges)
+        G = self._trim_graph(G_full, center_node, max_nodes=40, max_edges=75)
 
-        # 3. Calculate centralities
+        # 4. Calculate centralities on trimmed graph
         centrality = GraphAnalyzer.calculate_centrality(G)
-
-        # 4. Detect Communities (Gangs)
         communities = GraphAnalyzer.detect_communities(G, centrality["pagerank"])
+        repeat_offenders = GraphAnalyzer.detect_repeat_offenders(G, centrality["degree"])
 
-        # 5. Detect Repeat Offenders
-        repeat_offenders = GraphAnalyzer.detect_repeat_offenders(
-            G, centrality["degree"]
-        )
+        # 5. Format Graph Response
+        formatted_graph = NetworkResponseFormatter.format_graph(G, centrality, communities, repeat_offenders)
 
-        # 6. Format Graph Response
-        formatted_graph = NetworkResponseFormatter.format_graph(G)
-
-        # 7. Find Bridge Nodes and Most Connected (Degree > mean)
+        # 6. Find Bridge Nodes and Most Connected
         node_degrees = dict(G.degree())
         degree_values = list(node_degrees.values())
         avg_degree = sum(degree_values) / len(degree_values) if degree_values else 0.0
@@ -187,7 +255,7 @@ class GraphService:
             if bet > 0.0 and G.nodes[node].get("kind") == "accused"
         ]
 
-        # 8. Assemble results
+        # 7. Assemble results
         results = {
             "graph": formatted_graph.model_dump(),
             "degree_centrality": centrality["degree"],
@@ -208,9 +276,92 @@ class GraphService:
 
         # Write to Cache
         await self.cache.set("criminal_network", filters, results)
-
         return results
 
+    def _trim_graph(self, G: nx.Graph, center_node: str | None, max_nodes: int = 40, max_edges: int = 75) -> nx.Graph:
+        """Enforces limits on graph size prioritizing closeness to target node."""
+        if G.number_of_nodes() <= max_nodes and G.number_of_edges() <= max_edges:
+            return G
+
+        # 1. Select the top nodes to keep
+        if center_node and center_node in G:
+            try:
+                lengths = nx.single_source_shortest_path_length(G, center_node)
+            except Exception:
+                lengths = {n: 999 for n in G.nodes}
+            deg_centrality = nx.degree_centrality(G)
+            
+            sorted_nodes = sorted(
+                G.nodes,
+                key=lambda n: (lengths.get(n, 999), -deg_centrality.get(n, 0.0))
+            )
+            nodes_to_keep = sorted_nodes[:max_nodes]
+        else:
+            deg_centrality = nx.degree_centrality(G)
+            sorted_nodes = sorted(G.nodes, key=lambda n: -deg_centrality.get(n, 0.0))
+            nodes_to_keep = sorted_nodes[:max_nodes]
+
+        # Induced subgraph
+        G_trimmed = G.subgraph(nodes_to_keep).copy()
+
+        # 2. Trim edges if they exceed max_edges
+        if G_trimmed.number_of_edges() > max_edges:
+            sorted_edges = sorted(
+                G_trimmed.edges(data=True),
+                key=lambda e: e[2].get("weight", 1.0),
+                reverse=True
+            )
+            G_trimmed.clear_edges()
+            for u, v, data in sorted_edges[:max_edges]:
+                G_trimmed.add_edge(u, v, **data)
+
+        return G_trimmed
+
+    async def get_node_expansion_data(self, node_id: str, kind: str) -> dict:
+        """
+        Retrieves 1-degree neighbors and links for a specific node for lazy loading.
+        """
+        # Fetch relevant cases for this node
+        cases = await self.repository.get_cases_by_focus_id(node_id)
+        case_ids = [c.case_master_id for c in cases]
+        
+        # Fetch accused, victims, transactions
+        accused = await self.repository.get_accused_for_cases(case_ids)
+        accused_ids = [a.accused_master_id for a in accused]
+        victims = await self.repository.get_victims_for_cases(case_ids)
+        transactions = await self.repository.get_financial_transactions(
+            case_ids=case_ids, accused_ids=accused_ids
+        )
+        
+        # Build network graph
+        if kind == "account":
+            G = GraphBuilder.build_financial_network(transactions, cases)
+        else:
+            G = GraphBuilder.build_criminal_network(cases, accused, victims, transactions)
+            
+        # Extract 1-degree neighborhood (ego graph radius=1)
+        center_node = None
+        if node_id in G:
+            center_node = node_id
+        else:
+            # Fallback to label match
+            for n, data in G.nodes(data=True):
+                if data.get("label", "").lower() == node_id.lower():
+                    center_node = n
+                    break
+                    
+        if center_node:
+            G_sub = nx.ego_graph(G, center_node, radius=1)
+        else:
+            G_sub = G
+            
+        # Calculate local centralities and format
+        centrality = GraphAnalyzer.calculate_centrality(G_sub)
+        communities = GraphAnalyzer.detect_communities(G_sub, centrality["pagerank"])
+        repeat_offenders = GraphAnalyzer.detect_repeat_offenders(G_sub, centrality["degree"])
+        
+        formatted = NetworkResponseFormatter.format_graph(G_sub, centrality, communities, repeat_offenders)
+        return formatted.model_dump()
 
     async def get_financial_network_data(
         self,

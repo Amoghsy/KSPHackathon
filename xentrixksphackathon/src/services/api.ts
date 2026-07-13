@@ -10,6 +10,7 @@ import {
   getAccused,
   getNetwork as apiGetNetwork,
   getFinancialNetwork as apiGetFinancialNetwork,
+  getNetworkExpansion as apiGetNetworkExpansion,
 } from "@/lib/api/services";
 import type { DashboardResponse, Case, Accused } from "@/lib/api/types";
 import { ALL_FIRS, type FIR } from "@/mocks/firs";
@@ -184,6 +185,15 @@ export async function getNetwork(params?: {
   } catch (err) {
     console.error("Error fetching network from backend, using mock:", err);
     return generateNetwork();
+  }
+}
+
+export async function getNetworkExpansion(nodeId: string, kind: string) {
+  try {
+    return await apiGetNetworkExpansion(nodeId, kind);
+  } catch (err) {
+    console.error("Error expanding network node:", err);
+    return { nodes: [], links: [] };
   }
 }
 

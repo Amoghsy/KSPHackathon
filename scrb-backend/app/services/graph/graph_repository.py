@@ -69,6 +69,117 @@ class GraphRepository:
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
+    async def get_cases_by_focus_id(self, focus_id: str) -> list[CaseMaster]:
+        """
+        Fetch cases related to a focus ID (Accused name/ID, Case number/ID, Location, etc.).
+        """
+        focus_clean = focus_id.strip()
+        
+        # 1. Check if Case ID (e.g. C12)
+        if focus_clean.startswith("C") and focus_clean[1:].isdigit():
+            case_id = int(focus_clean[1:])
+            stmt = select(CaseMaster).where(CaseMaster.case_master_id == case_id).options(
+                selectinload(CaseMaster.police_station),
+                selectinload(CaseMaster.crime_type),
+            )
+            result = await self.db.execute(stmt)
+            c = result.scalar_one_or_none()
+            return [c] if c else []
+            
+        # 2. Check if specific crime number / case number
+        stmt = select(CaseMaster).where(
+            or_(
+                CaseMaster.crime_no == focus_clean,
+                CaseMaster.case_no == focus_clean
+            )
+        ).options(
+            selectinload(CaseMaster.police_station),
+            selectinload(CaseMaster.crime_type),
+        )
+        result = await self.db.execute(stmt)
+        cases = list(result.scalars().all())
+        if cases:
+            return cases
+
+        # 3. Check if it matches an accused person (name, person_id, or format A_name)
+        acc_search = focus_clean
+        if acc_search.startswith("A_"):
+            acc_search = acc_search[2:]
+            
+        # Select accused masters where person_id matches or name matches (normalized)
+        from app.services.graph.graph_utils import normalize_name
+        norm_search = normalize_name(acc_search)
+        
+        stmt = select(AccusedMaster).where(
+            or_(
+                AccusedMaster.person_id == focus_clean,
+                AccusedMaster.accused_name.ilike(f"%{acc_search}%")
+            )
+        )
+        result = await self.db.execute(stmt)
+        accused_list = list(result.scalars().all())
+        
+        # fallback to normalized comparison if no direct matches
+        if not accused_list and norm_search:
+            stmt = select(AccusedMaster)
+            result = await self.db.execute(stmt)
+            all_acc = list(result.scalars().all())
+            accused_list = [
+                a for a in all_acc 
+                if (a.person_id and normalize_name(a.person_id) == norm_search) 
+                or normalize_name(a.accused_name) == norm_search
+            ]
+            
+        if accused_list:
+            case_ids = list({a.case_master_id for a in accused_list})
+            stmt = select(CaseMaster).where(CaseMaster.case_master_id.in_(case_ids)).options(
+                selectinload(CaseMaster.police_station),
+                selectinload(CaseMaster.crime_type),
+            )
+            result = await self.db.execute(stmt)
+            return list(result.scalars().all())
+
+        # 4. Check if it matches a Police Station
+        stmt = select(PoliceStation).where(PoliceStation.name.ilike(f"%{focus_clean}%"))
+        result = await self.db.execute(stmt)
+        stations = list(result.scalars().all())
+        if stations:
+            station_ids = [s.police_station_id for s in stations]
+            stmt = select(CaseMaster).where(CaseMaster.police_station_id.in_(station_ids)).options(
+                selectinload(CaseMaster.police_station),
+                selectinload(CaseMaster.crime_type),
+            )
+            result = await self.db.execute(stmt)
+            return list(result.scalars().all())
+
+        # 5. Check if it matches a District
+        # Join CaseMaster and PoliceStation to filter by district
+        stmt = select(CaseMaster).join(CaseMaster.police_station).where(
+            PoliceStation.district.ilike(f"%{focus_clean}%")
+        ).options(
+            selectinload(CaseMaster.police_station),
+            selectinload(CaseMaster.crime_type),
+        )
+        result = await self.db.execute(stmt)
+        cases = list(result.scalars().all())
+        if cases:
+            return cases
+
+        # 6. Check if it matches a Crime Type
+        stmt = select(CrimeType).where(CrimeType.name.ilike(f"%{focus_clean}%"))
+        result = await self.db.execute(stmt)
+        ct_types = list(result.scalars().all())
+        if ct_types:
+            ct_ids = [ct.crime_type_id for ct in ct_types]
+            stmt = select(CaseMaster).where(CaseMaster.crime_type_id.in_(ct_ids)).options(
+                selectinload(CaseMaster.police_station),
+                selectinload(CaseMaster.crime_type),
+            )
+            result = await self.db.execute(stmt)
+            return list(result.scalars().all())
+
+        return []
+
     async def get_accused_for_cases(self, case_ids: list[int]) -> list[AccusedMaster]:
         """Fetch all accused associated with a list of Case IDs."""
         if not case_ids:

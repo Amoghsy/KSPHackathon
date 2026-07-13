@@ -30,13 +30,37 @@ class GraphCache:
             logger.info("GraphCache disabled via GRAPH_CACHE_ENABLED env var.")
 
     def _make_key(self, category: str, filters: dict[str, Any]) -> str:
-        """Create a stable SHA-256 cache key based on sorted filter parameters."""
-        sorted_filters = sorted(
-            [(k, str(v)) for k, v in filters.items() if v is not None]
-        )
-        normalized = json.dumps(sorted_filters)
-        digest = hashlib.sha256(normalized.encode()).hexdigest()
-        return f"gcache:{category}:{digest}"
+        """Create a stable cache key according to the naming convention."""
+        focus_id = filters.get("focus_id")
+        district = filters.get("district")
+        
+        if category == "dashboard_stats":
+            return "gcache:dashboard:stats"
+            
+        if category == "criminal_network":
+            if focus_id:
+                kind = filters.get("focus_kind", "target")
+                return f"graph:criminal:{kind}:{focus_id}"
+            elif district and district != "All":
+                return f"graph:criminal:district:{district}"
+            else:
+                import json
+                sorted_filters = sorted([(k, str(v)) for k, v in filters.items() if v is not None])
+                normalized = json.dumps(sorted_filters)
+                digest = hashlib.sha256(normalized.encode()).hexdigest()[:16]
+                return f"graph:criminal:filters:{digest}"
+                
+        if category == "financial_network":
+            if focus_id:
+                return f"graph:financial:{focus_id}"
+            else:
+                import json
+                sorted_filters = sorted([(k, str(v)) for k, v in filters.items() if v is not None])
+                normalized = json.dumps(sorted_filters)
+                digest = hashlib.sha256(normalized.encode()).hexdigest()[:16]
+                return f"graph:financial:filters:{digest}"
+                
+        return f"gcache:{category}:default"
 
     async def get(self, category: str, filters: dict[str, Any]) -> dict[str, Any] | None:
         """Retrieve cached graph data or None on miss/error."""

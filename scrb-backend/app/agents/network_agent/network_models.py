@@ -7,6 +7,8 @@ class NodeModel(BaseModel):
     label: str
     kind: str  # 'accused', 'victim', 'location', 'case', 'account'
     metadata: dict[str, Any] = {}
+    color: str | None = None
+    val: float | None = None
 
 
 class LinkModel(BaseModel):

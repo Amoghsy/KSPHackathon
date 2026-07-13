@@ -125,6 +125,10 @@ export async function getNetwork(params?: {
   return apiGet<any>(ENDPOINTS.NETWORK, query);
 }
 
+export async function getNetworkExpansion(nodeId: string, kind: string): Promise<any> {
+  return apiGet<any>(ENDPOINTS.NETWORK_EXPAND, { node_id: nodeId, kind });
+}
+
 export async function getFinancialNetwork(params?: {
   district?: string;
   crimeType?: string;

@@ -46,6 +46,20 @@ async def get_network(
 
 
 
+@router.get("/expand")
+async def expand_node(
+    node_id: str,
+    kind: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get 1-degree neighbors of a node for lazy-loading.
+    """
+    service = GraphService(db)
+    data = await service.get_node_expansion_data(node_id, kind)
+    return data
+
+
 @router.get("/accused/{id}")
 async def get_accused_network(id: str, db: AsyncSession = Depends(get_db)):
     """
