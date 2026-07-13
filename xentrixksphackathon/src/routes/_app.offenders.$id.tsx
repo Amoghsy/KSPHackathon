@@ -63,7 +63,7 @@ function OffenderDetailPage() {
               Risk score breakdown
             </div>
             <div className="space-y-3">
-              {o.factors.map((f) => (
+              {(o.factors ?? []).map((f: any) => (
                 <div key={f.label}>
                   <div className="flex justify-between text-xs mb-1">
                     <span>{f.label}</span>
@@ -92,7 +92,7 @@ function OffenderDetailPage() {
               Modus operandi
             </div>
             <div className="flex flex-wrap gap-2">
-              {o.modusOperandi.map((m) => (
+              {(o.modusOperandi ?? []).map((m: any) => (
                 <Badge key={m} variant="secondary">
                   {m}
                 </Badge>
@@ -104,16 +104,27 @@ function OffenderDetailPage() {
             <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-3">
               Linked case history
             </div>
-            <ul className="text-sm divide-y divide-border">
-              {Array.from({ length: Math.min(o.linkedCases, 6) }).map((_, i) => (
-                <li key={i} className="py-2 flex justify-between">
-                  <span className="font-mono text-xs">{`104430006202600${String(i + 21).padStart(3, "0")}`}</span>
-                  <span className="text-muted-foreground text-xs">
-                    2026-0{(i % 6) + 1}-1{i}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            {(!o.cases || o.cases.length === 0) ? (
+              <div className="text-sm text-muted-foreground">No cases on record.</div>
+            ) : (
+              <ul className="text-sm divide-y divide-border">
+                {o.cases.map((c: any) => (
+                  <li key={c.id} className="py-2 flex justify-between items-center">
+                    <Link
+                      to="/cases/$firId"
+                      params={{ firId: c.id }}
+                      className="font-mono text-xs text-primary hover:underline"
+                    >
+                      {c.crimeNo}
+                    </Link>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span>{c.station}</span>
+                      <span>{c.date}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
 

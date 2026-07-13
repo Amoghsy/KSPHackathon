@@ -1,5 +1,6 @@
-// src/services/api.ts — Real backend API calls replacing all mock data.
-// Delegates to src/lib/api/services.ts for HTTP; adapts response shapes as needed.
+// src/services/api.ts — Real backend API calls only. Mock fallbacks removed for all
+// pages that have backend endpoints. Stubs (empty arrays) are kept for pages where
+// no backend route exists (hotspots, alerts, audit, sociological, forecast).
 
 import {
   getDashboardData,
@@ -12,16 +13,8 @@ import {
   getFinancialNetwork as apiGetFinancialNetwork,
   getNetworkExpansion as apiGetNetworkExpansion,
 } from "@/lib/api/services";
-import type { DashboardResponse, Case, Accused } from "@/lib/api/types";
-import { ALL_FIRS, type FIR } from "@/mocks/firs";
-import { ALL_OFFENDERS, type Offender } from "@/mocks/offenders";
-import { generateNetwork } from "@/mocks/network";
-import { generateHotspots } from "@/mocks/hotspots";
-import { ALERTS } from "@/mocks/alerts";
-import { AUDIT_ROWS } from "@/mocks/audit";
-import { generateSociological } from "@/mocks/sociological";
-import { generateFinancialNetwork } from "@/mocks/financial";
-import { generateForecast, forecastCommentary, type ForecastCrime } from "@/mocks/forecast";
+import type { DashboardResponse } from "@/lib/api/types";
+import type { ForecastCrime } from "@/mocks/forecast";
 
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 export async function getDashboard(): Promise<DashboardResponse> {
@@ -87,89 +80,59 @@ export async function listFIRs(params?: {
   district?: string;
   page?: number;
   pageSize?: number;
-}): Promise<{ items: FIR[]; total: number }> {
-  try {
-    const response = await listCases(params);
-    if (!response || !response.items) {
-      return fallbackListFIRs(params);
-    }
-    return response as { items: FIR[]; total: number };
-  } catch (err) {
-    console.error("Error fetching cases from backend:", err);
-    return fallbackListFIRs(params);
+}): Promise<{ items: any[]; total: number }> {
+  const response = await listCases(params);
+  if (!response || !response.items) {
+    return { items: [], total: 0 };
   }
+  return response as { items: any[]; total: number };
 }
 
-function fallbackListFIRs(params?: {
-  q?: string;
-  status?: string;
-  district?: string;
-  page?: number;
-  pageSize?: number;
-}): { items: FIR[]; total: number } {
-  let items = ALL_FIRS.slice();
-  if (params?.q) {
-    const q = params.q.toLowerCase();
-    items = items.filter(
-      (f) =>
-        f.crimeNo.toLowerCase().includes(q) ||
-        f.station.toLowerCase().includes(q) ||
-        f.district.toLowerCase().includes(q) ||
-        f.crimeHead.toLowerCase().includes(q) ||
-        f.complainant.toLowerCase().includes(q),
-    );
-  }
-  if (params?.status && params.status !== "All") {
-    items = items.filter((f) => f.status === params.status);
-  }
-  if (params?.district && params.district !== "All") {
-    items = items.filter((f) => f.district === params.district);
-  }
-  const total = items.length;
-  const page = params?.page ?? 1;
-  const size = params?.pageSize ?? 15;
-  return { items: items.slice((page - 1) * size, page * size), total };
-}
-
-export async function getFIR(id: string): Promise<FIR | null> {
+export async function getFIR(id: string): Promise<any | null> {
   try {
     const c = await getCase(id);
-    if (!c) return null;
-    return c as FIR;
+    return c ?? null;
   } catch (err) {
     console.error("Error fetching case details:", err);
-    return ALL_FIRS.find((f) => f.id === id) ?? null;
+    return null;
   }
 }
 
 // ─── Offenders / Accused ─────────────────────────────────────────────────────
-export async function listOffenders(): Promise<Offender[]> {
-  try {
-    const response = await listAccused({ page: 1, pageSize: 150 });
-    if (!response || !response.items || response.items.length === 0) {
-      return ALL_OFFENDERS;
-    }
-    return response.items as Offender[];
-  } catch (err) {
-    console.error("Error listing offenders:", err);
-    return ALL_OFFENDERS;
+export async function listOffenders(params?: {
+  q?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<{ items: any[]; total: number }> {
+  const response = await listAccused({
+    q: params?.q,
+    page: params?.page ?? 1,
+    pageSize: params?.pageSize ?? 50,
+  });
+  if (!response || !response.items) {
+    return { items: [], total: 0 };
   }
+  return response as { items: any[]; total: number };
 }
 
-export async function getOffender(id: string): Promise<Offender | null> {
+export async function getOffender(id: string): Promise<any | null> {
   try {
     const response = await getAccused(id);
-    if (!response) return null;
-    return response as Offender;
+    return response ?? null;
   } catch (err) {
     console.error("Error fetching offender details:", err);
-    return ALL_OFFENDERS.find((o) => o.id === id) ?? null;
+    return null;
   }
 }
 
-export async function similarOffenders(id: string): Promise<Offender[]> {
-  const all = await listOffenders();
-  return all.filter((o) => o.id !== id).slice(0, 4);
+export async function similarOffenders(id: string): Promise<any[]> {
+  try {
+    const response = await listAccused({ page: 1, pageSize: 8 });
+    const items: any[] = response?.items ?? [];
+    return items.filter((o: any) => String(o.id) !== String(id)).slice(0, 4);
+  } catch {
+    return [];
+  }
 }
 
 // ─── Network ─────────────────────────────────────────────────────────────────
@@ -183,8 +146,8 @@ export async function getNetwork(params?: {
   try {
     return await apiGetNetwork(params);
   } catch (err) {
-    console.error("Error fetching network from backend, using mock:", err);
-    return generateNetwork();
+    console.error("Error fetching network from backend:", err);
+    return { nodes: [], links: [] };
   }
 }
 
@@ -197,27 +160,6 @@ export async function getNetworkExpansion(nodeId: string, kind: string) {
   }
 }
 
-
-// ─── Hotspots (Out of scope backend-wise) ────────────────────────────────────
-export async function getHotspots() {
-  return generateHotspots();
-}
-
-// ─── Alerts ──────────────────────────────────────────────────────────────────
-export async function getAlerts() {
-  return ALERTS;
-}
-
-// ─── Audit (Out of scope backend-wise) ───────────────────────────────────────
-export async function getAudit() {
-  return AUDIT_ROWS;
-}
-
-// ─── Sociological (Out of scope backend-wise) ────────────────────────────────
-export async function getSociologicalInsights() {
-  return generateSociological();
-}
-
 // ─── Financial ───────────────────────────────────────────────────────────────
 export async function getFinancialNetwork(params?: {
   district?: string;
@@ -228,16 +170,41 @@ export async function getFinancialNetwork(params?: {
   try {
     return await apiGetFinancialNetwork(params);
   } catch (err) {
-    console.error("Error fetching financial network from backend, using mock:", err);
-    return generateFinancialNetwork();
+    console.error("Error fetching financial network from backend:", err);
+    return { nodes: [], links: [] };
   }
 }
 
+// ─── Stubs (no backend endpoints) ────────────────────────────────────────────
+export async function getHotspots(): Promise<any[]> {
+  return [];
+}
 
-// ─── Forecast (Out of scope backend-wise) ────────────────────────────────────
-export async function getForecast(crime: ForecastCrime) {
-  const points = generateForecast(crime);
-  return { points, commentary: forecastCommentary(crime, points) };
+export async function getAlerts(): Promise<any[]> {
+  return [];
+}
+
+export async function getAudit(): Promise<any[]> {
+  return [];
+}
+
+export async function getSociologicalInsights(): Promise<any> {
+  return {
+    crimeByHour: [],
+    crimeByDay: [],
+    recidivismRate: 0,
+    avgCaseDuration: 0,
+    crimeCategories: [],
+    districtHeatmap: [],
+    byAge: [],
+    byGender: [],
+    bySocioEconomic: [],
+    callouts: [],
+  };
+}
+
+export async function getForecast(_crime: ForecastCrime) {
+  return { points: [], commentary: "Forecast data unavailable." };
 }
 
 export type { ForecastCrime };

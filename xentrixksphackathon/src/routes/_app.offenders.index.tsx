@@ -2,9 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { PageHeader } from "@/components/app/primitives";
-import { MockBadge } from "@/components/app/mock-badge";
 import { listOffenders } from "@/services/api";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { User } from "lucide-react";
@@ -22,19 +22,43 @@ function riskColor(r: string) {
 }
 
 function OffendersPage() {
-  const { data, isLoading } = useQuery({ queryKey: ["offenders"], queryFn: listOffenders });
   const [q, setQ] = useState("");
-  const items = (data ?? []).filter((o) => o.name.toLowerCase().includes(q.toLowerCase()));
+  const [debouncedQ, setDebouncedQ] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 48;
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["offenders", { q: debouncedQ, page }],
+    queryFn: () => listOffenders({ q: debouncedQ || undefined, page, pageSize: PAGE_SIZE }),
+  });
+
+  const items: any[] = data?.items ?? [];
+  const total: number = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const handleSearch = () => {
+    setDebouncedQ(q);
+    setPage(1);
+  };
 
   return (
     <div className="p-6 max-w-[1600px] mx-auto">
       <PageHeader
         title="Offender Profiles"
-        subtitle={`${data?.length ?? 0} offenders tracked · sorted by risk score`}
-        actions={<MockBadge />}
+        subtitle={`${total.toLocaleString()} offenders tracked · sorted by risk score`}
       />
-      <div className="mb-4 max-w-md">
-        <Input placeholder="Search by name…" value={q} onChange={(e) => setQ(e.target.value)} />
+      <div className="mb-4 flex gap-2 max-w-md">
+        <Input
+          placeholder="Search by name…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSearch();
+          }}
+        />
+        <Button variant="outline" onClick={handleSearch}>
+          Search
+        </Button>
       </div>
 
       {isLoading && (
@@ -45,8 +69,14 @@ function OffendersPage() {
         </div>
       )}
 
+      {!isLoading && items.length === 0 && (
+        <div className="text-center py-16 text-muted-foreground text-sm">
+          No offenders found{debouncedQ ? ` for "${debouncedQ}"` : ""}.
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {items.map((o) => (
+        {items.map((o: any) => (
           <Link
             key={o.id}
             to="/offenders/$id"
@@ -74,7 +104,7 @@ function OffendersPage() {
               <span className="font-mono tabular-nums">{o.riskScore}/100</span>
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
-              {o.modusOperandi.slice(0, 2).map((m) => (
+              {(o.modusOperandi ?? []).slice(0, 2).map((m: string) => (
                 <Badge key={m} variant="secondary" className="text-[10px]">
                   {m}
                 </Badge>
@@ -83,6 +113,20 @@ function OffendersPage() {
           </Link>
         ))}
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-6 text-xs text-muted-foreground">
+          <span>Page {page} of {totalPages}</span>
+          <div className="flex gap-1">
+            <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+              Prev
+            </Button>
+            <Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

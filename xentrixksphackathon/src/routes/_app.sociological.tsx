@@ -124,7 +124,7 @@ function SociologicalPage() {
                     outerRadius={95}
                     paddingAngle={2}
                   >
-                    {data.byGender.map((_, i) => (
+                    {(data.byGender ?? []).map((_: any, i: number) => (
                       <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                     ))}
                   </Pie>
@@ -201,7 +201,7 @@ function SociologicalPage() {
           ? Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-24 rounded-md" />
             ))
-          : data.callouts.map((c) => (
+          : (data.callouts ?? []).map((c: any) => (
               <div key={c.title} className="rounded-xl glass p-4 border-l-2 border-l-primary">
                 <div className="text-sm font-semibold">{c.title}</div>
                 <div className="text-xs text-muted-foreground mt-1 leading-relaxed">{c.detail}</div>

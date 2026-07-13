@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { PageHeader } from "@/components/app/primitives";
 import { listFIRs } from "@/services/api";
-import { DISTRICTS, STATUSES } from "@/mocks/firs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +15,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+
+const STATUSES = ["Under Investigation", "Charge Sheeted", "Closed", "Undetected"] as const;
+
+const DISTRICTS = [
+  "Bengaluru Urban", "Bengaluru Rural", "Mysuru", "Mangaluru", "Belagavi",
+  "Kalaburagi", "Hubballi-Dharwad", "Tumakuru", "Shivamogga", "Ballari",
+  "Vijayapura", "Udupi", "Chitradurga", "Hassan",
+];
 
 export const Route = createFileRoute("/_app/cases/")({
   head: () => ({ meta: [{ title: "Case Search — Crime Intelligence Assistant" }] }),

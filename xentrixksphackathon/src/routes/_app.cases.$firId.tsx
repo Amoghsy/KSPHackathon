@@ -5,7 +5,7 @@ import { getFIR } from "@/services/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/cases/$firId")({
@@ -90,7 +90,7 @@ function CaseDetailPage() {
 
         <TabsContent value="accused">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {fir.accused.map((a) => (
+            {(fir.accused ?? []).map((a: any) => (
               <Card key={a.id} title={`${a.name} · ${a.id}`}>
                 <div className="text-sm text-muted-foreground">Age {a.age}</div>
                 <div className="text-xs mt-2">
@@ -103,7 +103,7 @@ function CaseDetailPage() {
 
         <TabsContent value="victims">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {fir.victims.map((v, i) => (
+            {(fir.victims ?? []).map((v: any, i: number) => (
               <Card key={i} title={v.name}>
                 <div className="text-sm text-muted-foreground">Age {v.age}</div>
               </Card>
@@ -114,7 +114,7 @@ function CaseDetailPage() {
         <TabsContent value="acts">
           <Card title="Applicable acts & sections">
             <div className="flex flex-wrap gap-2">
-              {fir.actsSections.map((a) => (
+              {(fir.actsSections ?? []).map((a: any) => (
                 <Badge key={a} variant="secondary" className="font-mono">
                   {a}
                 </Badge>
@@ -125,11 +125,11 @@ function CaseDetailPage() {
 
         <TabsContent value="arrests">
           <Card title="Arrests">
-            {fir.arrests.length === 0 ? (
+            {!fir.arrests || fir.arrests.length === 0 ? (
               <div className="text-sm text-muted-foreground">No arrests recorded.</div>
             ) : (
               <ul className="text-sm divide-y divide-border">
-                {fir.arrests.map((a, i) => (
+                {fir.arrests.map((a: any, i: number) => (
                   <li key={i} className="py-2 flex justify-between">
                     <span>{a.name}</span>
                     <span className="text-muted-foreground tabular-nums">{a.date}</span>
@@ -153,24 +153,16 @@ function CaseDetailPage() {
         <TabsContent value="timeline">
           <Card title="Case timeline">
             <ol className="relative border-l-2 border-border ml-2 space-y-6 pl-6 pt-1">
-              {fir.timeline.map((t, i) => (
+              {(fir.timeline ?? []).map((t: any, i: number) => (
                 <li key={i} className="relative">
-                  <span
-                    className={cn(
-                      "absolute -left-[33px] top-0.5 h-5 w-5 rounded-full flex items-center justify-center border-2",
-                      t.done
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-background border-border text-muted-foreground",
-                    )}
-                  >
-                    {t.done ? (
-                      <Check className="h-3 w-3" />
-                    ) : (
-                      <span className="text-[10px]">{i + 1}</span>
-                    )}
+                  <span className="absolute -left-[33px] top-0.5 h-5 w-5 rounded-full flex items-center justify-center border-2 bg-primary text-primary-foreground border-primary">
+                    <span className="text-[10px]">{i + 1}</span>
                   </span>
-                  <div className="text-sm font-medium">{t.label}</div>
+                  <div className="text-sm font-medium">{t.title ?? t.label}</div>
                   <div className="text-xs text-muted-foreground">{t.date || "Pending"}</div>
+                  {t.description && (
+                    <div className="text-xs text-muted-foreground/70 mt-0.5">{t.description}</div>
+                  )}
                 </li>
               ))}
             </ol>
