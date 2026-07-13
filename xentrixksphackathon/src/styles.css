@@ -242,3 +242,136 @@
   opacity: 0.45;
   pointer-events: none;
 }
+
+/* ─── Gemini-like chatbot aurora background ─────────────────────────────── */
+
+@keyframes aurora-drift-1 {
+  0%   { transform: translate(0%, 0%)    scale(1);    opacity: 0.38; }
+  25%  { transform: translate(6%, -8%)   scale(1.08); opacity: 0.48; }
+  50%  { transform: translate(12%, 4%)   scale(0.95); opacity: 0.32; }
+  75%  { transform: translate(4%, 10%)   scale(1.12); opacity: 0.44; }
+  100% { transform: translate(0%, 0%)    scale(1);    opacity: 0.38; }
+}
+
+@keyframes aurora-drift-2 {
+  0%   { transform: translate(0%, 0%)    scale(1.05); opacity: 0.30; }
+  30%  { transform: translate(-8%, 6%)   scale(0.92); opacity: 0.42; }
+  60%  { transform: translate(-14%, -4%) scale(1.10); opacity: 0.28; }
+  80%  { transform: translate(-5%, -10%) scale(1.03); opacity: 0.40; }
+  100% { transform: translate(0%, 0%)    scale(1.05); opacity: 0.30; }
+}
+
+@keyframes aurora-drift-3 {
+  0%   { transform: translate(0%, 0%)   scale(0.9);  opacity: 0.25; }
+  40%  { transform: translate(10%, 8%)  scale(1.15); opacity: 0.38; }
+  70%  { transform: translate(-6%, 12%) scale(0.88); opacity: 0.20; }
+  100% { transform: translate(0%, 0%)   scale(0.9);  opacity: 0.25; }
+}
+
+@keyframes aurora-shimmer {
+  0%   { opacity: 0.06; }
+  50%  { opacity: 0.14; }
+  100% { opacity: 0.06; }
+}
+
+@keyframes intro-badge-in {
+  0%   { opacity: 0; transform: translateY(8px) scale(0.95); }
+  100% { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+@utility chat-aurora-bg {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+@utility chat-aurora-blob-1 {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  pointer-events: none;
+  width: 65%;
+  height: 80%;
+  top: -20%;
+  left: -10%;
+  background: radial-gradient(ellipse at center,
+    oklch(0.65 0.12 220 / 0.55),
+    oklch(0.5 0.15 240 / 0.20) 55%,
+    transparent 75%
+  );
+  filter: blur(72px);
+  animation: aurora-drift-1 18s ease-in-out infinite;
+}
+
+@utility chat-aurora-blob-2 {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  pointer-events: none;
+  width: 55%;
+  height: 75%;
+  top: 15%;
+  right: -8%;
+  background: radial-gradient(ellipse at center,
+    oklch(0.60 0.13 190 / 0.48),
+    oklch(0.52 0.12 210 / 0.18) 55%,
+    transparent 75%
+  );
+  filter: blur(80px);
+  animation: aurora-drift-2 22s ease-in-out infinite;
+}
+
+@utility chat-aurora-blob-3 {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  pointer-events: none;
+  width: 50%;
+  height: 60%;
+  bottom: -10%;
+  left: 25%;
+  background: radial-gradient(ellipse at center,
+    oklch(0.55 0.10 260 / 0.38),
+    oklch(0.48 0.08 250 / 0.14) 55%,
+    transparent 75%
+  );
+  filter: blur(90px);
+  animation: aurora-drift-3 26s ease-in-out infinite;
+}
+
+@utility chat-aurora-shimmer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    135deg,
+    transparent 40%,
+    oklch(0.75 0.06 220 / 0.12) 55%,
+    transparent 70%
+  );
+  animation: aurora-shimmer 8s ease-in-out infinite;
+}
+
+/* Dark mode aurora — more saturated, deeper tones */
+.dark .chat-aurora-blob-1 {
+  background: radial-gradient(ellipse at center,
+    oklch(0.50 0.16 240 / 0.45),
+    oklch(0.38 0.14 250 / 0.18) 55%,
+    transparent 75%
+  );
+}
+.dark .chat-aurora-blob-2 {
+  background: radial-gradient(ellipse at center,
+    oklch(0.45 0.15 200 / 0.40),
+    oklch(0.38 0.12 220 / 0.15) 55%,
+    transparent 75%
+  );
+}
+.dark .chat-aurora-blob-3 {
+  background: radial-gradient(ellipse at center,
+    oklch(0.40 0.12 270 / 0.32),
+    oklch(0.30 0.08 260 / 0.12) 55%,
+    transparent 75%
+  );
+}
+

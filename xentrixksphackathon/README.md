@@ -77,3 +77,62 @@ Validate the production bundle compilation:
 ```bash
 npm run build
 ```
+
+---
+
+## Multilingual Voice Integration & UI Enhancements
+
+The console features a complete Multilingual Voice Interaction layer supporting **English**, **Kannada**, and **Mixed Kannada + English** speech.
+
+### 🎙️ Voice & Speech Features
+
+1. **Speech Input (STT)**:
+   - Utilizes browser-native Web Speech API (`SpeechRecognition`).
+   - Active recording indicator (halo animations, red flashing `● REC` badge in Voice Status Bar).
+   - Smart silence detection (automatically stops recording after 3 seconds of silence).
+   - Language-aware speech recognition (defaults to English, switches dynamically when Kannada preferred language is active).
+
+2. **Speech Output (TTS)**:
+   - High-quality backend-driven text-to-speech engine (`/api/v1/chat/tts`) using `gTTS`.
+   - **Mixed Language Processing**: Automatically detects Kannada and English text runs in responses. English segments are synthesised using the English engine (for natural pronunciation), and Kannada segments/numerics/alphanumerics are processed by the Kannada engine (converting digits like `302` and `2024` into spoken Kannada words like `ಮೂರು ನೂರು ಎರಡು` so they aren't skipped). The resulting audio segments are stitched into a single MP3 stream dynamically.
+   - Per-message **Speak / Stop** triggers (avatar converts to a waveform visualization when speaking).
+   - Audio playback controls in the persistent Voice Status Bar (Play, Pause, Stop, Replay last message, Speed rate, Pitch, Volume adjustments).
+
+3. **Auto-Introduction**:
+   - On initial page load, the assistant displays a structured greeting card and speaks a 10-second self-introduction in the user's preferred language.
+
+4. **Aesthetics & Motion**:
+   - **Gemini-like Aurora Background**: Multi-layered drifting radial gradient blobs animate smoothly behind the message layout, adapting to dark/light modes.
+   - **Dynamic Logo Glow**: The KSP seal displays active pulse halos synchronized with TTS audio playback.
+   - Animated speaking waveforms for avatars and status headers.
+
+### 🌐 Supported Languages
+- **English (en-IN)**
+- **Kannada (kn-IN)**
+- **Auto-Detect**: Seamlessly routes Kannada script inputs to Kannada speech output and English inputs to English speech output.
+
+### ♿ Accessibility (A11y) & Keyboard Shortcuts
+- Fully compliant ARIA landmarks, roles, and status fields (`aria-live="polite"`, `role="log"`, `role="status"`).
+- Keyboard tooltips for action buttons with shortcuts.
+- **Shortcuts**:
+  - `Ctrl + M`: Toggle Microphone (Start/Stop listening)
+  - `Escape`: Stop voice playback / cancel recording
+  - `Ctrl + H`: Open/Close conversation history sidebar
+  - `Ctrl + Shift + N`: Start a new conversation session
+
+### 💻 Browser Compatibility & Requirements
+
+| Browser | Speech Recognition (STT) | Speech Synthesis (TTS) | Notes |
+|---------|--------------------------|------------------------|-------|
+| Google Chrome | Yes | Yes | Native webkitSpeechRecognition support |
+| MS Edge | Yes | Yes | Native support |
+| Safari | Yes | Yes | iOS/macOS compatibility |
+| Firefox | Partial / Config | Yes | Requires enabling `media.webspeech.recognition.enable` in `about:config` |
+
+### ⚠️ Known Limitations & Error Handling
+
+- **Microphone Permission Denied**: Displays a non-intrusive warning toast instructing the user to allow microphone access in site settings.
+- **Speech Recognition Unavailable**: Disables the microphone button, displays a tooltip indicating the browser is not supported, and warns the user.
+- **Speech Synthesis (TTS) Offline**: Cascades gracefully to browser-native synthesis speech fallback if the backend TTS service returns an error or is unreachable.
+- **Gemini / Database / Redis Down**: The frontend captures HTTP exceptions, renders detailed, retryable error states inside the message thread, and defaults to memory session storage on the backend to prevent crashes.
+

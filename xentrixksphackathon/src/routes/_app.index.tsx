@@ -312,6 +312,9 @@ function ChatPage() {
   const [contextEntity, setContextEntity] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
+  const [introShown, setIntroShown] = useState(false);
+  const [introText, setIntroText] = useState("");
+  const introSpokenRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -376,6 +379,21 @@ function ChatPage() {
 
   useEffect(() => {
     inputRef.current?.focus();
+  }, []);
+
+  // ─── Auto intro on first page open ───────────────────────────────────────
+  useEffect(() => {
+    if (introSpokenRef.current) return;
+    introSpokenRef.current = true;
+    const text = t("introGreeting");
+    setIntroText(text);
+    // Short delay so audio context is ready
+    const tid = setTimeout(() => {
+      setIntroShown(true);
+      speak(text);
+    }, 800);
+    return () => clearTimeout(tid);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Context entity detection
@@ -1146,28 +1164,115 @@ function ChatPage() {
           {/* ── Message List ─────────────────────────────────────────────────── */}
           <div
             ref={scrollRef}
-            className="flex-1 overflow-y-auto scrollbar-thin px-3 sm:px-5 py-6 space-y-5"
+            className="flex-1 overflow-y-auto scrollbar-thin px-3 sm:px-5 py-6 space-y-5 chat-aurora-bg"
             role="log"
             aria-label="Conversation messages"
             aria-live="polite"
           >
-            {/* Empty state */}
+            {/* Aurora background blobs — always visible, animate continuously */}
+            <div className="chat-aurora-blob-1" aria-hidden="true" />
+            <div className="chat-aurora-blob-2" aria-hidden="true" />
+            <div className="chat-aurora-blob-3" aria-hidden="true" />
+            <div className="chat-aurora-shimmer" aria-hidden="true" />
+            {/* Empty state + intro */}
             {messages.length === 0 && !loading && !chatError && (
-              <div className="flex flex-col items-center justify-center h-full py-20 text-center text-muted-foreground animate-in fade-in duration-500">
-                <div className="relative mb-4">
-                  <div className="absolute inset-0 rounded-2xl bg-primary/10 blur-xl animate-pulse" aria-hidden="true" />
+              <div className="flex flex-col items-center justify-center h-full py-16 text-center text-muted-foreground animate-in fade-in duration-500 relative z-10">
+                {/* Logo with animated glow ring */}
+                <div className="relative mb-5">
+                  <div
+                    className={cn(
+                      "absolute inset-0 rounded-2xl blur-2xl transition-all duration-1000",
+                      isPlaying
+                        ? "bg-primary/30 scale-125 animate-pulse"
+                        : "bg-primary/10 scale-100",
+                    )}
+                    aria-hidden="true"
+                  />
+                  <div
+                    className={cn(
+                      "absolute -inset-3 rounded-3xl opacity-0 transition-opacity duration-500",
+                      isPlaying && "opacity-100 animate-pulse",
+                    )}
+                    style={{
+                      background:
+                        "radial-gradient(ellipse, oklch(0.65 0.12 220 / 0.35) 0%, transparent 70%)",
+                    }}
+                    aria-hidden="true"
+                  />
                   <img
                     src="/logo.png"
                     alt="KSP Logo"
-                    className="relative h-20 w-20 object-contain rounded-xl shadow-lg border border-border"
+                    className={cn(
+                      "relative h-24 w-24 object-contain rounded-2xl shadow-xl border-2 transition-all duration-500",
+                      isPlaying
+                        ? "border-primary/60 scale-105 shadow-primary/25"
+                        : "border-border/60 scale-100",
+                    )}
                   />
                 </div>
-                <p className="text-sm font-semibold text-foreground">KSP Crime Intelligence Assistant</p>
-                <p className="text-xs mt-1 text-muted-foreground max-w-xs">
+
+                <p className="text-base font-bold text-foreground tracking-tight">
+                  KSP Crime Intelligence Assistant
+                </p>
+                <p className="text-xs mt-1.5 text-muted-foreground max-w-sm">
                   Ask a question to query police databases, analyze suspect networks, or view crime trends.
                 </p>
-                <p className="text-[10px] mt-3 text-muted-foreground/60">
-                  Press <kbd className="rounded bg-muted px-1 py-0.5 font-mono">Ctrl+M</kbd> to use voice input
+
+                {/* Intro greeting bubble — appears after 800 ms */}
+                {introShown && introText && (
+                  <div
+                    className="mt-6 max-w-md w-full text-left"
+                    style={{ animation: "intro-badge-in 0.5s ease both" }}
+                  >
+                    <div
+                      className={cn(
+                        "rounded-xl px-5 py-4 text-sm leading-relaxed border shadow-sm transition-all duration-500",
+                        isPlaying
+                          ? "bg-primary/8 border-primary/30 shadow-primary/10"
+                          : "bg-card/80 border-border/60 backdrop-blur-sm",
+                      )}
+                    >
+                      {/* Speaking header */}
+                      <div className="flex items-center gap-2 mb-2.5">
+                        <div
+                          className={cn(
+                            "h-7 w-7 rounded-full flex items-center justify-center shrink-0 transition-all",
+                            isPlaying
+                              ? "bg-primary text-primary-foreground ring-4 ring-primary/20"
+                              : "bg-primary/10 text-primary",
+                          )}
+                        >
+                          {isPlaying ? (
+                            <SpeakingWaveform active={true} className="text-primary-foreground" />
+                          ) : (
+                            <Bot className="h-3.5 w-3.5" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="text-xs font-semibold text-foreground">SCRB Assistant</div>
+                          {isPlaying && (
+                            <div className="text-[10px] text-primary font-medium">Speaking introduction…</div>
+                          )}
+                        </div>
+                        {/* Replay intro button */}
+                        <button
+                          onClick={() => speak(introText)}
+                          className="ml-auto h-6 w-6 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                          aria-label="Replay introduction"
+                          title="Replay introduction"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                        </button>
+                      </div>
+                      <p className="text-foreground/90 whitespace-pre-wrap">{introText}</p>
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-[10px] mt-5 text-muted-foreground/50">
+                  Press{" "}
+                  <kbd className="rounded bg-muted px-1 py-0.5 font-mono">Ctrl+M</kbd>{" "}
+                  for voice input
                 </p>
               </div>
             )}

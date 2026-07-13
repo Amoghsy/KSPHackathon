@@ -39,6 +39,13 @@ const en = {
   showReasoning: "Show reasoning",
   voiceUnsupported: "Voice input not supported in this browser",
 
+  // self-introduction (spoken on page load, ~10 seconds)
+  introGreeting:
+    "Namaskara. I am the Karnataka SCRB Crime Intelligence Assistant, powered by advanced AI. " +
+    "I can help you query police records, analyze suspect networks, explore crime trends, " +
+    "and generate detailed case reports — all in natural language. " +
+    "Just type or speak your question and I will respond instantly. How can I assist you today?",
+
   // suggestion chips
   s1: "Show robbery cases in Bengaluru last 6 months",
   s2: "Which accused have 3+ FIRs?",
@@ -82,6 +89,15 @@ const kn: typeof en = {
   historyTitle: "ಸಂಭಾಷಣೆ ಇತಿಹಾಸ",
   showReasoning: "ತಾರ್ಕಿಕತೆ ತೋರಿಸಿ",
   voiceUnsupported: "ಈ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಧ್ವನಿ ಇನ್‌ಪುಟ್ ಬೆಂಬಲಿತವಾಗಿಲ್ಲ",
+
+  // self-introduction (spoken on page load, ~10 seconds)
+  introGreeting:
+    "ನಮಸ್ಕಾರ. ನಾನು ಕರ್ನಾಟಕ SCRB ಅಪರಾಧ ಗುಪ್ತಚರ ಸಹಾಯಕ. " +
+    "ನಾನು ನಿಮಗೆ ಪೊಲೀಸ್ ದಾಖಲೆಗಳನ್ನು ಪ್ರಶ್ನಿಸಲು, " +
+    "ಅಪರಾಧಿ ಜಾಲಗಳನ್ನು ವಿಶ್ಲೇಷಿಸಲು, " +
+    "ಅಪರಾಧ ಪ್ರವೃತ್ತಿಗಳನ್ನು ಅನ್ವೇಷಿಸಲು " +
+    "ಮತ್ತು ವಿವರವಾದ ಪ್ರಕರಣ ವರದಿಗಳನ್ನು ರಚಿಸಲು ಸಹಾಯ ಮಾಡಬಲ್ಲೆ. " +
+    "ನಿಮ್ಮ ಪ್ರಶ್ನೆಯನ್ನು ಟೈಪ್ ಮಾಡಿ ಅಥವಾ ಮಾತನಾಡಿ. ನಾನು ಸಹಾಯ ಮಾಡಲು ಸಿದ್ಧನಾಗಿದ್ದೇನೆ.",
 
   s1: "ಬೆಂಗಳೂರಿನಲ್ಲಿ ಕಳೆದ 6 ತಿಂಗಳಲ್ಲಿ ದರೋಡೆ ಪ್ರಕರಣಗಳನ್ನು ತೋರಿಸಿ",
   s2: "ಯಾವ ಅಪರಾಧಿಗಳಿಗೆ 3+ ಎಫ್‌ಐಆರ್‌ಗಳಿವೆ?",
