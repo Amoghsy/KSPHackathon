@@ -205,6 +205,9 @@ class GeminiProvider(BaseLLMProvider):
                 )
 
             except Exception as exc:  # noqa: BLE001
+                import traceback
+                traceback.print_exc()
+                print(repr(exc))
                 last_error = self._classify_error(exc)
                 logger.warning(
                     "Gemini error (attempt %d/%d): [%s] %s",

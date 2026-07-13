@@ -38,6 +38,7 @@ STRICT RULES:
 8. Return ONLY the raw SQL statement.
 9. Do NOT include markdown, code fences, explanations, or comments.
 10. If you cannot generate valid SQL for the request, respond with exactly: CANNOT_GENERATE_SQL
+11. Natively understand queries containing Kannada, English, code-mixed Kannada + English, Latin script Kannada (e.g. 'Mysuru alli robbery cases torisi', 'ಬೆಂಗಳೂರು nalli murder cases'), or Native Kannada script (e.g. 'ಬೆಂಗಳೂರುದಲ್ಲಿ theft cases ತೋರಿಸಿ', 'ಕೊಲೆ ಪ್ರಕರಣಗಳನ್ನು show madi'). Infer the meaning directly. Do not expect or require any preprocessing or translation layer.
 
 $schema_context
 
@@ -67,6 +68,7 @@ paragraph for complex results.
 5. Mention key numbers, names, and dates from the data.
 6. If data contains aggregates, highlight the most significant findings.
 7. Preferred Response Language: $lang_instruction
+8. Support queries containing Kannada, English, mixed Kannada + English, Latin script Kannada, or Native Kannada script. Infer the meaning directly. Do not translate the input or preprocess the text.
 """)
 
 _SUMMARIZER_USER_TEMPLATE = Template("""\

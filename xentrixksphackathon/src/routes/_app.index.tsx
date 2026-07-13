@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import {
   Send,
   Mic,
+  MicOff,
   ChevronDown,
   ChevronRight,
   Sparkles,
@@ -17,7 +18,20 @@ import {
   Loader2,
   AlertCircle,
   Plus,
+  Headphones,
+  Play,
+  Pause,
+  Square,
+  RotateCcw,
+  Volume2,
+  VolumeX,
+  Globe,
+  Check,
+  CheckCheck,
 } from "lucide-react";
+import { useSpeechSynthesis } from "../hooks/useSpeechSynthesis";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import {
   BarChart,
   Bar,
@@ -39,6 +53,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
@@ -47,6 +67,7 @@ import { askAssistant, detectContextRef, extractAccusedId } from "@/services/ass
 import { listConversations, deleteConversation } from "@/lib/api/services";
 import { queryKeys } from "@/lib/api/query-keys";
 import { toast } from "sonner";
+import type { Language } from "@/context/LanguageContext";
 
 export const Route = createFileRoute("/_app/")({
   head: () => ({
@@ -63,6 +84,12 @@ const AGENT_COLORS: Record<AgentKind, string> = {
   "Decision Support Agent": "bg-warning/15 text-warning-foreground border-warning/40",
 };
 
+const LANG_OPTIONS: { value: Language; label: string; native: string; flag: string }[] = [
+  { value: "auto", label: "Auto Detect", native: "Auto", flag: "🌐" },
+  { value: "en", label: "English", native: "English", flag: "🇮🇳" },
+  { value: "kn", label: "Kannada", native: "ಕನ್ನಡ", flag: "🏔️" },
+];
+
 // Feature-detect SpeechRecognition
 function getSpeechRecognition(): unknown | null {
   if (typeof window === "undefined") return null;
@@ -73,10 +100,208 @@ function getSpeechRecognition(): unknown | null {
   );
 }
 
+// ─── Speaking Waveform Animation ────────────────────────────────────────────
+function SpeakingWaveform({ active, className }: { active: boolean; className?: string }) {
+  return (
+    <span
+      className={cn("inline-flex items-end gap-[2px] h-3.5", className)}
+      aria-label={active ? "Speaking" : ""}
+      role="img"
+    >
+      {[0, 1, 2, 3, 4].map((i) => (
+        <span
+          key={i}
+          className={cn(
+            "w-[2px] rounded-full bg-current transition-all",
+            active
+              ? "animate-bounce"
+              : "h-1",
+          )}
+          style={
+            active
+              ? {
+                  animationDelay: `${i * 80}ms`,
+                  animationDuration: "600ms",
+                  height: `${6 + (i % 3) * 4}px`,
+                }
+              : { height: "4px" }
+          }
+        />
+      ))}
+    </span>
+  );
+}
+
+// ─── Recording Pulse Indicator ───────────────────────────────────────────────
+function RecordingIndicator({ active }: { active: boolean }) {
+  if (!active) return null;
+  return (
+    <span className="inline-flex items-center gap-1.5" aria-live="polite" aria-label="Recording active">
+      <span className="relative flex h-2.5 w-2.5">
+        <span className="absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75 animate-ping" />
+        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-destructive" />
+      </span>
+      <span className="text-destructive text-[10px] font-semibold uppercase tracking-widest">REC</span>
+    </span>
+  );
+}
+
+// ─── Typing Animation ────────────────────────────────────────────────────────
+function TypingDots() {
+  return (
+    <span className="inline-flex items-center gap-1" aria-label="Assistant is typing" role="status">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="h-1.5 w-1.5 rounded-full bg-muted-foreground animate-bounce"
+          style={{ animationDelay: `${i * 150}ms`, animationDuration: "900ms" }}
+        />
+      ))}
+    </span>
+  );
+}
+
+// ─── Message Status Icon ─────────────────────────────────────────────────────
+function MessageStatus({ role, speaking }: { role: "user" | "assistant"; speaking?: boolean }) {
+  if (role === "assistant") {
+    if (speaking) {
+      return (
+        <span className="inline-flex items-center gap-1 text-primary text-[10px]">
+          <SpeakingWaveform active={true} />
+          <span>Speaking</span>
+        </span>
+      );
+    }
+    return null;
+  }
+  return (
+    <CheckCheck className="h-3 w-3 text-primary/60" aria-label="Delivered" />
+  );
+}
+
+// ─── Voice Status Bar ────────────────────────────────────────────────────────
+function VoiceStatusBar({
+  detectedLang,
+  preferredLang,
+  currentVoice,
+  isPlaying,
+  isPaused,
+  listening,
+  onStop,
+  onReplay,
+  onPause,
+  onResume,
+}: {
+  detectedLang: string;
+  preferredLang: string;
+  currentVoice: string;
+  isPlaying: boolean;
+  isPaused: boolean;
+  listening: boolean;
+  onStop: () => void;
+  onReplay: () => void;
+  onPause: () => void;
+  onResume: () => void;
+}) {
+  const hasActivity = isPlaying || isPaused || listening;
+
+  return (
+    <div
+      className={cn(
+        "flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 px-5 py-1.5 text-[11px] border-b border-border transition-all duration-300",
+        hasActivity
+          ? "bg-primary/5 border-primary/20"
+          : "bg-muted/20",
+      )}
+      aria-label="Voice and language status bar"
+      role="status"
+    >
+      {/* Left: Status info */}
+      <div className="flex items-center flex-wrap gap-x-3 gap-y-1">
+        <RecordingIndicator active={listening} />
+
+        {isPlaying && !isPaused && (
+          <span className="inline-flex items-center gap-1.5 text-primary font-medium">
+            <SpeakingWaveform active={true} className="text-primary" />
+            <span>Speaking…</span>
+          </span>
+        )}
+        {isPaused && (
+          <span className="text-warning font-medium">⏸ Paused</span>
+        )}
+        {!listening && !isPlaying && !isPaused && (
+          <span className="text-muted-foreground">Ready</span>
+        )}
+
+        <span className="text-muted-foreground/60">|</span>
+
+        <span className="text-muted-foreground">
+          <span className="font-medium text-foreground">Detected:</span>{" "}
+          {detectedLang}
+        </span>
+        <span className="text-muted-foreground">
+          <span className="font-medium text-foreground">Preferred:</span>{" "}
+          {preferredLang}
+        </span>
+        <span className="text-muted-foreground">
+          <span className="font-medium text-foreground">Voice:</span>{" "}
+          <span className="font-mono truncate max-w-[120px] inline-block align-bottom">{currentVoice || "—"}</span>
+        </span>
+      </div>
+
+      {/* Right: Quick controls */}
+      {(isPlaying || isPaused) && (
+        <div className="flex items-center gap-1" role="group" aria-label="Playback controls">
+          <TooltipProvider delayDuration={200}>
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={isPaused ? onResume : onPause}
+                  className="h-6 w-6 rounded flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label={isPaused ? "Resume speaking" : "Pause speaking"}
+                >
+                  {isPaused ? <Play className="h-3 w-3 fill-current" /> : <Pause className="h-3 w-3" />}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">{isPaused ? "Resume" : "Pause"}</TooltipContent>
+            </UITooltip>
+
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={onStop}
+                  className="h-6 w-6 rounded flex items-center justify-center hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                  aria-label="Stop speaking"
+                >
+                  <Square className="h-3 w-3 fill-current" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">Stop</TooltipContent>
+            </UITooltip>
+
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={onReplay}
+                  className="h-6 w-6 rounded flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label="Replay last speech"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">Replay</TooltipContent>
+            </UITooltip>
+          </TooltipProvider>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ChatPage() {
   const t = useT();
   const queryClient = useQueryClient();
-  const { language, setLanguage, recognitionLanguage } = useLanguage();
+  const { language, setLanguage, recognitionLanguage, resolvedLanguage } = useLanguage();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -86,18 +311,43 @@ function ChatPage() {
   const [listening, setListening] = useState(false);
   const [contextEntity, setContextEntity] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<any>(null);
   const initialInputRef = useRef("");
 
+  const [voicePanelOpen, setVoicePanelOpen] = useState(false);
+  const {
+    isPlaying,
+    isPaused,
+    rate,
+    pitch,
+    volume,
+    language: ttsLanguage,
+    autoSpeak,
+    filteredVoices,
+    selectedVoice,
+    speak,
+    pause,
+    resume,
+    stop,
+    replay,
+    setRate,
+    setPitch,
+    setVolume,
+    setLanguage: setTtsLanguage,
+    setAutoSpeak,
+    setSelectedVoice,
+  } = useSpeechSynthesis();
+
   const SR = useMemo(() => getSpeechRecognition(), []);
   const speechSupported = !!SR;
 
   const SUGGESTIONS = [t("s1"), t("s2"), t("s3"), t("s4"), t("s5")];
 
-  // ─── Conversation History (TanStack Query) ────────────────────────────────
+  // ─── Conversation History ─────────────────────────────────────────────────
   const { data: conversations, isLoading: conversationsLoading } = useQuery({
     queryKey: queryKeys.conversations(),
     queryFn: () => listConversations({ limit: 30, sort_by: "updated_at", sort_order: "desc" }),
@@ -105,7 +355,6 @@ function ChatPage() {
     staleTime: 60_000,
   });
 
-  // ─── Delete Conversation Mutation ─────────────────────────────────────────
   const deleteMutation = useMutation({
     mutationFn: deleteConversation,
     onSuccess: (_, id) => {
@@ -144,6 +393,37 @@ function ChatPage() {
     }
   }, [input, messages]);
 
+  // ─── Keyboard Shortcuts ───────────────────────────────────────────────────
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      // Ctrl/Cmd + M → toggle mic
+      if ((e.ctrlKey || e.metaKey) && e.key === "m") {
+        e.preventDefault();
+        if (!speechSupported) return;
+        if (listening) stopListening();
+        else startListening();
+      }
+      // Escape → stop playback or listening
+      if (e.key === "Escape") {
+        if (isPlaying || isPaused) stop();
+        if (listening) stopListening();
+      }
+      // Ctrl/Cmd + H → toggle history
+      if ((e.ctrlKey || e.metaKey) && e.key === "h") {
+        e.preventDefault();
+        setHistoryOpen((v) => !v);
+      }
+      // Ctrl/Cmd + Shift + N → new chat
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "N") {
+        e.preventDefault();
+        startNewConversation();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [speechSupported, listening, isPlaying, isPaused]);
+
   const stopListening = useCallback(() => {
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
@@ -160,7 +440,6 @@ function ChatPage() {
   const startListening = useCallback(() => {
     if (!SR) return;
 
-    // Capture initial textbox content
     initialInputRef.current = input;
 
     if (silenceTimerRef.current) {
@@ -244,7 +523,6 @@ function ChatPage() {
     }
   }, [SR, recognitionLanguage, stopListening, input]);
 
-  // Clean up silence timer on unmount
   useEffect(() => {
     return () => {
       if (silenceTimerRef.current) {
@@ -252,6 +530,21 @@ function ChatPage() {
       }
     };
   }, []);
+
+  const handleSpeak = useCallback(
+    (text: string, msgId?: string) => {
+      speak(text);
+      if (msgId) setSpeakingMsgId(msgId);
+    },
+    [speak],
+  );
+
+  // Clear speakingMsgId when playback ends
+  useEffect(() => {
+    if (!isPlaying && !isPaused) {
+      setSpeakingMsgId(null);
+    }
+  }, [isPlaying, isPaused]);
 
   const send = useCallback(
     async (text: string) => {
@@ -275,14 +568,15 @@ function ChatPage() {
 
       try {
         const reply = await askAssistant(q, conversationId, language);
-        // Capture the conversation_id from the response
         const replyWithId = reply as ChatMessage & { conversationId?: string };
         if (replyWithId.conversationId && !conversationId) {
           setConversationId(replyWithId.conversationId);
-          // Invalidate so the sidebar shows the new conversation
           queryClient.invalidateQueries({ queryKey: queryKeys.conversations() });
         }
         setMessages((m) => [...m, { ...reply, id: reply.id }]);
+        if (autoSpeak) {
+          handleSpeak(reply.text, reply.id);
+        }
       } catch (err: unknown) {
         const message =
           (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
@@ -295,7 +589,7 @@ function ChatPage() {
         setTimeout(() => inputRef.current?.focus(), 50);
       }
     },
-    [loading, conversationId, queryClient],
+    [loading, conversationId, queryClient, autoSpeak, handleSpeak, language, listening, stopListening],
   );
 
   function startNewConversation() {
@@ -382,130 +676,602 @@ function ChatPage() {
     toast.success("PDF downloaded", { description: filename });
   }
 
+  // Detected language label derived from TTS detection
+  const detectedLangLabel = ttsLanguage === "kn-IN" ? "Kannada (kn)" : "English (en)";
+  const preferredLangLabel =
+    language === "auto"
+      ? `Auto (${resolvedLanguage === "kn" ? "Kannada" : "English"})`
+      : language === "kn"
+        ? "Kannada"
+        : "English";
+  const currentVoiceName = selectedVoice?.name ?? "—";
+
   return (
-    <div className="flex h-full">
-      {/* Main chat column */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <div className="flex items-center justify-between border-b border-border bg-card px-5 py-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <h1 className="text-sm font-semibold">{t("chatTitle")}</h1>
-              <Badge variant="secondary" className="text-[10px] font-medium">
+    <TooltipProvider delayDuration={200}>
+      <div className="flex h-full" role="main">
+        {/* Main chat column */}
+        <div className="flex-1 flex flex-col min-w-0">
+
+          {/* ── Header ──────────────────────────────────────────────────────── */}
+          <header
+            className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-card px-3 sm:px-5 py-2.5"
+            aria-label="Chat assistant header"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <Sparkles className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />
+              <h1 className="text-sm font-semibold truncate">{t("chatTitle")}</h1>
+              <Badge variant="secondary" className="text-[10px] font-medium hidden sm:flex">
                 {t("chatBadge")}
               </Badge>
               {conversationId && (
-                <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground">
+                <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground hidden sm:flex">
                   {conversationId.slice(0, 8)}…
                 </Badge>
               )}
             </div>
-            <div className="text-xs text-muted-foreground mt-0.5">{t("chatSubtitle")}</div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={startNewConversation} className="gap-1.5">
-              <Plus className="h-3.5 w-3.5" /> New Chat
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setHistoryOpen((v) => !v)}
-              className="gap-1.5"
+
+            {/* Header actions */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {/* Language Selector */}
+              <DropdownMenu>
+                <UITooltip>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-2.5 gap-1.5 text-xs"
+                        aria-label={`Language: ${preferredLangLabel}. Press to change.`}
+                        id="language-selector"
+                      >
+                        <Globe className="h-3.5 w-3.5" aria-hidden="true" />
+                        <span className="hidden sm:inline">{preferredLangLabel}</span>
+                        <span className="sm:hidden text-[10px] uppercase">
+                          {language === "auto" ? "AUTO" : language.toUpperCase()}
+                        </span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">
+                    Select response language
+                  </TooltipContent>
+                </UITooltip>
+                <DropdownMenuContent align="end" className="w-44">
+                  {LANG_OPTIONS.map((opt) => (
+                    <DropdownMenuItem
+                      key={opt.value}
+                      onClick={() => setLanguage(opt.value)}
+                      className="flex items-center justify-between text-xs cursor-pointer"
+                      aria-checked={language === opt.value}
+                      role="menuitemradio"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span>{opt.flag}</span>
+                        <span>{opt.label}</span>
+                        {opt.value !== "auto" && (
+                          <span className="text-muted-foreground">({opt.native})</span>
+                        )}
+                      </span>
+                      {language === opt.value && <Check className="h-3.5 w-3.5 text-primary" />}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Voice Controls Button */}
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setVoicePanelOpen((v) => !v)}
+                    className={cn(
+                      "h-8 gap-1.5 px-2.5",
+                      (isPlaying || voicePanelOpen) && "border-primary text-primary bg-primary/5",
+                    )}
+                    aria-label={voicePanelOpen ? "Close voice controls" : "Open voice controls"}
+                    aria-expanded={voicePanelOpen}
+                    aria-controls="voice-panel"
+                  >
+                    <Headphones
+                      className={cn("h-3.5 w-3.5", isPlaying && !isPaused && "animate-pulse")}
+                      aria-hidden="true"
+                    />
+                    <span className="hidden sm:inline">
+                      {isPlaying && !isPaused ? "Speaking…" : "Voice"}
+                    </span>
+                    {isPlaying && !isPaused && (
+                      <SpeakingWaveform active={true} className="text-primary hidden sm:inline-flex" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  Voice controls (speaker settings)
+                </TooltipContent>
+              </UITooltip>
+
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={startNewConversation}
+                    className="h-8 gap-1.5 px-2.5"
+                    aria-label="Start new conversation (Ctrl+Shift+N)"
+                    title="Ctrl+Shift+N"
+                  >
+                    <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span className="hidden sm:inline">New</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  New chat <kbd className="ml-1 rounded bg-muted px-1 py-0.5 text-[9px] font-mono">Ctrl+Shift+N</kbd>
+                </TooltipContent>
+              </UITooltip>
+
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setHistoryOpen((v) => !v)}
+                    className={cn("h-8 gap-1.5 px-2.5", historyOpen && "border-primary text-primary bg-primary/5")}
+                    aria-label="Toggle conversation history (Ctrl+H)"
+                    aria-expanded={historyOpen}
+                    aria-controls="history-panel"
+                    title="Ctrl+H"
+                  >
+                    <History className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span className="hidden sm:inline">{t("history")}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  History <kbd className="ml-1 rounded bg-muted px-1 py-0.5 text-[9px] font-mono">Ctrl+H</kbd>
+                </TooltipContent>
+              </UITooltip>
+
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={exportPdf}
+                    className="h-8 gap-1.5 px-2.5"
+                    aria-label="Export chat as PDF"
+                    disabled={messages.length === 0}
+                  >
+                    <FileDown className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span className="hidden sm:inline">{t("exportPdf")}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">Export as PDF</TooltipContent>
+              </UITooltip>
+            </div>
+          </header>
+
+          {/* ── Voice Status Bar ─────────────────────────────────────────────── */}
+          <VoiceStatusBar
+            detectedLang={detectedLangLabel}
+            preferredLang={preferredLangLabel}
+            currentVoice={currentVoiceName}
+            isPlaying={isPlaying}
+            isPaused={isPaused}
+            listening={listening}
+            onStop={stop}
+            onReplay={replay}
+            onPause={pause}
+            onResume={resume}
+          />
+
+          {/* ── Voice Control Panel ──────────────────────────────────────────── */}
+          {voicePanelOpen && (
+            <section
+              id="voice-panel"
+              className="border-b border-border bg-muted/30 p-4 space-y-4 animate-in slide-in-from-top duration-250"
+              aria-label="Voice assistant controls"
             >
-              <History className="h-3.5 w-3.5" /> {t("history")}
-            </Button>
-            <Button variant="outline" size="sm" onClick={exportPdf} className="gap-1.5">
-              <FileDown className="h-3.5 w-3.5" /> {t("exportPdf")}
-            </Button>
-          </div>
-        </div>
+              {/* Row 1: Player Controls */}
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary transition-all",
+                      isPlaying && !isPaused && "ring-2 ring-primary/30 ring-offset-1",
+                    )}
+                    aria-hidden="true"
+                  >
+                    {isPlaying && !isPaused ? (
+                      <SpeakingWaveform active={true} className="text-primary" />
+                    ) : (
+                      <Headphones className="h-4 w-4" />
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-foreground">Voice Assistant</div>
+                    <div className="text-[10px] text-muted-foreground">
+                      {isPlaying ? (isPaused ? "Paused" : "Speaking response…") : "Idle"}
+                    </div>
+                  </div>
+                </div>
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin px-5 py-6 space-y-5">
-          {/* Empty state */}
-          {messages.length === 0 && !loading && !chatError && (
-            <div className="flex flex-col items-center justify-center h-full py-20 text-center text-muted-foreground animate-in fade-in duration-500">
-              <div className="relative mb-4">
-                <div className="absolute inset-0 rounded-2xl bg-primary/10 blur-xl animate-pulse" />
-                <img
-                  src="/logo.png"
-                  alt="KSP Logo"
-                  className="relative h-20 w-20 object-contain rounded-xl shadow-lg border border-border"
-                />
+                {/* Playback Controls */}
+                <div className="flex items-center gap-1.5" role="group" aria-label="Playback controls">
+                  <UITooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 rounded-full"
+                        onClick={() => {
+                          if (isPaused) {
+                            resume();
+                          } else if (isPlaying) {
+                            pause();
+                          } else {
+                            const lastAssistantMsg = [...messages].reverse().find((m) => m.role === "assistant");
+                            if (lastAssistantMsg) handleSpeak(lastAssistantMsg.text, lastAssistantMsg.id);
+                          }
+                        }}
+                        aria-label={isPlaying && !isPaused ? "Pause speaking" : "Play / Resume"}
+                      >
+                        {isPlaying && !isPaused ? (
+                          <Pause className="h-3.5 w-3.5" />
+                        ) : (
+                          <Play className="h-3.5 w-3.5 fill-foreground ml-0.5" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="text-xs">
+                      {isPlaying && !isPaused ? "Pause" : "Play / Resume"}
+                    </TooltipContent>
+                  </UITooltip>
+
+                  <UITooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 rounded-full"
+                        onClick={stop}
+                        disabled={!isPlaying && !isPaused}
+                        aria-label="Stop speaking"
+                      >
+                        <Square className="h-3.5 w-3.5 fill-foreground" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="text-xs">Stop</TooltipContent>
+                  </UITooltip>
+
+                  <UITooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 rounded-full"
+                        onClick={replay}
+                        disabled={!isPlaying && !isPaused}
+                        aria-label="Replay last response"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="text-xs">Replay</TooltipContent>
+                  </UITooltip>
+
+                  {/* Mute / Unmute volume quick toggle */}
+                  <UITooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 rounded-full"
+                        onClick={() => setVolume(volume > 0 ? 0 : 1)}
+                        aria-label={volume > 0 ? "Mute speaker" : "Unmute speaker"}
+                      >
+                        {volume > 0 ? (
+                          <Volume2 className="h-3.5 w-3.5" />
+                        ) : (
+                          <VolumeX className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="text-xs">{volume > 0 ? "Mute" : "Unmute"}</TooltipContent>
+                  </UITooltip>
+                </div>
+
+                {/* Auto Speak Switch */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground" id="auto-speak-label">
+                    Auto-speak
+                  </span>
+                  <Switch
+                    checked={autoSpeak}
+                    onCheckedChange={setAutoSpeak}
+                    id="auto-speak-toggle"
+                    aria-labelledby="auto-speak-label"
+                  />
+                </div>
               </div>
-              <p className="text-sm font-semibold text-foreground">KSP Crime Intelligence Assistant</p>
-              <p className="text-xs mt-1 text-muted-foreground max-w-xs">
-                Ask a question to query police databases, analyze suspect networks, or view crime trends.
-              </p>
-            </div>
-          )}
 
-          {messages.map((m) => (
-            <MessageRow key={m.id} m={m} />
-          ))}
+              {/* Row 2: Voice Settings */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 pt-3 border-t border-border/60">
+                {/* TTS Language Selector */}
+                <div className="space-y-1.5">
+                  <label
+                    className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider"
+                    id="tts-lang-label"
+                  >
+                    Speaker Language
+                  </label>
+                  <div
+                    className="flex rounded-md border border-input overflow-hidden text-xs bg-background h-8"
+                    role="group"
+                    aria-labelledby="tts-lang-label"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setTtsLanguage("en-IN")}
+                      className={cn(
+                        "flex-1 font-medium transition-colors",
+                        ttsLanguage === "en-IN" ? "bg-primary text-primary-foreground" : "hover:bg-accent",
+                      )}
+                      aria-pressed={ttsLanguage === "en-IN"}
+                      aria-label="English speaker"
+                    >
+                      English
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTtsLanguage("kn-IN")}
+                      className={cn(
+                        "flex-1 font-medium transition-colors",
+                        ttsLanguage === "kn-IN" ? "bg-primary text-primary-foreground" : "hover:bg-accent",
+                      )}
+                      aria-pressed={ttsLanguage === "kn-IN"}
+                      aria-label="Kannada speaker"
+                    >
+                      ಕನ್ನಡ
+                    </button>
+                  </div>
+                </div>
 
-          {loading && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
-              <Bot className="h-4 w-4" /> {t("analysing")}
-            </div>
-          )}
+                {/* Voice Selector */}
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="voice-select"
+                    className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider"
+                  >
+                    Voice
+                  </label>
+                  <select
+                    id="voice-select"
+                    value={selectedVoice?.name || ""}
+                    onChange={(e) => {
+                      const voice = filteredVoices.find((v) => v.name === e.target.value);
+                      if (voice) setSelectedVoice(voice);
+                    }}
+                    className="w-full text-xs rounded-md border border-input bg-background px-2.5 h-8 focus:outline-none focus:ring-1 focus:ring-ring"
+                    aria-label="Select voice"
+                  >
+                    {filteredVoices.length === 0 ? (
+                      <option value="">No voices available</option>
+                    ) : (
+                      filteredVoices.map((v) => {
+                        const isFallback = !v.lang.toLowerCase().startsWith(ttsLanguage.split("-")[0].toLowerCase());
+                        return (
+                          <option key={v.name} value={v.name}>
+                            {isFallback ? "[Fallback] " : ""}{v.name} ({v.lang})
+                          </option>
+                        );
+                      })
+                    )}
+                  </select>
+                </div>
 
-          {chatError && (
-            <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-              <div>
-                <div className="font-medium">Query failed</div>
-                <div className="text-xs mt-0.5 text-destructive/80">{chatError}</div>
+                {/* Volume */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label
+                      htmlFor="volume-slider"
+                      className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider"
+                    >
+                      Volume
+                    </label>
+                    <span className="text-[10px] font-mono" aria-live="polite">{Math.round(volume * 100)}%</span>
+                  </div>
+                  <div className="flex items-center h-8">
+                    <Slider
+                      id="volume-slider"
+                      value={[volume]}
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      onValueChange={(val) => setVolume(val[0])}
+                      aria-label="Volume"
+                    />
+                  </div>
+                </div>
+
+                {/* Rate */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label
+                      htmlFor="rate-slider"
+                      className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider"
+                    >
+                      Speed
+                    </label>
+                    <span className="text-[10px] font-mono" aria-live="polite">{rate.toFixed(1)}x</span>
+                  </div>
+                  <div className="flex items-center h-8">
+                    <Slider
+                      id="rate-slider"
+                      value={[rate]}
+                      min={0.5}
+                      max={2.0}
+                      step={0.1}
+                      onValueChange={(val) => setRate(val[0])}
+                      aria-label="Playback speed"
+                    />
+                  </div>
+                </div>
+
+                {/* Pitch */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label
+                      htmlFor="pitch-slider"
+                      className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider"
+                    >
+                      Pitch
+                    </label>
+                    <span className="text-[10px] font-mono" aria-live="polite">{pitch.toFixed(1)}</span>
+                  </div>
+                  <div className="flex items-center h-8">
+                    <Slider
+                      id="pitch-slider"
+                      value={[pitch]}
+                      min={0.5}
+                      max={2.0}
+                      step={0.1}
+                      onValueChange={(val) => setPitch(val[0])}
+                      aria-label="Voice pitch"
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
+            </section>
           )}
-        </div>
 
-        <div className="border-t border-border bg-card px-5 py-3">
-          {contextEntity && (
-            <div className="mb-2 flex items-center gap-2">
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-primary">
-                <span className="font-medium">Context:</span>
-                <span>{contextEntity}</span>
-                <button
-                  onClick={() => setContextEntity(null)}
-                  className="ml-1 rounded-full hover:bg-primary/20 p-0.5"
-                  aria-label="Clear context"
-                >
-                  <X className="h-3 w-3" />
-                </button>
+          {/* ── Message List ─────────────────────────────────────────────────── */}
+          <div
+            ref={scrollRef}
+            className="flex-1 overflow-y-auto scrollbar-thin px-3 sm:px-5 py-6 space-y-5"
+            role="log"
+            aria-label="Conversation messages"
+            aria-live="polite"
+          >
+            {/* Empty state */}
+            {messages.length === 0 && !loading && !chatError && (
+              <div className="flex flex-col items-center justify-center h-full py-20 text-center text-muted-foreground animate-in fade-in duration-500">
+                <div className="relative mb-4">
+                  <div className="absolute inset-0 rounded-2xl bg-primary/10 blur-xl animate-pulse" aria-hidden="true" />
+                  <img
+                    src="/logo.png"
+                    alt="KSP Logo"
+                    className="relative h-20 w-20 object-contain rounded-xl shadow-lg border border-border"
+                  />
+                </div>
+                <p className="text-sm font-semibold text-foreground">KSP Crime Intelligence Assistant</p>
+                <p className="text-xs mt-1 text-muted-foreground max-w-xs">
+                  Ask a question to query police databases, analyze suspect networks, or view crime trends.
+                </p>
+                <p className="text-[10px] mt-3 text-muted-foreground/60">
+                  Press <kbd className="rounded bg-muted px-1 py-0.5 font-mono">Ctrl+M</kbd> to use voice input
+                </p>
               </div>
-              <span className="text-[11px] text-muted-foreground">Click × to clear</span>
-            </div>
-          )}
-          <div className="flex flex-wrap gap-1.5 mb-2.5">
-            {SUGGESTIONS.map((s) => (
-              <button
-                key={s}
-                onClick={() => send(s)}
-                className="text-xs rounded-full border border-border bg-background px-3 py-1 hover:border-primary hover:text-primary transition-colors"
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-end gap-2">
-            <div className="flex-1 relative">
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    send(input);
-                  }
-                }}
-                rows={2}
-                placeholder={t("askPlaceholder")}
-                className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 pr-24 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40"
+            )}
+
+            {messages.map((m) => (
+              <MessageRow
+                key={m.id}
+                m={m}
+                onSpeak={(text) => handleSpeak(text, m.id)}
+                isSpeaking={speakingMsgId === m.id}
               />
-              <div className="absolute right-2 bottom-2 flex items-center gap-1">
-                <TooltipProvider delayDuration={200}>
+            ))}
+
+            {/* Typing animation */}
+            {loading && (
+              <div
+                className="flex items-center gap-2.5 text-sm text-muted-foreground"
+                role="status"
+                aria-label="Assistant is thinking"
+              >
+                <div className="h-8 w-8 rounded flex items-center justify-center bg-primary/10 text-primary shrink-0">
+                  <Bot className="h-4 w-4" aria-hidden="true" />
+                </div>
+                <div className="rounded-md px-4 py-3 bg-card border-l-2 border-l-primary border border-border shadow-xs">
+                  <div className="flex items-center gap-2">
+                    <TypingDots />
+                    <span className="text-xs text-muted-foreground">{t("analysing")}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {chatError && (
+              <div
+                className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+                role="alert"
+              >
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" />
+                <div>
+                  <div className="font-medium">Query failed</div>
+                  <div className="text-xs mt-0.5 text-destructive/80">{chatError}</div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ── Input Bar ────────────────────────────────────────────────────── */}
+          <div className="border-t border-border bg-card px-3 sm:px-5 py-3">
+            {contextEntity && (
+              <div className="mb-2 flex items-center gap-2">
+                <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-primary">
+                  <span className="font-medium">Context:</span>
+                  <span>{contextEntity}</span>
+                  <button
+                    onClick={() => setContextEntity(null)}
+                    className="ml-1 rounded-full hover:bg-primary/20 p-0.5"
+                    aria-label="Clear context entity"
+                  >
+                    <X className="h-3 w-3" aria-hidden="true" />
+                  </button>
+                </div>
+                <span className="text-[11px] text-muted-foreground">Click × to clear</span>
+              </div>
+            )}
+
+            {/* Suggestion chips */}
+            <div className="flex flex-wrap gap-1.5 mb-2.5" role="list" aria-label="Suggested queries">
+              {SUGGESTIONS.map((s) => (
+                <button
+                  key={s}
+                  role="listitem"
+                  onClick={() => send(s)}
+                  className="text-xs rounded-full border border-border bg-background px-3 py-1 hover:border-primary hover:text-primary transition-colors"
+                  aria-label={`Suggested query: ${s}`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+
+            {/* Input row */}
+            <div className="flex items-end gap-2">
+              <div className="flex-1 relative">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      send(input);
+                    }
+                  }}
+                  rows={2}
+                  placeholder={t("askPlaceholder")}
+                  className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 pr-28 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40"
+                  aria-label="Type your message. Press Enter to send, Shift+Enter for new line."
+                  aria-multiline="true"
+                  id="chat-input"
+                />
+
+                {/* Inline controls inside textarea */}
+                <div className="absolute right-2 bottom-2 flex items-center gap-1">
+                  {/* Mic button */}
                   <UITooltip>
                     <TooltipTrigger asChild>
                       <button
@@ -519,16 +1285,29 @@ function ChatPage() {
                         }}
                         disabled={!speechSupported}
                         className={cn(
-                          "h-8 w-8 rounded flex items-center justify-center hover:bg-accent relative transition-all",
+                          "h-8 w-8 rounded flex items-center justify-center hover:bg-accent relative transition-all focus-visible:ring-2 focus-visible:ring-ring",
                           !speechSupported && "opacity-40 cursor-not-allowed",
                           listening && "bg-destructive/20 text-destructive scale-105",
                         )}
+                        aria-label={
+                          !speechSupported
+                            ? t("voiceUnsupported")
+                            : listening
+                              ? "Stop voice recording (Ctrl+M)"
+                              : "Start voice recording (Ctrl+M)"
+                        }
+                        aria-pressed={listening}
+                        title={listening ? "Stop listening (Esc)" : "Start voice input (Ctrl+M)"}
                       >
-                        <Mic className={cn("h-4 w-4", listening && "animate-pulse")} />
+                        {listening ? (
+                          <MicOff className="h-4 w-4" aria-hidden="true" />
+                        ) : (
+                          <Mic className={cn("h-4 w-4", !speechSupported && "opacity-60")} aria-hidden="true" />
+                        )}
                         {listening && (
                           <>
-                            <span className="absolute inset-0 rounded bg-destructive/30 animate-ping" />
-                            <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-destructive ring-2 ring-card animate-bounce" />
+                            <span className="absolute inset-0 rounded bg-destructive/30 animate-ping" aria-hidden="true" />
+                            <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-destructive ring-2 ring-card animate-bounce" aria-hidden="true" />
                           </>
                         )}
                       </button>
@@ -536,140 +1315,226 @@ function ChatPage() {
                     <TooltipContent side="top" className="text-xs">
                       {speechSupported
                         ? listening
-                          ? "Stop listening"
-                          : "Start voice input"
+                          ? "Stop listening (Esc)"
+                          : "Voice input (Ctrl+M)"
                         : t("voiceUnsupported")}
                     </TooltipContent>
                   </UITooltip>
-                </TooltipProvider>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase tracking-wider font-mono">
-                  {recognitionLanguage.split("-")[0]}
-                </span>
+
+                  {/* Speaker button — quick speak last response */}
+                  <UITooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => {
+                          if (isPlaying || isPaused) {
+                            stop();
+                          } else {
+                            const last = [...messages].reverse().find((m) => m.role === "assistant");
+                            if (last) handleSpeak(last.text, last.id);
+                          }
+                        }}
+                        disabled={messages.filter((m) => m.role === "assistant").length === 0}
+                        className={cn(
+                          "h-8 w-8 rounded flex items-center justify-center hover:bg-accent transition-all focus-visible:ring-2 focus-visible:ring-ring",
+                          (isPlaying || isPaused) && "bg-primary/10 text-primary",
+                          messages.filter((m) => m.role === "assistant").length === 0 && "opacity-30 cursor-not-allowed",
+                        )}
+                        aria-label={isPlaying || isPaused ? "Stop speaking (Esc)" : "Speak last response"}
+                        aria-pressed={isPlaying || isPaused}
+                      >
+                        {isPlaying && !isPaused ? (
+                          <SpeakingWaveform active={true} className="text-primary" />
+                        ) : (
+                          <Volume2 className="h-4 w-4" aria-hidden="true" />
+                        )}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">
+                      {isPlaying || isPaused ? "Stop speaking (Esc)" : "Speak last response"}
+                    </TooltipContent>
+                  </UITooltip>
+
+                  {/* Recognition language tag */}
+                  <UITooltip>
+                    <TooltipTrigger asChild>
+                      <span
+                        className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase tracking-wider font-mono cursor-default select-none"
+                        aria-label={`Voice recognition language: ${recognitionLanguage}`}
+                      >
+                        {recognitionLanguage.split("-")[0]}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">
+                      Mic language: {recognitionLanguage}
+                    </TooltipContent>
+                  </UITooltip>
+                </div>
               </div>
+
+              {/* Send button */}
+              <Button
+                onClick={() => send(input)}
+                disabled={loading || !input.trim()}
+                className="h-11 px-4 shrink-0"
+                aria-label="Send message (Enter)"
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-1.5" aria-hidden="true" />
+                    {t("send")}
+                  </>
+                )}
+              </Button>
             </div>
-            <Button
-              onClick={() => send(input)}
-              disabled={loading || !input.trim()}
-              className="h-11 px-4"
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <>
-                  <Send className="h-4 w-4 mr-1.5" /> {t("send")}
-                </>
-              )}
-            </Button>
-          </div>
-          <div className="text-[11px] text-muted-foreground mt-2">{t("explainabilityNote")}</div>
-          <div className="text-[11px] text-muted-foreground/80 italic mt-1">
-            {t("translationNote")}
+
+            {/* Footer notes */}
+            <div className="flex flex-wrap items-center justify-between gap-1 mt-2">
+              <div className="text-[11px] text-muted-foreground">{t("explainabilityNote")}</div>
+              <div className="text-[11px] text-muted-foreground/70 italic">{t("translationNote")}</div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {historyOpen && (
-        <aside className="w-72 border-l border-border bg-card overflow-y-auto scrollbar-thin animate-in slide-in-from-right duration-200">
-          <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-            <div className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
-              {t("historyTitle")}
+        {/* ── History Sidebar ──────────────────────────────────────────────── */}
+        {historyOpen && (
+          <aside
+            id="history-panel"
+            className="w-64 sm:w-72 border-l border-border bg-card overflow-y-auto scrollbar-thin animate-in slide-in-from-right duration-200 shrink-0"
+            aria-label="Conversation history"
+          >
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between sticky top-0 bg-card z-10">
+              <div className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                {t("historyTitle")}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => setHistoryOpen(false)}
+                aria-label="Close history panel"
+              >
+                <X className="h-3.5 w-3.5" aria-hidden="true" />
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={() => setHistoryOpen(false)}
-            >
-              <X className="h-3.5 w-3.5" />
-            </Button>
-          </div>
 
-          {conversationsLoading ? (
-            <div className="p-3 space-y-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-14 rounded" />
-              ))}
-            </div>
-          ) : !conversations || conversations.length === 0 ? (
-            <div className="px-4 py-8 text-center text-xs text-muted-foreground">
-              No past conversations yet.
-            </div>
-          ) : (
-            <ul className="p-2 space-y-1">
-              {conversations.map((s) => (
-                <li key={s.conversation_id}>
-                  <div
-                    className={cn(
-                      "w-full text-left rounded px-3 py-2 hover:bg-accent group flex items-start gap-2 cursor-pointer",
-                      conversationId === s.conversation_id && "bg-accent",
-                    )}
-                    onClick={() => {
-                      setConversationId(s.conversation_id);
-                      setMessages([]);
-                      setChatError(null);
-                      // Restore preferred language
-                      if (s.preferred_language) {
-                        setLanguage(s.preferred_language as any);
-                      }
-                      // Load last message into the view if available
-                      if (s.conversation_history?.length > 0) {
-                        const hydratedMessages: ChatMessage[] = s.conversation_history.map(
-                          (h, i) => ({
-                            id: `${s.conversation_id}-${i}`,
-                            role: h.role,
-                            text: h.content,
-                            ts: new Date(h.timestamp * 1000).toISOString(),
-                            sql: h.generated_sql ?? undefined,
-                          }),
-                        );
-                        setMessages(hydratedMessages);
-                      }
-                    }}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">
-                        {s.last_question
-                          ? s.last_question.slice(0, 40) + (s.last_question.length > 40 ? "…" : "")
-                          : s.conversation_id.slice(0, 16) + "…"}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground">
-                        {format(new Date(s.updated_at * 1000), "d MMM · HH:mm")}
-                      </div>
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteMutation.mutate(s.conversation_id);
+            {conversationsLoading ? (
+              <div className="p-3 space-y-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-14 rounded" />
+                ))}
+              </div>
+            ) : !conversations || conversations.length === 0 ? (
+              <div className="px-4 py-8 text-center text-xs text-muted-foreground">
+                No past conversations yet.
+              </div>
+            ) : (
+              <ul className="p-2 space-y-1" role="list" aria-label="Past conversations">
+                {conversations.map((s) => (
+                  <li key={s.conversation_id} role="listitem">
+                    <div
+                      className={cn(
+                        "w-full text-left rounded px-3 py-2 hover:bg-accent group flex items-start gap-2 cursor-pointer",
+                        conversationId === s.conversation_id && "bg-accent",
+                      )}
+                      onClick={() => {
+                        setConversationId(s.conversation_id);
+                        setMessages([]);
+                        setChatError(null);
+                        if (s.preferred_language) {
+                          setLanguage(s.preferred_language as any);
+                        }
+                        if (s.conversation_history?.length > 0) {
+                          const hydratedMessages: ChatMessage[] = s.conversation_history.map(
+                            (h, i) => ({
+                              id: `${s.conversation_id}-${i}`,
+                              role: h.role,
+                              text: h.content,
+                              ts: new Date(h.timestamp * 1000).toISOString(),
+                              sql: h.generated_sql ?? undefined,
+                            }),
+                          );
+                          setMessages(hydratedMessages);
+                        }
                       }}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/10 hover:text-destructive"
-                      aria-label="Delete conversation"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Load conversation: ${s.last_question?.slice(0, 40) || s.conversation_id.slice(0, 16)}`}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.currentTarget.click();
+                        }
+                      }}
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </aside>
-      )}
-    </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">
+                          {s.last_question
+                            ? s.last_question.slice(0, 40) + (s.last_question.length > 40 ? "…" : "")
+                            : s.conversation_id.slice(0, 16) + "…"}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground">
+                          {format(new Date(s.updated_at * 1000), "d MMM · HH:mm")}
+                        </div>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteMutation.mutate(s.conversation_id);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100"
+                        aria-label={`Delete conversation`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </aside>
+        )}
+      </div>
+    </TooltipProvider>
   );
 }
 
-function MessageRow({ m }: { m: ChatMessage }) {
+// ─── MessageRow ──────────────────────────────────────────────────────────────
+function MessageRow({
+  m,
+  onSpeak,
+  isSpeaking,
+}: {
+  m: ChatMessage;
+  onSpeak?: (text: string) => void;
+  isSpeaking?: boolean;
+}) {
   const t = useT();
   const [showSql, setShowSql] = useState(false);
   const isUser = m.role === "user";
 
   return (
-    <div className={cn("flex gap-3 animate-in fade-in duration-300", isUser && "justify-end")}>
+    <article
+      className={cn("flex gap-3 animate-in fade-in duration-300", isUser && "justify-end")}
+      aria-label={`${isUser ? "Your" : "Assistant"} message`}
+    >
       {!isUser && (
-        <div className="h-8 w-8 rounded flex items-center justify-center bg-primary/10 text-primary shrink-0">
-          <Bot className="h-4 w-4" />
+        <div
+          className={cn(
+            "h-8 w-8 rounded flex items-center justify-center bg-primary/10 text-primary shrink-0 transition-all",
+            isSpeaking && "ring-2 ring-primary/40 ring-offset-1",
+          )}
+          aria-hidden="true"
+        >
+          {isSpeaking ? (
+            <SpeakingWaveform active={true} className="text-primary" />
+          ) : (
+            <Bot className="h-4 w-4" />
+          )}
         </div>
       )}
-      <div className={cn("max-w-[80%] min-w-0", isUser && "order-1")}>
+
+      <div className={cn("max-w-[85%] sm:max-w-[80%] min-w-0", isUser && "order-1")}>
         {!isUser && m.agent && (
           <div className="mb-1">
             <Badge
@@ -680,6 +1545,7 @@ function MessageRow({ m }: { m: ChatMessage }) {
             </Badge>
           </div>
         )}
+
         <div
           className={cn(
             "rounded-md px-4 py-3 text-sm",
@@ -696,39 +1562,84 @@ function MessageRow({ m }: { m: ChatMessage }) {
           )}
         </div>
 
+        {/* Message metadata row */}
         <div
           className={cn(
-            "flex items-center gap-2 mt-1.5 text-[11px] text-muted-foreground",
+            "flex items-center gap-2 mt-1.5 text-[11px] text-muted-foreground flex-wrap",
             isUser && "justify-end",
           )}
         >
-          <span>{format(new Date(m.ts), "d MMM · HH:mm")}</span>
+          <span aria-label={`Sent at ${format(new Date(m.ts), "d MMM, HH:mm")}`}>
+            {format(new Date(m.ts), "d MMM · HH:mm")}
+          </span>
+
+          {/* Message status */}
+          <MessageStatus role={m.role} speaking={isSpeaking} />
+
           {!isUser && m.sql && (
             <button
               onClick={() => setShowSql((v) => !v)}
-              className="inline-flex items-center gap-0.5 hover:text-foreground"
+              className="inline-flex items-center gap-0.5 hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring rounded"
+              aria-label={showSql ? "Hide SQL reasoning" : "Show SQL reasoning"}
+              aria-expanded={showSql}
             >
               {showSql ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
               {t("showReasoning")} · {m.rows} row{m.rows === 1 ? "" : "s"}
             </button>
           )}
+
+          {!isUser && onSpeak && (
+            <TooltipProvider delayDuration={200}>
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => onSpeak(m.text)}
+                    className={cn(
+                      "inline-flex items-center gap-1 hover:text-foreground ml-1 cursor-pointer focus-visible:ring-1 focus-visible:ring-ring rounded transition-colors",
+                      isSpeaking && "text-primary",
+                    )}
+                    aria-label={isSpeaking ? "Currently speaking this message" : "Speak this response"}
+                    aria-pressed={isSpeaking}
+                  >
+                    {isSpeaking ? (
+                      <SpeakingWaveform active={true} className="text-primary" />
+                    ) : (
+                      <Volume2 className="h-3.5 w-3.5" />
+                    )}
+                    {isSpeaking ? "Speaking" : "Speak"}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  {isSpeaking ? "Currently speaking" : "Read response aloud"}
+                </TooltipContent>
+              </UITooltip>
+            </TooltipProvider>
+          )}
         </div>
 
         {!isUser && showSql && m.sql && (
-          <pre className="mt-2 rounded border border-border bg-muted/60 p-3 text-[11px] font-mono leading-relaxed overflow-x-auto text-foreground">
+          <pre
+            className="mt-2 rounded border border-border bg-muted/60 p-3 text-[11px] font-mono leading-relaxed overflow-x-auto text-foreground"
+            aria-label="Generated SQL query"
+          >
             {m.sql}
           </pre>
         )}
       </div>
+
       {isUser && (
-        <div className="h-8 w-8 rounded bg-muted flex items-center justify-center shrink-0">
+        <div
+          className="h-8 w-8 rounded bg-muted flex items-center justify-center shrink-0"
+          aria-hidden="true"
+        >
           <UserIcon className="h-4 w-4 text-muted-foreground" />
         </div>
       )}
-    </div>
+    </article>
   );
 }
 
+// ─── RichCard ────────────────────────────────────────────────────────────────
 function RichCard({ data }: { data: RichData }) {
   if (data.kind === "stat") {
     const up = (data.delta ?? 0) >= 0;
@@ -757,11 +1668,11 @@ function RichCard({ data }: { data: RichData }) {
           {data.title}
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+          <table className="w-full text-xs" aria-label={data.title}>
             <thead>
               <tr className="bg-muted/50">
                 {data.columns?.map((c) => (
-                  <th key={c} className="text-left px-3 py-2 font-medium">
+                  <th key={c} className="text-left px-3 py-2 font-medium" scope="col">
                     {c}
                   </th>
                 ))}
@@ -790,7 +1701,7 @@ function RichCard({ data }: { data: RichData }) {
       <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
         {data.title}
       </div>
-      <div className="h-40">
+      <div className="h-40" aria-label={`Chart: ${data.title}`}>
         <ResponsiveContainer width="100%" height="100%">
           <Comp data={data.chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />

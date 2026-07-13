@@ -34,7 +34,7 @@ const en = {
   analysing: "Assistant is analysing the request…",
   explainabilityNote:
     "Responses include the generated SQL and row count for explainability. Every query is audited.",
-  translationNote: "Response translation requires backend integration — UI labels only for now.",
+  translationNote: "",
   historyTitle: "Conversation history",
   showReasoning: "Show reasoning",
   voiceUnsupported: "Voice input not supported in this browser",

@@ -17,7 +17,7 @@ import pytest
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -72,7 +72,8 @@ async def test_query_agent_pipeline_success(mock_genai, db_session: AsyncSession
     )
 
     # Setup generator and summarizer side effects
-    mock_client.models.generate_content.side_effect = [
+    mock_client.aio.models.generate_content = AsyncMock()
+    mock_client.aio.models.generate_content.side_effect = [
         mock_response_sql,  # first call: SQL Generator
         mock_response_sum,  # second call: Summarizer
     ]
@@ -106,6 +107,8 @@ async def test_query_agent_pipeline_success(mock_genai, db_session: AsyncSession
         )
 
         # Verify audit log was written to DB
+        # Wait a moment for fire-and-forget background task to complete
+        await asyncio.sleep(0.5)
         # Run query to find the AuditLog entry
         stmt = select(AuditLog).where(AuditLog.request_id == request_id)
         result = await db_session.execute(stmt)
@@ -150,7 +153,8 @@ async def test_query_agent_pipeline_logging_failure_tolerance(
         prompt_token_count=200, candidates_token_count=30
     )
 
-    mock_client.models.generate_content.side_effect = [
+    mock_client.aio.models.generate_content = AsyncMock()
+    mock_client.aio.models.generate_content.side_effect = [
         mock_response_sql,
         mock_response_sum,
     ]

@@ -358,6 +358,9 @@ class LLMService:
                 )
 
             except Exception as exc:  # noqa: BLE001
+                import traceback
+                traceback.print_exc()
+                print(repr(exc))
                 elapsed_ms = (time.perf_counter() - start) * 1000
                 last_error = self._classify_error(exc)
                 logger.warning(
