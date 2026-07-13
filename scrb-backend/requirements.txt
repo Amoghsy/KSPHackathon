@@ -26,3 +26,9 @@ python-multipart==0.0.19
 google-genai>=1.0.0
 sqlparse==0.5.3
 gTTS==2.5.1
+
+# Network Intelligence (Day 5)
+networkx>=3.0
+numpy>=1.20
+
+

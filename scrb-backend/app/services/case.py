@@ -1,6 +1,26 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.repositories.case import CaseRepository
+
+
+def map_status(status_id: int | None) -> str:
+    # 1: Under Investigation, 2: Charge Sheeted, 3: Closed, 4: Undetected
+    mapping = {
+        1: "Under Investigation",
+        2: "Charge Sheeted",
+        3: "Closed",
+        4: "Undetected"
+    }
+    return mapping.get(status_id or 1, "Under Investigation")
+
+
+def map_gravity(gravity_id: int | None) -> str:
+    # 1: Low, 2: Medium, 3: High
+    mapping = {
+        1: "Low",
+        2: "Medium",
+        3: "High"
+    }
+    return mapping.get(gravity_id or 2, "Medium")
 
 
 class CaseService:
@@ -8,7 +28,7 @@ class CaseService:
         self.repository = CaseRepository(db)
 
     async def list_cases(self, limit: int = 100, offset: int = 0) -> list[dict]:
-        """Get list of cases formatted for API response."""
+        """Basic case list."""
         cases = await self.repository.get_cases(limit, offset)
         return [
             {
@@ -25,3 +45,109 @@ class CaseService:
             }
             for c in cases
         ]
+
+    async def list_cases_paginated(
+        self,
+        q: str | None = None,
+        status: str | None = None,
+        district: str | None = None,
+        page: int = 1,
+        page_size: int = 15,
+    ) -> dict:
+        """Fetch and format paginated cases for the Case Search page."""
+        # Reverse status mapping
+        status_id = None
+        if status and status != "All":
+            status_mappings = {
+                "Under Investigation": 1,
+                "Charge Sheeted": 2,
+                "Closed": 3,
+                "Undetected": 4
+            }
+            status_id = status_mappings.get(status)
+
+        district_clean = None
+        if district and district != "All":
+            district_clean = district
+
+        offset = (page - 1) * page_size
+        cases = await self.repository.get_filtered_cases(
+            q=q,
+            status_id=status_id,
+            district=district_clean,
+            limit=page_size,
+            offset=offset,
+        )
+        total = await self.repository.get_filtered_cases_count(
+            q=q, status_id=status_id, district=district_clean
+        )
+
+        formatted_items = []
+        for c in cases:
+            formatted_items.append({
+                "id": str(c.case_master_id),
+                "crimeNo": c.crime_no,
+                "caseNo": c.case_no or f"C-{c.case_master_id}",
+                "date": c.crime_registered_date.strftime("%d %b %Y") if c.crime_registered_date else "Unknown",
+                "station": c.police_station.name if c.police_station else "Unknown PS",
+                "district": c.police_station.district if c.police_station else "Unknown District",
+                "crimeHead": c.crime_type.name if c.crime_type else "General Crime",
+                "status": map_status(c.case_status_id),
+                "gravity": map_gravity(c.gravity_offence_id),
+                "narrative": c.brief_facts or "",
+            })
+
+        return {
+            "items": formatted_items,
+            "total": total
+        }
+
+    async def get_case_detail(self, case_id: int) -> dict | None:
+        """Fetch detailed case parameters for Case Details page."""
+        c = await self.repository.get_case_by_id(case_id)
+        if not c:
+            return None
+
+        # Build list of accused
+        accused_list = []
+        for a in c.accused:
+            accused_list.append({
+                "id": str(a.accused_master_id),
+                "name": a.accused_name or "Unknown Accused",
+                "age": a.age_year or 30,
+                "gender": "Male" if a.gender_id == 1 else "Female",
+            })
+
+        # Build list of victims
+        victims_list = []
+        for v in c.victims:
+            victims_list.append({
+                "id": str(v.victim_master_id),
+                "name": v.victim_name or "Unknown Victim",
+                "age": v.age_year or 30,
+                "gender": "Male" if v.gender_id == 1 else "Female",
+            })
+
+        return {
+            "id": str(c.case_master_id),
+            "crimeNo": c.crime_no,
+            "caseNo": c.case_no or f"C-{c.case_master_id}",
+            "date": c.crime_registered_date.strftime("%d %b %Y") if c.crime_registered_date else "Unknown",
+            "station": c.police_station.name if c.police_station else "Unknown PS",
+            "district": c.police_station.district if c.police_station else "Unknown District",
+            "crimeHead": c.crime_type.name if c.crime_type else "General Crime",
+            "complainant": "State of Karnataka",
+            "status": map_status(c.case_status_id),
+            "gravity": map_gravity(c.gravity_offence_id),
+            "narrative": c.brief_facts or "",
+            "accused": accused_list,
+            "victims": victims_list,
+            "actsSections": ["IPC Section 379", "IPC Section 34"],
+            "timeline": [
+                {
+                    "title": "FIR Registered",
+                    "date": c.crime_registered_date.strftime("%d %b %Y") if c.crime_registered_date else "Unknown",
+                    "description": "Case filed in police record."
+                }
+            ],
+        }

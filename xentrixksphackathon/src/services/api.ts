@@ -8,6 +8,8 @@ import {
   getCase,
   listAccused,
   getAccused,
+  getNetwork as apiGetNetwork,
+  getFinancialNetwork as apiGetFinancialNetwork,
 } from "@/lib/api/services";
 import type { DashboardResponse, Case, Accused } from "@/lib/api/types";
 import { ALL_FIRS, type FIR } from "@/mocks/firs";
@@ -86,54 +88,11 @@ export async function listFIRs(params?: {
   pageSize?: number;
 }): Promise<{ items: FIR[]; total: number }> {
   try {
-    const response = await listCases({
-      page: 1,
-      pageSize: 100,
-    });
-
-    if (!response.cases || response.cases.length === 0) {
-      // Fallback to mocks if DB is empty
+    const response = await listCases(params);
+    if (!response || !response.items) {
       return fallbackListFIRs(params);
     }
-
-    let items: FIR[] = response.cases.map((c: Case) => ({
-      id: String(c.case_master_id),
-      crimeNo: c.crime_no,
-      caseNo: c.case_no ?? `C-${c.case_master_id}`,
-      date: new Date(c.crime_registered_date).toLocaleDateString("en-IN", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      }),
-      station: c.police_station_id ? `Station ${c.police_station_id}` : "SCRB Station",
-      district: "Bengaluru Urban",
-      crimeHead: "Theft",
-      complainant: "State of Karnataka",
-      status: "Under Investigation",
-      gravity: "Medium",
-      narrative: c.brief_facts ?? "",
-      accused: [],
-      victims: [],
-      actsSections: [],
-      arrests: [],
-      chargesheet: null,
-      timeline: [],
-    }));
-
-    if (params?.q) {
-      const q = params.q.toLowerCase();
-      items = items.filter(
-        (f) =>
-          f.crimeNo.toLowerCase().includes(q) ||
-          f.station.toLowerCase().includes(q) ||
-          f.narrative.toLowerCase().includes(q),
-      );
-    }
-
-    const total = items.length;
-    const page = params?.page ?? 1;
-    const size = params?.pageSize ?? 15;
-    return { items: items.slice((page - 1) * size, page * size), total };
+    return response as { items: FIR[]; total: number };
   } catch (err) {
     console.error("Error fetching cases from backend:", err);
     return fallbackListFIRs(params);
@@ -173,36 +132,9 @@ function fallbackListFIRs(params?: {
 
 export async function getFIR(id: string): Promise<FIR | null> {
   try {
-    const numericId = parseInt(id, 10);
-    if (isNaN(numericId)) {
-      return ALL_FIRS.find((f) => f.id === id) ?? null;
-    }
     const c = await getCase(id);
     if (!c) return null;
-
-    return {
-      id: String(c.case_master_id),
-      crimeNo: c.crime_no,
-      caseNo: c.case_no ?? `C-${c.case_master_id}`,
-      date: new Date(c.crime_registered_date).toLocaleDateString("en-IN", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      }),
-      station: c.police_station_id ? `Station ${c.police_station_id}` : "SCRB Station",
-      district: "Bengaluru Urban",
-      crimeHead: "Theft",
-      complainant: "State of Karnataka",
-      status: "Under Investigation",
-      gravity: "Medium",
-      narrative: c.brief_facts ?? "",
-      accused: [],
-      victims: [],
-      actsSections: [],
-      arrests: [],
-      chargesheet: null,
-      timeline: [],
-    };
+    return c as FIR;
   } catch (err) {
     console.error("Error fetching case details:", err);
     return ALL_FIRS.find((f) => f.id === id) ?? null;
@@ -212,26 +144,11 @@ export async function getFIR(id: string): Promise<FIR | null> {
 // ─── Offenders / Accused ─────────────────────────────────────────────────────
 export async function listOffenders(): Promise<Offender[]> {
   try {
-    const response = await listAccused();
-    if (!response.accused || response.accused.length === 0) {
+    const response = await listAccused({ page: 1, pageSize: 150 });
+    if (!response || !response.items || response.items.length === 0) {
       return ALL_OFFENDERS;
     }
-
-    return response.accused.map((a: Accused) => ({
-      id: String(a.accused_master_id),
-      name: a.accused_name ?? "Unknown Accused",
-      age: a.age_year ?? 30,
-      linkedCases: 1,
-      riskScore: 50,
-      risk: "Medium",
-      modusOperandi: ["General theft"],
-      aliases: [],
-      lastKnown: "Bengaluru Urban",
-      factors: [
-        { label: "Prior convictions", value: 50 },
-        { label: "Case severity", value: 40 },
-      ],
-    }));
+    return response.items as Offender[];
   } catch (err) {
     console.error("Error listing offenders:", err);
     return ALL_OFFENDERS;
@@ -240,28 +157,9 @@ export async function listOffenders(): Promise<Offender[]> {
 
 export async function getOffender(id: string): Promise<Offender | null> {
   try {
-    const numericId = parseInt(id, 10);
-    if (isNaN(numericId)) {
-      return ALL_OFFENDERS.find((o) => o.id === id) ?? null;
-    }
-    const a = await getAccused(id);
-    if (!a) return null;
-
-    return {
-      id: String(a.accused_master_id),
-      name: a.accused_name ?? "Unknown Accused",
-      age: a.age_year ?? 30,
-      linkedCases: 1,
-      riskScore: 55,
-      risk: "Medium",
-      modusOperandi: ["General theft"],
-      aliases: [],
-      lastKnown: "Bengaluru Urban",
-      factors: [
-        { label: "Prior convictions", value: 60 },
-        { label: "Case severity", value: 50 },
-      ],
-    };
+    const response = await getAccused(id);
+    if (!response) return null;
+    return response as Offender;
   } catch (err) {
     console.error("Error fetching offender details:", err);
     return ALL_OFFENDERS.find((o) => o.id === id) ?? null;
@@ -273,10 +171,22 @@ export async function similarOffenders(id: string): Promise<Offender[]> {
   return all.filter((o) => o.id !== id).slice(0, 4);
 }
 
-// ─── Network (Out of scope backend-wise) ─────────────────────────────────────
-export async function getNetwork() {
-  return generateNetwork();
+// ─── Network ─────────────────────────────────────────────────────────────────
+export async function getNetwork(params?: {
+  district?: string;
+  crimeType?: string;
+  policeStation?: string;
+  timePeriod?: string;
+  focusId?: string;
+}) {
+  try {
+    return await apiGetNetwork(params);
+  } catch (err) {
+    console.error("Error fetching network from backend, using mock:", err);
+    return generateNetwork();
+  }
 }
+
 
 // ─── Hotspots (Out of scope backend-wise) ────────────────────────────────────
 export async function getHotspots() {
@@ -298,10 +208,21 @@ export async function getSociologicalInsights() {
   return generateSociological();
 }
 
-// ─── Financial (Out of scope backend-wise) ───────────────────────────────────
-export async function getFinancialNetwork() {
-  return generateFinancialNetwork();
+// ─── Financial ───────────────────────────────────────────────────────────────
+export async function getFinancialNetwork(params?: {
+  district?: string;
+  crimeType?: string;
+  policeStation?: string;
+  timePeriod?: string;
+}) {
+  try {
+    return await apiGetFinancialNetwork(params);
+  } catch (err) {
+    console.error("Error fetching financial network from backend, using mock:", err);
+    return generateFinancialNetwork();
+  }
 }
+
 
 // ─── Forecast (Out of scope backend-wise) ────────────────────────────────────
 export async function getForecast(crime: ForecastCrime) {

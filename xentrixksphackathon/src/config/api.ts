@@ -30,6 +30,18 @@ export const ENDPOINTS = {
   ACCUSED: "/accused/",
   ACCUSED_DETAIL: (id: string) => `/accused/${id}`,
 
+  // Network
+  NETWORK: "/network/",
+  NETWORK_ACCUSED: (id: string) => `/network/accused/${id}`,
+  NETWORK_CASE: (id: string) => `/network/case/${id}`,
+  NETWORK_COMMUNITY: "/network/community",
+  NETWORK_REPEAT_OFFENDERS: "/network/repeat-offenders",
+  NETWORK_ANALYTICS: "/network/analytics",
+
+  // Financial
+  FINANCIAL: "/financial/",
+
   // Health
   HEALTH: "/health",
+
 } as const;

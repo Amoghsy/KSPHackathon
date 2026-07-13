@@ -69,24 +69,26 @@ export async function listCases(params?: {
   district?: string;
   page?: number;
   pageSize?: number;
-}): Promise<CasesResponse> {
-  const limit = params?.pageSize ?? 100;
-  const offset = ((params?.page ?? 1) - 1) * limit;
-  return apiGet<CasesResponse>(ENDPOINTS.CASES, { limit, offset });
+}): Promise<any> {
+  return apiGet<any>(ENDPOINTS.CASES, params as Record<string, unknown>);
 }
 
-export async function getCase(id: string): Promise<Case> {
-  return apiGet<Case>(ENDPOINTS.CASE(id));
+export async function getCase(id: string): Promise<any> {
+  return apiGet<any>(ENDPOINTS.CASE(id));
 }
 
 // ─── Accused ─────────────────────────────────────────────────────────────────
 
-export async function listAccused(): Promise<AccusedResponse> {
-  return apiGet<AccusedResponse>(ENDPOINTS.ACCUSED);
+export async function listAccused(params?: {
+  q?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<any> {
+  return apiGet<any>(ENDPOINTS.ACCUSED, params as Record<string, unknown>);
 }
 
-export async function getAccused(id: string): Promise<Accused> {
-  return apiGet<Accused>(ENDPOINTS.ACCUSED_DETAIL(id));
+export async function getAccused(id: string): Promise<any> {
+  return apiGet<any>(ENDPOINTS.ACCUSED_DETAIL(id));
 }
 
 // ─── Administrative Users ───────────────────────────────────────────────────
@@ -102,3 +104,41 @@ export async function createUser(body: UserCreatePayload): Promise<UserResponse>
 export async function deleteUser(id: number): Promise<void> {
   return apiDelete<void>(ENDPOINTS.USER(id));
 }
+
+// ─── Network & Financial ─────────────────────────────────────────────────────
+
+export async function getNetwork(params?: {
+  district?: string;
+  crimeType?: string;
+  policeStation?: string;
+  timePeriod?: string;
+  focusId?: string;
+}): Promise<any> {
+  const query: Record<string, unknown> = {};
+  if (params) {
+    if (params.district) query.district = params.district;
+    if (params.crimeType) query.crime_type = params.crimeType;
+    if (params.policeStation) query.police_station = params.policeStation;
+    if (params.timePeriod) query.time_period = params.timePeriod;
+    if (params.focusId) query.focus_id = params.focusId;
+  }
+  return apiGet<any>(ENDPOINTS.NETWORK, query);
+}
+
+export async function getFinancialNetwork(params?: {
+  district?: string;
+  crimeType?: string;
+  policeStation?: string;
+  timePeriod?: string;
+}): Promise<any> {
+  const query: Record<string, unknown> = {};
+  if (params) {
+    if (params.district) query.district = params.district;
+    if (params.crimeType) query.crime_type = params.crimeType;
+    if (params.policeStation) query.police_station = params.policeStation;
+    if (params.timePeriod) query.time_period = params.timePeriod;
+  }
+  return apiGet<any>(ENDPOINTS.FINANCIAL, query);
+}
+
+

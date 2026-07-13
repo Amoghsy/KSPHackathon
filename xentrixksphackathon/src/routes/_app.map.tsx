@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { PageHeader } from "@/components/app/primitives";
@@ -200,9 +200,16 @@ function MapPage() {
               >
                 {sel.trend >= 0 ? "▲" : "▼"} {Math.abs(sel.trend)}% vs prior period
               </div>
+              <Link
+                to="/network"
+                search={{ district: sel.district }}
+                className="mt-3 block w-full text-center text-xs bg-primary text-primary-foreground py-2 rounded-lg font-medium hover:opacity-90 transition-opacity"
+              >
+                View Criminal Network
+              </Link>
               <button
                 onClick={() => setSelected(null)}
-                className="mt-2 text-[11px] text-muted-foreground hover:text-foreground"
+                className="mt-2 block w-full text-center text-[11px] text-muted-foreground hover:text-foreground"
               >
                 Close
               </button>
@@ -213,3 +220,4 @@ function MapPage() {
     </div>
   );
 }
+

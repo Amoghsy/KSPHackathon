@@ -97,18 +97,75 @@ function FinancialPage() {
             </div>
           }
         />
-        <div className="-mt-2 mb-2">
-          <Badge
-            variant="outline"
-            className="gap-1.5 border-warning/40 bg-warning/10 text-warning-foreground"
-          >
-            <ShieldAlert className="h-3.5 w-3.5" />
-            Simulated transaction data — schema has no live financial table yet
-          </Badge>
-        </div>
+        {data?.patterns && (
+          <div className="mt-1 mb-2 flex flex-wrap gap-2 animate-in fade-in duration-300">
+            {data.patterns.circular_flows?.length > 0 && (
+              <Badge variant="destructive" className="gap-1.5 animate-pulse">
+                <ShieldAlert className="h-3.5 w-3.5" />
+                Circular Flows: {data.patterns.circular_flows.length} loop(s) detected
+              </Badge>
+            )}
+            {data.patterns.shared_accounts?.length > 0 && (
+              <Badge variant="outline" className="gap-1.5 border-destructive/40 bg-destructive/10 text-destructive-foreground">
+                <ShieldAlert className="h-3.5 w-3.5" />
+                Shared Accounts: {data.patterns.shared_accounts.length} account(s) shared
+              </Badge>
+            )}
+            {data.patterns.high_value_transfers?.length > 0 && (
+              <Badge variant="outline" className="gap-1.5 border-warning/40 bg-warning/10 text-warning-foreground">
+                <ShieldAlert className="h-3.5 w-3.5" />
+                Suspicious Transfers: {data.patterns.high_value_transfers.length} flagged
+              </Badge>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex-1 relative border-t border-border bg-muted/30" ref={containerRef}>
+        {/* Floating Intelligence Panel */}
+        {data?.patterns && (
+          <div className="absolute top-4 left-4 z-10 w-72 rounded-xl glass shadow-lg p-3 max-h-[300px] overflow-y-auto">
+            <div className="text-[10px] font-bold text-primary uppercase tracking-wider mb-2">
+              Financial Intelligence Alerts
+            </div>
+            
+            {data.patterns.circular_flows?.length > 0 ? (
+              <div className="space-y-1.5 mb-3">
+                <div className="text-[9px] font-bold text-destructive uppercase">
+                  Circular Flows ({data.patterns.circular_flows.length})
+                </div>
+                {data.patterns.circular_flows.map((c: any, i: number) => (
+                  <div key={i} className="text-[10px] bg-destructive/10 border border-destructive/20 rounded p-1.5 leading-relaxed font-mono">
+                    {c.flow}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {data.patterns.shared_accounts?.length > 0 ? (
+              <div className="space-y-1.5">
+                <div className="text-[9px] font-bold text-warning uppercase">
+                  Shared Accounts ({data.patterns.shared_accounts.length})
+                </div>
+                {data.patterns.shared_accounts.map((s: any, i: number) => (
+                  <div key={i} className="text-[10px] bg-warning/10 border border-warning/20 rounded p-1.5 leading-normal">
+                    <strong>{s.label}</strong> shared by:
+                    <div className="text-[9px] text-muted-foreground mt-0.5">
+                      {s.owners.join(", ")}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {data.patterns.circular_flows?.length === 0 && data.patterns.shared_accounts?.length === 0 && (
+              <div className="text-[10px] text-muted-foreground">
+                No money laundering cycles or shared accounts detected.
+              </div>
+            )}
+          </div>
+        )}
+
         {isLoading || !data ? (
           <Skeleton className="absolute inset-4" />
         ) : (
@@ -139,6 +196,7 @@ function FinancialPage() {
             />
           </Suspense>
         )}
+
 
         {/* Legend */}
         <div className="absolute bottom-4 left-4 rounded-xl glass/95 backdrop-blur p-3 text-xs shadow-sm">
