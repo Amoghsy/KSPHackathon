@@ -321,25 +321,30 @@ class GraphBuilder:
                 account_banks[tx.source_account] = tx.bank_name
                 if tx.accused:
                     pid = tx.accused.person_id or f"A_{normalize_name(tx.accused.accused_name)}"
-                    account_owners[tx.source_account] = {
+                    owner_info = {
                         "id": pid,
                         "name": tx.accused.accused_name,
                         "bank": tx.bank_name,
                     }
+                    if tx.source_account not in account_owners:
+                        account_owners[tx.source_account] = []
+                    if owner_info not in account_owners[tx.source_account]:
+                        account_owners[tx.source_account].append(owner_info)
             if tx.destination_account:
                 if tx.destination_account not in account_banks:
                     account_banks[tx.destination_account] = tx.bank_name
 
         # 1. Add Accused nodes
-        for acc_no, owner in account_owners.items():
-            pid = owner["id"]
-            if pid not in G_fin:
-                G_fin.add_node(
-                    pid,
-                    label=owner["name"],
-                    kind="accused",
-                    metadata={"person_id": pid},
-                )
+        for acc_no, owners in account_owners.items():
+            for owner in owners:
+                pid = owner["id"]
+                if pid not in G_fin:
+                    G_fin.add_node(
+                        pid,
+                        label=owner["name"],
+                        kind="accused",
+                        metadata={"person_id": pid},
+                    )
 
         # 2. Add Account nodes
         for acc_no, bank in account_banks.items():
@@ -357,8 +362,9 @@ class GraphBuilder:
 
             # Link Accused owner to Account
             if acc_no in account_owners:
-                pid = account_owners[acc_no]["id"]
-                G_fin.add_edge(pid, acc_no, label="owns", relationship="owns")
+                for owner in account_owners[acc_no]:
+                    pid = owner["id"]
+                    G_fin.add_edge(pid, acc_no, label="owns", relationship="owns")
 
         # 3. Add Transaction edges & link to cases
         # We consolidate multiple transactions between the same source and destination
