@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { PageHeader } from "@/components/app/primitives";
-import { listFIRs } from "@/services/api";
+import { listFIRs, getCasesMetadata } from "@/services/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,7 +51,17 @@ function CasesPage() {
   const user = useAuthStore((s) => s.user);
   const canSeeSensitive = hasPermission(user, PERMISSIONS.SENSITIVE_CASE_ACCESS);
   const hideVictimColumn = user?.role === "Policymaker";
-  const districtOptions = user?.assignedDistricts?.length ? user.assignedDistricts : DISTRICTS;
+
+  const { data: metadata } = useQuery({
+    queryKey: ["casesMetadata"],
+    queryFn: getCasesMetadata,
+    staleTime: Infinity,
+  });
+
+  const districtsList = metadata?.districts ?? DISTRICTS;
+  const statusesList = metadata?.statuses ?? STATUSES;
+
+  const districtOptions = user?.assignedDistricts?.length ? user.assignedDistricts : districtsList;
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<string>("All");
   const [district, setDistrict] = useState<string>("All");
@@ -101,7 +111,7 @@ function CasesPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="All">All statuses</SelectItem>
-              {STATUSES.map((s) => (
+              {statusesList.map((s) => (
                 <SelectItem key={s} value={s}>
                   {s}
                 </SelectItem>

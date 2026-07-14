@@ -25,6 +25,7 @@ export const ENDPOINTS = {
   // Cases / FIRs
   CASES: "/cases/",
   CASE: (id: string) => `/cases/${id}`,
+  CASES_METADATA: "/cases/metadata",
 
   // Accused / Offenders
   ACCUSED: "/accused/",

@@ -40,6 +40,16 @@ async def get_cases(
     return result
 
 
+@router.get("/metadata")
+async def get_cases_metadata(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Retrieve metadata options for filters (districts, crime heads, statuses, gravity)."""
+    service = CaseService(db)
+    return await service.get_metadata()
+
+
 @router.get("/{id}")
 async def get_case_by_id(
     id: int,

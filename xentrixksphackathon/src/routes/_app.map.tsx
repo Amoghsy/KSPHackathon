@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useCallback, useState, useEffect } from "react";
 import { PageHeader } from "@/components/app/primitives";
 import { getMapAnalytics } from "@/services/crimeMapApi";
-import { DISTRICTS, CRIME_HEADS, GRAVITY } from "@/config/constants";
+import { getCasesMetadata } from "@/services/api";
 import { CrimeMap } from "@/components/map/CrimeMap";
 import { useCrimeMap } from "@/hooks/useCrimeMap";
 import { Button } from "@/components/ui/button";
@@ -65,13 +65,32 @@ function MapPage() {
   const rbac = useRBAC();
   const { user, role } = rbac;
 
+  const { data: metadata } = useQuery({
+    queryKey: ["casesMetadata"],
+    queryFn: getCasesMetadata,
+    staleTime: Infinity,
+  });
+
+  const districtsList = useMemo(() => metadata?.districts ?? [
+    "Bengaluru Urban", "Bengaluru Rural", "Mysuru", "Mangaluru", "Belagavi",
+    "Kalaburagi", "Hubballi-Dharwad", "Tumakuru", "Shivamogga", "Ballari",
+    "Vijayapura", "Udupi", "Chitradurga", "Hassan",
+  ], [metadata]);
+
+  const crimeHeadsList = useMemo(() => metadata?.crime_heads ?? [
+    "Theft", "Robbery", "Cyber Fraud", "Murder", "Assault",
+    "Kidnapping", "Vehicle Theft", "Drug Trafficking", "Financial Fraud", "Human Trafficking"
+  ], [metadata]);
+
+  const gravityList = useMemo(() => metadata?.gravity ?? ["Low", "Medium", "High", "Grievous"], [metadata]);
+
   const districtOptions = useMemo(() => {
     if (!user) return [];
     if (role === "Admin" || role === "Analyst" || role === "Policymaker" || role === "Policy Maker") {
-      return DISTRICTS;
+      return districtsList;
     }
     return user.assignedDistricts ?? [];
-  }, [user, role]);
+  }, [user, role, districtsList]);
 
   const canSelectAll = role === "Admin" || role === "Analyst" || role === "Policymaker" || role === "Policy Maker";
 
@@ -227,7 +246,7 @@ function MapPage() {
                   </SelectTrigger>
                   <SelectContent className="bg-popover border-border text-popover-foreground text-xs">
                     <SelectItem value="All">All types</SelectItem>
-                    {CRIME_HEADS.map((c) => (
+                    {crimeHeadsList.map((c) => (
                       <SelectItem key={c} value={c}>
                         {c}
                       </SelectItem>
@@ -288,7 +307,7 @@ function MapPage() {
                   </SelectTrigger>
                   <SelectContent className="bg-popover border-border text-popover-foreground text-xs">
                     <SelectItem value="All">All</SelectItem>
-                    {GRAVITY.map((g) => (
+                    {gravityList.map((g) => (
                       <SelectItem key={g} value={g}>
                         {g}
                       </SelectItem>

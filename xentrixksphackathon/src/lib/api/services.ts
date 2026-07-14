@@ -77,6 +77,20 @@ export async function getCase(id: string): Promise<any> {
   return apiGet<any>(ENDPOINTS.CASE(id));
 }
 
+export async function getCasesMetadata(): Promise<{
+  districts: string[];
+  crime_heads: string[];
+  statuses: string[];
+  gravity: string[];
+}> {
+  return apiGet<{
+    districts: string[];
+    crime_heads: string[];
+    statuses: string[];
+    gravity: string[];
+  }>(ENDPOINTS.CASES_METADATA);
+}
+
 // ─── Accused ─────────────────────────────────────────────────────────────────
 
 export async function listAccused(params?: {

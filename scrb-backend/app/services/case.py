@@ -14,11 +14,12 @@ def map_status(status_id: int | None) -> str:
 
 
 def map_gravity(gravity_id: int | None) -> str:
-    # 1: Low, 2: Medium, 3: High
+    # 1: Low, 2: Medium, 3: High, 4: Grievous
     mapping = {
         1: "Low",
         2: "Medium",
-        3: "High"
+        3: "High",
+        4: "Grievous"
     }
     return mapping.get(gravity_id or 2, "Medium")
 
@@ -150,4 +151,27 @@ class CaseService:
                     "description": "Case filed in police record."
                 }
             ],
+        }
+
+    async def get_metadata(self) -> dict:
+        """Fetch unique/distinct districts and crime types from the DB, alongside static statuses/gravity."""
+        from sqlalchemy import select
+        from app.models.police_station import PoliceStation
+        from app.models.crime_type import CrimeType
+
+        # Get unique districts from PoliceStation
+        districts_stmt = select(PoliceStation.district).where(PoliceStation.district.is_not(None)).distinct()
+        districts_res = await self.repository.db.execute(districts_stmt)
+        districts = sorted([r[0] for r in districts_res.all() if r[0]])
+
+        # Get unique crime heads from CrimeType
+        crime_types_stmt = select(CrimeType.name).where(CrimeType.name.is_not(None)).distinct()
+        crime_types_res = await self.repository.db.execute(crime_types_stmt)
+        crime_types = sorted([r[0] for r in crime_types_res.all() if r[0]])
+
+        return {
+            "districts": districts,
+            "crime_heads": crime_types,
+            "statuses": ["Under Investigation", "Charge Sheeted", "Closed", "Undetected"],
+            "gravity": ["Low", "Medium", "High", "Grievous"]
         }

@@ -12,9 +12,9 @@ import {
   getNetwork as apiGetNetwork,
   getFinancialNetwork as apiGetFinancialNetwork,
   getNetworkExpansion as apiGetNetworkExpansion,
+  getCasesMetadata,
 } from "@/lib/api/services";
 import type { DashboardResponse } from "@/lib/api/types";
-import type { ForecastCrime } from "@/config/constants";
 
 
 // ─── Dashboard ───────────────────────────────────────────────────────────────
@@ -274,6 +274,6 @@ export async function getForecast(crime: ForecastCrime) {
   }
 }
 
-export type { ForecastCrime };
-export { listConversations };
+export type ForecastCrime = "Robbery" | "Theft" | "Cybercrime" | "Assault";
+export { listConversations, getCasesMetadata };
 
