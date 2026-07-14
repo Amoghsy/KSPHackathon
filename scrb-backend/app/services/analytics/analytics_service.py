@@ -464,7 +464,16 @@ class AnalyticsService:
         hotspots = hotspots_res.get("dbscan_clusters", [])
 
         # 3. Compile Police Station data — coordinates derived from avg case lat/lng in DB
-        db_stations = await self.repository.get_police_station_counts(district=district, limit=50)
+        db_stations = await self.repository.get_police_station_counts(
+            district=district,
+            crime_type=crime_type,
+            police_station=police_station,
+            start_date=start_date,
+            end_date=end_date,
+            gravity=gravity,
+            status=status,
+            limit=50
+        )
         police_stations = []
         for s in db_stations:
             lat = s.get("latitude")

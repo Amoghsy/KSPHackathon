@@ -180,11 +180,20 @@ async def get_map_analytics(
     police_station: str | None = Query(None, description="Filter by police station"),
     start_date: datetime.date | None = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: datetime.date | None = Query(None, description="End date (YYYY-MM-DD)"),
+    date_range: str | None = Query(None, description="Filter by date range in days (7, 30, 90, 365)"),
     gravity: str | None = Query(None, description="Filter by gravity"),
     status: str | None = Query(None, description="Filter by status"),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve the aggregated GIS portal payload containing boundaries, stats, stations, and heatmaps."""
+    if date_range:
+        try:
+            days = int(date_range)
+            end_date = datetime.date.today()
+            start_date = end_date - datetime.timedelta(days=days)
+        except ValueError:
+            pass
+
     service = AnalyticsService(db)
     res = await service.get_map_analytics(
         district=district,

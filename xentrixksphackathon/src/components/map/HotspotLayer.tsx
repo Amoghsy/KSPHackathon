@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, Fragment } from "react";
 import { CircleMarker, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import { AlertTriangle, TrendingUp } from "lucide-react";
@@ -80,7 +80,7 @@ export const HotspotLayer = memo(function HotspotLayer({ hotspots, show, onOpenI
   return (
     <>
       {validHotspots.map((c, i) => (
-        <div key={`hotspot-group-${c.cluster_id ?? i}`}>
+        <Fragment key={`hotspot-group-${c.cluster_id ?? i}`}>
           {/* Pulsing red coverage area */}
           <CircleMarker
             center={c._center}
@@ -127,7 +127,7 @@ export const HotspotLayer = memo(function HotspotLayer({ hotspots, show, onOpenI
               </div>
             </Popup>
           </Marker>
-        </div>
+        </Fragment>
       ))}
     </>
   );

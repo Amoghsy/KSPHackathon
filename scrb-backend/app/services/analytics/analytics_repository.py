@@ -128,7 +128,10 @@ class AnalyticsRepository:
         res = await self.db.execute(stmt)
         return [{"district": row.district or "Unknown", "cases": row.count} for row in res.all()]
 
-    async def get_police_station_counts(self, district: str | None = None, limit: int = 10) -> list[dict]:
+    async def get_police_station_counts(self, district: str | None = None, crime_type: str | None = None,
+                                        police_station: str | None = None, start_date: datetime.date | None = None,
+                                        end_date: datetime.date | None = None, gravity: str | None = None,
+                                        status: str | None = None, limit: int = 10) -> list[dict]:
         """Fetch top police stations by case count with avg lat/lng derived from case coordinates."""
         stmt = (
             select(
@@ -143,8 +146,38 @@ class AnalyticsRepository:
             .group_by(PoliceStation.name, PoliceStation.district)
             .order_by(func.count(CaseMaster.case_master_id).desc())
         )
+        
+        # Apply filters manually to avoid duplicate join issues
+        conditions = []
         if district and district != "All":
-            stmt = stmt.where(PoliceStation.district == district)
+            conditions.append(PoliceStation.district == district)
+        elif police_station and police_station != "All":
+            conditions.append(PoliceStation.name == police_station)
+
+        if crime_type and crime_type != "All":
+            stmt = stmt.join(CaseMaster.crime_type)
+            conditions.append(CrimeType.name == crime_type)
+
+        if start_date:
+            conditions.append(CaseMaster.crime_registered_date >= start_date)
+        if end_date:
+            conditions.append(CaseMaster.crime_registered_date <= end_date)
+
+        gravity_map = {"Low": 1, "Medium": 2, "High": 3, "Grievous": 4}
+        if gravity and gravity != "All":
+            g_id = gravity_map.get(gravity)
+            if g_id:
+                conditions.append(CaseMaster.gravity_offence_id == g_id)
+
+        status_id_map = {"Under Investigation": 1, "Charge Sheeted": 2, "Closed": 3, "Undetected": 4}
+        if status and status != "All":
+            s_id = status_id_map.get(status)
+            if s_id is not None:
+                conditions.append(CaseMaster.case_status_id == s_id)
+
+        if conditions:
+            stmt = stmt.where(and_(*conditions))
+
         stmt = stmt.limit(limit)
         res = await self.db.execute(stmt)
         return [

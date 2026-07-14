@@ -33,14 +33,14 @@ export const STATIONS = [
 export const CRIME_HEADS = [
   "Theft",
   "Robbery",
-  "Burglary",
+  "Cyber Fraud",
+  "Murder",
   "Assault",
-  "Cheating",
-  "Cybercrime",
-  "Narcotics",
-  "Vehicle Theft",
   "Kidnapping",
-  "Fraud",
+  "Vehicle Theft",
+  "Drug Trafficking",
+  "Financial Fraud",
+  "Human Trafficking",
 ];
 
 export const STATUSES = ["Under Investigation", "Charge Sheeted", "Closed", "Undetected"] as const;

@@ -80,7 +80,6 @@ export const HeatLayer = memo(function HeatLayer({ points, show }: HeatLayerProp
       ref={canvasRef}
       className="pointer-events-none absolute inset-0 z-[400]"
       style={{
-        mixBlendMode: "screen",
         opacity: show ? 0.75 : 0,
         transition: "opacity 0.2s ease",
       }}

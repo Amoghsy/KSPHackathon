@@ -6,7 +6,7 @@ export function useCrimeMap() {
 
   // Filters
   const [crimeType, setCrimeType] = useState<string>("All");
-  const [dateRange, setDateRange] = useState<string>("30");
+  const [dateRange, setDateRange] = useState<string>("3650");
   const [selDistrict, setSelDistrict] = useState<string>("All");
   const [gravity, setGravity] = useState<string>("All");
   const [status, setStatus] = useState<string>("All");
@@ -14,7 +14,7 @@ export function useCrimeMap() {
 
   // Layers Toggles
   const [showHeatmap, setShowHeatmap] = useState(true);
-  const [showBubbles, setShowBubbles] = useState(false);
+  const [showBubbles, setShowBubbles] = useState(true);
   const [showStations, setShowStations] = useState(true);
   const [showHotspots, setShowHotspots] = useState(true);
   const [showBoundaries, setShowBoundaries] = useState(true);

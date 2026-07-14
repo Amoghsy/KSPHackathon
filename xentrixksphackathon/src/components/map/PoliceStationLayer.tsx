@@ -49,7 +49,10 @@ export const PoliceStationLayer = memo(function PoliceStationLayer({ stations, z
   if (!show) return null;
 
   return (
-    <MarkerClusterGroup iconCreateFunction={createClusterIcon}>
+    <MarkerClusterGroup
+      key={`station-cluster-${stations.length}`}
+      iconCreateFunction={createClusterIcon}
+    >
       {stations.map((ps) => (
         <Marker
           key={ps.name}

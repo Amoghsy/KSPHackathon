@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useState, useMemo } from "react";
 import type React from "react";
 import { Legend } from "./Legend";
 
@@ -23,6 +23,14 @@ interface CrimeMapProps {
     setShowHotspots: (v: boolean) => void;
     showBoundaries: boolean;
     setShowBoundaries: (v: boolean) => void;
+  };
+  activeTab: "data" | "layers";
+  appliedFilters: {
+    district?: string;
+    crime_type?: string;
+    date_range?: string;
+    gravity?: string;
+    status?: string;
   };
   onOpenInvestigation?: (district: string) => void;
 }
@@ -72,6 +80,12 @@ export const CrimeMap = memo(function CrimeMap(props: CrimeMapProps) {
     };
   }, []);
 
+  const stats = useMemo(() => ({
+    heatmapPoints: props.data.heatmap_points?.length || 0,
+    policeStations: props.data.police_stations?.length || 0,
+    hotspots: props.data.hotspots?.length || 0,
+  }), [props.data.heatmap_points, props.data.police_stations, props.data.hotspots]);
+
   return (
     <div className="w-full h-full relative rounded-xl overflow-hidden border border-border">
       {MapInner ? (
@@ -85,8 +99,13 @@ export const CrimeMap = memo(function CrimeMap(props: CrimeMapProps) {
         </div>
       )}
       
-      {/* Legend is a pure HTML/CSS component so we render it instantly on page mount */}
-      <Legend />
+      {/* Dynamic context-aware legend component */}
+      <Legend
+        activeTab={props.activeTab}
+        appliedFilters={props.appliedFilters}
+        stats={stats}
+        layers={props.layers}
+      />
     </div>
   );
 });

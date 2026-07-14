@@ -46,9 +46,11 @@ const TILE_URLS = {
 function MapController({
   selected,
   centerOnSelected,
+  data,
 }: {
   selected: string | null;
   centerOnSelected: boolean;
+  data: any;
 }) {
   const map = useMap();
 
@@ -57,6 +59,15 @@ function MapController({
     map.setMaxBounds(KARNATAKA_BOUNDS);
     map.fitBounds(KARNATAKA_BOUNDS, { padding: [10, 10] });
   }, [map]);
+
+  useEffect(() => {
+    if (!map) return;
+    // Force Leaflet to recalculate viewport size and reposition marker divs
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [map, data]);
 
   useEffect(() => {
     if (selected && centerOnSelected && DISTRICT_CENTROIDS[selected]) {
@@ -178,7 +189,7 @@ export function CrimeMapInner({
         className="w-full h-full"
         style={{ background: mapBg }}
       >
-        <MapController selected={selected} centerOnSelected={centerOnSelected} />
+        <MapController selected={selected} centerOnSelected={centerOnSelected} data={data} />
         <ZoomListener onZoomChange={handleZoomChange} />
 
         {/* Base tile layer — switches with theme */}
@@ -239,7 +250,7 @@ export function CrimeMapInner({
         />
 
         {/* Controls */}
-        <MapControls layers={layers} />
+        <MapControls />
       </MapContainer>
     </div>
   );
