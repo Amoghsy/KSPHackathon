@@ -12,6 +12,15 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
+import re
+
+
+def extract_tables(sql: str) -> list[str]:
+    """Extract table names from SQL FROM and JOIN clauses."""
+    matches = re.findall(r"\b(?:from|join)\s+([a-zA-Z_0-9]+)", sql, re.IGNORECASE)
+    return list(set(matches))
+
+
 def format_success(
     *,
     question: str,
@@ -25,20 +34,22 @@ def format_success(
 ) -> dict[str, Any]:
     """
     Build the standard success response payload.
-
-    Matches the contract:
-        {
-            "status": "success",
-            "question": "...",
-            "generated_sql": "...",
-            "row_count": 25,
-            "execution_time_ms": 42,
-            "summary": "...",
-            "rows": [...],
-            "columns": [...],
-            "confidence": 0.95
-        }
     """
+    tables = extract_tables(generated_sql)
+    sources = f"PostgreSQL: {', '.join(tables)}" if tables else "PostgreSQL Database"
+    
+    # Calculate confidence score (0-100)
+    conf_pct = int(confidence * 100) if confidence <= 1.0 else int(confidence)
+
+    explain_block = {
+        "sql": generated_sql,
+        "sources": sources,
+        "algorithms": "NL-to-SQL Semantic Translation, Relational Database Execution",
+        "confidence": conf_pct,
+        "execution_time": f"{round(execution_time_ms, 2)}ms",
+        "summary": summary
+    }
+
     return {
         "status": "success",
         "question": question,
@@ -48,8 +59,10 @@ def format_success(
         "summary": summary,
         "rows": rows,
         "columns": columns,
-        "confidence": round(confidence, 2),
+        "confidence": conf_pct,
+        "explain": explain_block
     }
+
 
 
 def format_error(

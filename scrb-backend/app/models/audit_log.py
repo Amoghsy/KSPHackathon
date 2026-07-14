@@ -18,4 +18,11 @@ class AuditLog(Base):
     )
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    username: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    role: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    api: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    response_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     request_id: Mapped[str] = mapped_column(String(100), nullable=False)
+

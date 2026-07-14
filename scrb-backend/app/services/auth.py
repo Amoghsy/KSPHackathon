@@ -26,35 +26,50 @@ class AuthService:
         user_repo = UserRepository(db)
         db_user = await user_repo.get_by_username(username)
 
-        if db_user:
-            if not verify_password(password, db_user.hashed_password):
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Incorrect password",
-                )
-            
-            token_payload = {"sub": db_user.username, "role": db_user.role, "id": db_user.id}
-            token = create_access_token(token_payload)
-            return {
-                "access_token": token,
-                "token_type": "bearer",
-                "username": db_user.username,
-                "role": db_user.role,
-            }
-
-        # Admin role must exist in DB
-        if role == UserRole.ADMIN.value:
+        if not db_user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Administrator account not found in database",
+                detail="User not found in system.",
             )
 
-        # Fallback to placeholder logic for dev/testing
-        token_payload = {"sub": username, "role": role, "id": 999}  # Mock user id
+        if not verify_password(password, db_user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect password",
+            )
+
+        import datetime
+        import json
+        from app.core.redis import get_redis_client
+
+        # Create access token (expires in ACCESS_TOKEN_EXPIRE_MINUTES)
+        token_payload = {"sub": db_user.username, "role": db_user.role, "id": db_user.id}
         token = create_access_token(token_payload)
+
+        # Create refresh token (expires in 7 days)
+        refresh_payload = {"sub": db_user.username, "type": "refresh", "id": db_user.id}
+        refresh_token = create_access_token(
+            refresh_payload, expires_delta=datetime.timedelta(days=7)
+        )
+
+        # Cache session in Redis
+        try:
+            client = get_redis_client()
+            user_info = {
+                "id": db_user.id,
+                "username": db_user.username,
+                "role": db_user.role,
+                "districts": db_user.districts,
+            }
+            await client.setex(f"session:{db_user.username}", 24 * 3600, json.dumps(user_info))
+        except Exception:
+            pass
+
         return {
             "access_token": token,
             "token_type": "bearer",
-            "username": username,
-            "role": role,
+            "username": db_user.username,
+            "role": db_user.role,
+            "refresh_token": refresh_token,
         }
+

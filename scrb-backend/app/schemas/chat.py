@@ -54,8 +54,12 @@ class ChatResponse(BaseModel):
     rows: list[dict[str, Any]] = Field(default_factory=list, description="Result rows.")
     columns: list[str] = Field(default_factory=list, description="Column names.")
     confidence: float = Field(
-        ..., ge=0, le=1, description="Heuristic confidence score."
+        ..., ge=0, le=100, description="Heuristic confidence score."
     )
+    explain: Optional[dict[str, Any]] = Field(
+        default=None, description="Explainable AI reasoning and execution details."
+    )
+
 
 
 # ---------------------------------------------------------------------------

@@ -15,3 +15,7 @@ class User(Base):
     role: Mapped[str] = mapped_column(
         String(50), default="Investigator"
     )  # TODO Confirm ER Schema
+    districts: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, default=None
+    )
+

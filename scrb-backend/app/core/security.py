@@ -50,6 +50,27 @@ def create_access_token(
     return encoded_jwt
 
 
+async def is_token_blacklisted(token: str) -> bool:
+    """Check if token is in the Redis blacklist."""
+    try:
+        from app.core.redis import get_redis_client
+        client = get_redis_client()
+        res = await client.get(f"blacklist:{token}")
+        return res is not None
+    except Exception:
+        return False
+
+
+async def blacklist_token(token: str, expire_seconds: int = 3600) -> None:
+    """Blacklist a token in Redis with a TTL."""
+    try:
+        from app.core.redis import get_redis_client
+        client = get_redis_client()
+        await client.setex(f"blacklist:{token}", expire_seconds, "true")
+    except Exception:
+        pass
+
+
 def verify_access_token(token: str) -> dict[str, Any] | None:
     """Validate a JWT token and decode its payload. Returns None if invalid/expired."""
     try:
@@ -64,15 +85,25 @@ async def get_current_user(
 ) -> dict[str, Any]:
     """
     Dependency injection helper to validate the JWT and return user details.
-    Does NOT do db lookup yet; returns mock user info based on token claims.
+    Queries the database to fetch latest role and district assignments.
     """
     if not token:
         # Fallback dummy user for local development if no token is provided
         return {
             "id": 1,
-            "username": "dummy_investigator",
-            "role": UserRole.INVESTIGATOR.value,
+            "username": "insp_mysuru",
+            "role": "Investigator",
+            "districts": "Mysuru",
         }
+
+    # Verify if token is blacklisted in Redis
+    if await is_token_blacklisted(token):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session has expired or logged out. Please sign in again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
 
     payload = verify_access_token(token)
     if not payload:
@@ -83,15 +114,31 @@ async def get_current_user(
         )
 
     username: str | None = payload.get("sub")
-    role: str | None = payload.get("role")
     if not username:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token payload is missing subject claim",
         )
 
+    from app.db.session import SessionLocal
+    from sqlalchemy import select
+    from app.models.user import User
+
+    async with SessionLocal() as db_session:
+        stmt = select(User).where(User.username == username)
+        result = await db_session.execute(stmt)
+        db_user = result.scalar_one_or_none()
+
+    if not db_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account not found in database",
+        )
+
     return {
-        "id": payload.get("id", 1),
-        "username": username,
-        "role": role or UserRole.INVESTIGATOR.value,
+        "id": db_user.id,
+        "username": db_user.username,
+        "role": db_user.role,
+        "districts": db_user.districts,
     }
+

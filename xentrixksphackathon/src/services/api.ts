@@ -205,9 +205,15 @@ export async function getAlerts(): Promise<any[]> {
   }
 }
 
+import { getAuditLogs } from "@/lib/api/services";
+
 export async function getAudit(): Promise<any[]> {
-  // Stubs for audit (out of scope for day 6, belongs to audit agent/pages)
-  return [];
+  try {
+    return await getAuditLogs();
+  } catch (err) {
+    console.error("Error fetching audit logs:", err);
+    return [];
+  }
 }
 
 export async function getSociologicalInsights(): Promise<any> {

@@ -8,6 +8,7 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
     accused,
+    audit,
     auth,
     cases,
     chat,
@@ -17,6 +18,7 @@ from app.api.v1.endpoints import (
     network,
     financial,
     patterns,
+    reports,
 )
 
 api_router = APIRouter()
@@ -33,5 +35,9 @@ api_router.include_router(
 api_router.include_router(network.router, prefix="/network", tags=["network"])
 api_router.include_router(financial.router, prefix="/financial", tags=["financial"])
 api_router.include_router(patterns.router, prefix="/pattern", tags=["pattern"])
+api_router.include_router(audit.router, prefix="/audit", tags=["audit"])
+api_router.include_router(reports.router, prefix="/reports", tags=["reports"])
+
+
 
 

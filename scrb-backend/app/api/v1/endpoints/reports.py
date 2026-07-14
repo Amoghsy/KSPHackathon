@@ -1,0 +1,105 @@
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
+from sqlalchemy.ext.asyncio import AsyncSession
+from io import BytesIO, StringIO
+import csv
+
+from app.db.session import get_db
+from app.core.security import get_current_user
+from app.core.permissions import require_permission
+from app.core.rbac import Permission
+from app.services.case import CaseService
+from app.services.graph.graph_service import GraphService
+
+router = APIRouter()
+
+
+@router.get("/export/csv")
+async def export_csv(
+    district: str | None = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Export case listings as a CSV file.
+    """
+    check_perm = require_permission(Permission.EXPORT_DATA)
+    await check_perm(current_user)
+
+    service = CaseService(db)
+    result = await service.list_cases_paginated(district=district, page=1, page_size=200)
+    items = result.get("items", [])
+
+    f = StringIO()
+    writer = csv.writer(f)
+    # Header
+    writer.writerow(["ID", "Crime No", "Case No", "Date", "Police Station", "District", "Crime Head", "Status", "Gravity"])
+    
+    for item in items:
+        writer.writerow([
+            item.get("id"),
+            item.get("crimeNo"),
+            item.get("caseNo"),
+            item.get("date"),
+            item.get("station"),
+            item.get("district"),
+            item.get("crimeHead"),
+            item.get("status"),
+            item.get("gravity")
+        ])
+
+    f.seek(0)
+    response = StreamingResponse(
+        iter([f.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=investigation_report.csv"}
+    )
+    return response
+
+
+@router.get("/export/pdf")
+async def export_pdf(
+    district: str | None = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Generates a structured text/markdown report of the current investigation state
+    formatted as a stream.
+    """
+    check_perm = require_permission(Permission.EXPORT_DATA)
+    await check_perm(current_user)
+
+    service = CaseService(db)
+    result = await service.list_cases_paginated(district=district, page=1, page_size=15)
+    items = result.get("items", [])
+
+    report = []
+    report.append("=========================================================")
+    report.append(" KARNATAKA STATE POLICE — SCRB INTELLIGENCE PLATFORM")
+    report.append(" CONFIDENTIAL INVESTIGATION REPORT")
+    report.append("=========================================================")
+    report.append(f"Exported By: {current_user.get('username')}")
+    report.append(f"System Role: {current_user.get('role')}")
+    report.append(f"Filter District: {district or 'All Districts'}")
+    report.append("---------------------------------------------------------")
+    report.append("\nRECENT REGISTERED CASES SUMMARY:\n")
+
+    for idx, item in enumerate(items, 1):
+        report.append(f"{idx}. [{item.get('status')}] Crime No: {item.get('crimeNo')} ({item.get('crimeHead')})")
+        report.append(f"   Station: {item.get('station')}, {item.get('district')} District")
+        report.append(f"   Narrative: {item.get('narrative')[:120]}...\n")
+
+    report.append("=========================================================")
+    report.append("END OF REPORT — GENERATED VIA AUDITED GATEWAY SYSTEM")
+    report.append("=========================================================")
+
+    pdf_text = "\n".join(report)
+    buf = BytesIO(pdf_text.encode("utf-8"))
+    
+    response = StreamingResponse(
+        buf,
+        media_type="text/plain",
+        headers={"Content-Disposition": "attachment; filename=investigation_report.txt"}
+    )
+    return response

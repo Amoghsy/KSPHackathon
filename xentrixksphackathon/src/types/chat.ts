@@ -29,6 +29,14 @@ export interface ChatMessage {
   rows?: number;
   agent?: AgentKind;
   ts: string;
+  explain?: {
+    sql?: string;
+    sources?: string;
+    algorithms?: string;
+    confidence?: number;
+    execution_time?: string;
+    summary?: string;
+  };
 }
 
 export interface ChatSession {

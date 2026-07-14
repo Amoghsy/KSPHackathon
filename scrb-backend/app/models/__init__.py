@@ -14,3 +14,5 @@ from app.models.financial_transaction import FinancialTransaction  # noqa: F401
 from app.models.police_station import PoliceStation  # noqa: F401
 from app.models.user import User  # noqa: F401
 from app.models.victim import VictimMaster  # noqa: F401
+from app.models.investigation_history import InvestigationHistory  # noqa: F401
+

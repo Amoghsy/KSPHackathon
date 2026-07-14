@@ -1681,7 +1681,7 @@ function MessageRow({
           {/* Message status */}
           <MessageStatus role={m.role} speaking={isSpeaking} />
 
-          {!isUser && m.sql && (
+          {!isUser && (m.sql || m.explain) && (
             <button
               onClick={() => setShowSql((v) => !v)}
               className="inline-flex items-center gap-0.5 hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring rounded"
@@ -1689,7 +1689,7 @@ function MessageRow({
               aria-expanded={showSql}
             >
               {showSql ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-              {t("showReasoning")} · {m.rows} row{m.rows === 1 ? "" : "s"}
+              Explain Analysis · {m.rows ?? 0} row{m.rows === 1 ? "" : "s"}
             </button>
           )}
 
@@ -1722,13 +1722,59 @@ function MessageRow({
           )}
         </div>
 
-        {!isUser && showSql && m.sql && (
-          <pre
-            className="mt-2 rounded border border-border bg-muted/60 p-3 text-[11px] font-mono leading-relaxed overflow-x-auto text-foreground"
-            aria-label="Generated SQL query"
-          >
-            {m.sql}
-          </pre>
+        {!isUser && showSql && (m.sql || m.explain) && (
+          <div className="mt-3 p-4 rounded-xl border border-border/80 bg-muted/40 text-xs space-y-3">
+            <h4 className="font-semibold text-foreground flex items-center gap-1.5 border-b border-border/60 pb-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-primary animate-pulse" />
+              AI Reasoning & Execution Plan
+            </h4>
+            
+            {m.explain ? (
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider block">Data Sources</span>
+                    <span className="text-foreground">{m.explain.sources || "N/A"}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider block">Algorithms Used</span>
+                    <span className="text-foreground">{m.explain.algorithms || "N/A"}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider block">Confidence Score</span>
+                    <Badge 
+                      className={cn(
+                        "mt-0.5 text-[10px] font-bold py-0.5 px-2",
+                        (m.explain.confidence ?? 0) >= 85 ? "bg-green-500/10 text-green-500 border-green-500/20" :
+                        (m.explain.confidence ?? 0) >= 65 ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
+                        "bg-red-500/10 text-red-500 border-red-500/20"
+                      )}
+                      variant="outline"
+                    >
+                      {m.explain.confidence ?? 0}%
+                    </Badge>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider block">Execution Time</span>
+                    <span className="text-foreground font-mono">{m.explain.execution_time || "N/A"}</span>
+                  </div>
+                </div>
+                
+                {m.explain.sql && (
+                  <div className="pt-2">
+                    <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider block mb-1">Generated SQL Query</span>
+                    <pre className="p-3 bg-muted/85 rounded border border-border/50 text-[10px] font-mono overflow-x-auto text-sky-400">
+                      {m.explain.sql}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <pre className="p-3 bg-muted/85 rounded border border-border/50 text-[10px] font-mono overflow-x-auto text-sky-400">
+                {m.sql}
+              </pre>
+            )}
+          </div>
         )}
       </div>
 

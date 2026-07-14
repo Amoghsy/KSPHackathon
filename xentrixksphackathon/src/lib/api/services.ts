@@ -146,3 +146,23 @@ export async function getFinancialNetwork(params?: {
 }
 
 
+// ─── Audit & History ──────────────────────────────────────────────────────────
+
+export async function getAuditLogs(): Promise<any[]> {
+  return apiGet<any[]>("/audit");
+}
+
+export async function getAdminStats(): Promise<any> {
+  return apiGet<any>("/audit/dashboard-stats");
+}
+
+export async function getInvestigationHistory(): Promise<any[]> {
+  return apiGet<any[]>("/audit/history");
+}
+
+export async function addInvestigationHistory(body: { name: string; entity_type: string; entity_id: string }): Promise<any> {
+  return apiPost<any>(`/audit/history?name=${encodeURIComponent(body.name)}&entity_type=${encodeURIComponent(body.entity_type)}&entity_id=${encodeURIComponent(body.entity_id)}`);
+}
+
+
+

@@ -52,6 +52,7 @@ class Orchestrator:
         conversation_id: str | None = None,
         request_id: str | None = None,
         user_id: int | None = None,
+        current_user: dict | None = None,
         response_language: str = "auto",
     ) -> dict[str, Any]:
         """
@@ -59,6 +60,7 @@ class Orchestrator:
         """
         req_id = request_id or str(uuid.uuid4())
         conv_id = conversation_id or str(uuid.uuid4())
+        u_id = user_id or (current_user.get("id") if current_user else None)
 
         logger.info(
             "Orchestrator request_id=%s conversation_id=%s question=%.200s",
@@ -74,8 +76,9 @@ class Orchestrator:
                 "No session found. Creating new session for conversation_id=%s", conv_id
             )
             conv_context = await self.conversation_manager.create_conversation(
-                conv_id, user_id=user_id
+                conv_id, user_id=u_id
             )
+
         
         # Update preference in context
         conv_context.preferred_language = response_language
@@ -101,7 +104,7 @@ class Orchestrator:
             # Fire-and-forget audit log — don't block the error response
             asyncio.create_task(
                 self._log_conversation(
-                    None, question, resolved_question, response, req_id, conv_id, user_id
+                    None, question, resolved_question, response, req_id, conv_id, current_user
                 )
             )
             return response
@@ -121,7 +124,7 @@ class Orchestrator:
             }
             asyncio.create_task(
                 self._log_conversation(
-                    None, question, resolved_question, response, req_id, conv_id, user_id
+                    None, question, resolved_question, response, req_id, conv_id, current_user
                 )
             )
             return response
@@ -168,7 +171,7 @@ class Orchestrator:
                         ),
                         self._log_conversation(
                             None, question, resolved_question, response,
-                            req_id, conv_id, user_id,
+                            req_id, conv_id, current_user,
                         ),
                     )
                 except Exception as bg_exc:
@@ -181,7 +184,7 @@ class Orchestrator:
             # Still log the conversation even if entity resolution failed
             asyncio.create_task(
                 self._log_conversation(
-                    None, question, resolved_question, response, req_id, conv_id, user_id
+                    None, question, resolved_question, response, req_id, conv_id, current_user
                 )
             )
 
@@ -196,11 +199,14 @@ class Orchestrator:
         response: dict[str, Any],
         req_id: str,
         conv_id: str,
-        user_id: int | None,
+        current_user: dict | None,
     ) -> None:
         """Helper to write conversation details to AuditLog. Safe from failures."""
         try:
             summary_content = response.get("summary") or response.get("error") or ""
+            user_id = current_user.get("id") if current_user else None
+            username = current_user.get("username") if current_user else None
+            role = current_user.get("role") if current_user else None
 
             logger.info(
                 "Audit Log Request: conversation_id=%s, request_id=%s, question=%s, resolved_question=%s, generated_sql=%s, summary=%s, execution_time=%s, user_id=%s",
@@ -215,18 +221,24 @@ class Orchestrator:
             )
 
             from app.db.session import SessionLocal
+            from app.agents.audit_agent.audit_agent import AuditAgent
 
             async with SessionLocal() as db_session:
-                audit = AuditLog(
+                audit_agent = AuditAgent()
+                await audit_agent.log_action(
+                    db_session,
+                    user_id=user_id,
+                    username=username,
+                    role=role,
+                    api="chat",
                     question=question,
                     generated_sql=response.get("generated_sql"),
                     execution_time_ms=response.get("execution_time_ms"),
-                    summary=summary_content,
-                    user_id=user_id,
+                    response_size=response.get("row_count") or len(response.get("rows", [])),
+                    ip_address="127.0.0.1",
                     request_id=req_id,
-                    timestamp=datetime.datetime.utcnow(),
+                    status=response.get("status", "success"),
+                    summary=summary_content,
                 )
-                db_session.add(audit)
-                await db_session.commit()
         except Exception as exc:
             logger.warning("Failed to write audit log to database: %s", exc)

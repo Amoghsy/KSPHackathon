@@ -21,7 +21,7 @@ export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
-const ROLES: Role[] = ["Investigator", "Analyst", "Supervisor", "Policymaker"];
+const ROLES: Role[] = ["Investigator", "Senior Investigator", "Analyst", "Supervisor", "Policymaker"];
 
 function LoginPage() {
   const login = useAuthStore((s) => s.login);

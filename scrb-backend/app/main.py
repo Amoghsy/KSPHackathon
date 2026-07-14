@@ -92,7 +92,7 @@ app = FastAPI(
 )
 
 # ---------------------------------------------------------------------------
-# CORS — allow only the Vite dev server (Day 4 will add production origin)
+# Middlewares — CORS, Secure Headers, Rate Limiting
 # ---------------------------------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
@@ -101,6 +101,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+from app.core.middleware import SecurityHeadersMiddleware, RateLimitingMiddleware
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RateLimitingMiddleware)
+
+
 
 
 # ---------------------------------------------------------------------------

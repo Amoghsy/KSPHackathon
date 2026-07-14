@@ -61,6 +61,7 @@ export async function askAssistant(
     agent: mapAgent(resp.agent),
     ts: new Date().toISOString(),
     conversationId: resp.conversation_id,
+    explain: resp.explain,
   };
 
   // If there are result rows, wrap them as a table RichData

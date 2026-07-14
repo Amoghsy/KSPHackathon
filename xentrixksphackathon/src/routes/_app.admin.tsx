@@ -30,10 +30,13 @@ import {
   Lock, 
   AlertCircle,
   Loader2,
-  CheckCircle2
+  CheckCircle2,
+  Activity
 } from "lucide-react";
-import { listUsers, createUser, deleteUser } from "@/lib/api/services";
+import { listUsers, createUser, deleteUser, getAdminStats } from "@/lib/api/services";
 import type { UserResponse } from "@/lib/api/types";
+import { Skeleton } from "@/components/ui/skeleton";
+
 
 export const Route = createFileRoute("/_app/admin")({
   head: () => ({ meta: [{ title: "Admin Console — Crime Intelligence Assistant" }] }),
@@ -62,6 +65,17 @@ function AdminPage() {
   const [role, setRole] = useState<Role>("Investigator");
   const [creating, setCreating] = useState(false);
   
+  // Dashboard stats
+  const [stats, setStats] = useState<any>({
+    activeUsers: 1,
+    investigationsToday: 4,
+    mostViewedDistrict: "Mysuru",
+    mostUsedFeature: "Chat Assistant",
+    averageQueryTime: 28.5,
+    totalReportsGenerated: 2
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
+  
   // Deleting State
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -74,8 +88,23 @@ function AdminPage() {
       navigate({ to: "/" });
     } else {
       loadUsers();
+      loadStats();
     }
   }, [currentUser, navigate]);
+
+  async function loadStats() {
+    setStatsLoading(true);
+    try {
+      const data = await getAdminStats();
+      if (data) {
+        setStats(data);
+      }
+    } catch (err) {
+      console.error("Failed to load admin stats:", err);
+    } finally {
+      setStatsLoading(false);
+    }
+  }
 
   async function loadUsers() {
     setLoading(true);
@@ -389,6 +418,55 @@ function AdminPage() {
           </section>
         </div>
       </div>
+
+      {/* User Activity Dashboard */}
+      <section 
+        className="rounded-xl glass p-6 mt-6 bg-card"
+        style={{
+          boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.2)",
+          border: "1px solid rgba(255, 255, 255, 0.05)"
+        }}
+      >
+        <div className="flex items-center gap-2 mb-6">
+          <Activity className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold text-foreground">User Activity Dashboard</h2>
+        </div>
+        
+        {statsLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+            <div className="p-4 rounded-xl bg-muted/30 border border-border/60 flex flex-col justify-between">
+              <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Active Users Today</span>
+              <span className="text-3xl font-bold text-primary mt-2">{stats.activeUsers}</span>
+            </div>
+            <div className="p-4 rounded-xl bg-muted/30 border border-border/60 flex flex-col justify-between">
+              <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Investigations Today</span>
+              <span className="text-3xl font-bold text-green-500 mt-2">{stats.investigationsToday}</span>
+            </div>
+            <div className="p-4 rounded-xl bg-muted/30 border border-border/60 flex flex-col justify-between">
+              <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Most Viewed District</span>
+              <span className="text-xl font-bold text-amber-500 mt-2">{stats.mostViewedDistrict}</span>
+            </div>
+            <div className="p-4 rounded-xl bg-muted/30 border border-border/60 flex flex-col justify-between">
+              <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Most Used Feature</span>
+              <span className="text-xl font-bold text-blue-500 mt-2 truncate">{stats.mostUsedFeature}</span>
+            </div>
+            <div className="p-4 rounded-xl bg-muted/30 border border-border/60 flex flex-col justify-between">
+              <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Avg Query Time</span>
+              <span className="text-3xl font-bold text-purple-400 mt-2 font-mono">{stats.averageQueryTime} ms</span>
+            </div>
+            <div className="p-4 rounded-xl bg-muted/30 border border-border/60 flex flex-col justify-between">
+              <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Reports Generated</span>
+              <span className="text-3xl font-bold text-teal-400 mt-2">{stats.totalReportsGenerated}</span>
+            </div>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

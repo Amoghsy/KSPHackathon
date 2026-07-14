@@ -16,7 +16,10 @@ import uuid
 from io import BytesIO
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from gtts import gTTS
+try:
+    from gtts import gTTS
+except ImportError:
+    gTTS = None  # type: ignore
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_current_user, oauth2_scheme
@@ -266,6 +269,7 @@ async def chat_endpoint(
     )
 
     user_id = None
+    current_user = None
     if token:
         try:
             current_user = await get_current_user(token)
@@ -280,8 +284,10 @@ async def chat_endpoint(
             conversation_id=request.conversation_id,
             request_id=request_id,
             user_id=user_id,
+            current_user=current_user,
             response_language=request.response_language,
         )
+
     except Exception as exc:  # noqa: BLE001
         logger.exception("Chat endpoint unhandled error: %s", exc)
         return {

@@ -43,6 +43,14 @@ export interface ChatResponse {
   resolved_question?: string;
   error?: string;
   error_type?: string;
+  explain?: {
+    sql?: string;
+    sources?: string;
+    algorithms?: string;
+    confidence?: number;
+    execution_time?: string;
+    summary?: string;
+  };
 }
 
 // ─── Conversations ──────────────────────────────────────────────────────────

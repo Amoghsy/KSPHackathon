@@ -33,9 +33,11 @@ export function Topbar() {
 
   const roleColor: Record<string, string> = {
     Supervisor: "bg-primary text-primary-foreground",
+    "Senior Investigator": "bg-destructive text-destructive-foreground",
     Investigator: "bg-info text-info-foreground",
     Analyst: "bg-chart-2/20 text-chart-2",
     Policymaker: "bg-warning text-warning-foreground",
+    Admin: "bg-red-500 text-white",
   };
 
   return (

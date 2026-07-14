@@ -5,7 +5,7 @@ import { persist } from "zustand/middleware";
 import { loginUser } from "@/lib/api/services";
 import type { LoginRequest } from "@/lib/api/types";
 
-export type Role = "Investigator" | "Analyst" | "Supervisor" | "Policymaker" | "Admin";
+export type Role = "Investigator" | "Senior Investigator" | "Analyst" | "Supervisor" | "Policymaker" | "Admin";
 
 export interface AuthUser {
   id: string;
@@ -76,6 +76,8 @@ export const useAuthStore = create<AuthState>()(
           let displayName = rawName;
           if (role === "Supervisor") {
             displayName = `SP ${rawName}`;
+          } else if (role === "Senior Investigator") {
+            displayName = `DySP ${rawName}`;
           } else if (role === "Investigator") {
             displayName = `Insp. ${rawName}`;
           } else if (role === "Policymaker") {
