@@ -14,7 +14,7 @@ import {
   getNetworkExpansion as apiGetNetworkExpansion,
 } from "@/lib/api/services";
 import type { DashboardResponse } from "@/lib/api/types";
-import type { ForecastCrime } from "@/mocks/forecast";
+import type { ForecastCrime } from "@/config/constants";
 
 
 // ─── Dashboard ───────────────────────────────────────────────────────────────

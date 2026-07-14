@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useCallback, useState } from "react";
 import { PageHeader } from "@/components/app/primitives";
 import { getMapAnalytics } from "@/services/crimeMapApi";
-import { DISTRICTS, CRIME_HEADS, GRAVITY } from "@/mocks/firs";
+import { DISTRICTS, CRIME_HEADS, GRAVITY } from "@/config/constants";
 import { CrimeMap } from "@/components/map/CrimeMap";
 import { useCrimeMap } from "@/hooks/useCrimeMap";
 import { Button } from "@/components/ui/button";
