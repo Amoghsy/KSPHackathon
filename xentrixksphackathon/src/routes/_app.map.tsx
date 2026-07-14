@@ -1,5 +1,6 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useMemo, useCallback } from "react";
 import { PageHeader } from "@/components/app/primitives";
 import { getMapAnalytics } from "@/services/crimeMapApi";
 import { DISTRICTS, CRIME_HEADS, GRAVITY } from "@/mocks/firs";
@@ -23,30 +24,47 @@ export const Route = createFileRoute("/_app/map")({
   component: MapPage,
 });
 
+// Empty fallback — defined once outside the component so it's always the same reference
+const EMPTY_MAP_DATA = {
+  heatmap_points: [] as any[],
+  hotspots: [] as any[],
+  police_stations: [] as any[],
+  district_statistics: {} as Record<string, any>,
+};
+
 function MapPage() {
   const navigate = useNavigate();
   const { zoomLevel, setZoomLevel, selectedDistrict, setSelectedDistrict, filters, layers } = useCrimeMap();
 
-  const queryFilters = {
+  // Memoize so the queryKey object is stable between renders that don't change filters
+  const queryFilters = useMemo(() => ({
     district: filters.selDistrict !== "All" ? filters.selDistrict : undefined,
     crime_type: filters.crimeType !== "All" ? filters.crimeType : undefined,
     date_range: filters.dateRange,
     gravity: filters.gravity !== "All" ? filters.gravity : undefined,
     status: filters.status !== "All" ? filters.status : undefined,
-  };
+  }), [filters.selDistrict, filters.crimeType, filters.dateRange, filters.gravity, filters.status]);
 
-  // Single aggregated query for all map layers and statistics
-  const { data, isLoading } = useQuery({
+  // Single aggregated query for all map layers and statistics.
+  // staleTime=5min: data is treated as fresh for 5 minutes — no background refetches.
+  // refetchOnWindowFocus=false: switching tabs won't reload tiles and cause flicker.
+  const { data } = useQuery({
     queryKey: ["mapAnalyticsPayload", queryFilters],
     queryFn: () => getMapAnalytics(queryFilters),
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
-  const mapData = data || {
-    heatmap_points: [],
-    hotspots: [],
-    police_stations: [],
-    district_statistics: {}
-  };
+  // Memoize so CrimeMap (React.memo) only re-renders when the actual data changes,
+  // not every time the parent re-renders for unrelated reasons.
+  const mapData = useMemo(() => data ?? EMPTY_MAP_DATA, [data]);
+
+  // Stable callback — won't break React.memo on CrimeMap when parent re-renders
+  const handleOpenInvestigation = useCallback(
+    (district: string) => navigate({ to: "/network", search: { district } }),
+    [navigate]
+  );
 
   const selectedStats = selectedDistrict ? mapData.district_statistics[selectedDistrict] : null;
 
@@ -162,9 +180,7 @@ function MapPage() {
             setZoomLevel={setZoomLevel}
             data={mapData}
             layers={layers}
-            onOpenInvestigation={(district) => {
-              navigate({ to: "/network", search: { district } });
-            }}
+            onOpenInvestigation={handleOpenInvestigation}
           />
 
           {/* District Intelligence Panel */}

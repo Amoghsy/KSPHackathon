@@ -10,7 +10,6 @@ import { HeatLayer } from "./HeatLayer";
 import { BubbleLayer } from "./BubbleLayer";
 import { PoliceStationLayer } from "./PoliceStationLayer";
 import { HotspotLayer } from "./HotspotLayer";
-import { Legend } from "./Legend";
 import { MapControls } from "./MapControls";
 
 // Karnataka Bounding Box Coordinates
@@ -190,18 +189,18 @@ export function CrimeMapInner({
         />
 
         {/* Outside-Karnataka mask — adapts colour to theme */}
-        {geojsonData && (
+        {useMemo(() => geojsonData ? (
           <BoundaryMask geojsonData={geojsonData} isDark={isDark} />
-        )}
+        ) : null, [geojsonData, isDark])}
 
         {/* Highlighted Karnataka State Outer Boundary Contour Line */}
-        {outlineData && (
+        {useMemo(() => outlineData ? (
           <GeoJSON
             key={`karnataka-outline-${theme}`}
             data={outlineData}
             style={outlineStyle}
           />
-        )}
+        ) : null, [outlineData, theme, outlineStyle])}
 
         {/* District Boundaries — no remount on selection change */}
         {geojsonData && (
@@ -239,9 +238,8 @@ export function CrimeMapInner({
           onOpenInvestigation={onOpenInvestigation}
         />
 
-        {/* Controls & Legend */}
+        {/* Controls */}
         <MapControls layers={layers} />
-        <Legend />
       </MapContainer>
     </div>
   );
