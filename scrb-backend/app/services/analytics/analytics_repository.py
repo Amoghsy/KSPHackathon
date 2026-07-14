@@ -16,7 +16,8 @@ class AnalyticsRepository:
 
     def _apply_filters(self, stmt, district: str | None = None, crime_type: str | None = None,
                        police_station: str | None = None, start_date: datetime.date | None = None,
-                       end_date: datetime.date | None = None):
+                       end_date: datetime.date | None = None, gravity: str | None = None,
+                       status: str | None = None):
         """Helper to apply standard query filters to SQLAlchemy statements."""
         conditions = []
         if district and district != "All":
@@ -36,13 +37,39 @@ class AnalyticsRepository:
         if end_date:
             conditions.append(CaseMaster.crime_registered_date <= end_date)
 
+        # Gravity filter mapping
+        gravity_map = {
+            "Low": 1,
+            "Medium": 2,
+            "High": 3,
+            "Grievous": 4
+        }
+        if gravity and gravity != "All":
+            g_id = gravity_map.get(gravity)
+            if g_id:
+                conditions.append(CaseMaster.gravity_offence_id == g_id)
+
+        # Status filter mapping
+        status_id_map = {
+            "Under Investigation": 1,
+            "Charge Sheeted": 2,
+            "Closed": 3,
+            "Undetected": 4
+        }
+        if status and status != "All":
+            s_id = status_id_map.get(status)
+            if s_id is not None:
+                conditions.append(CaseMaster.case_status_id == s_id)
+
         if conditions:
             stmt = stmt.where(and_(*conditions))
         return stmt
 
+
     async def get_monthly_trends(self, district: str | None = None, crime_type: str | None = None,
                                   police_station: str | None = None, start_date: datetime.date | None = None,
-                                  end_date: datetime.date | None = None) -> list[dict]:
+                                  end_date: datetime.date | None = None, gravity: str | None = None,
+                                  status: str | None = None) -> list[dict]:
         """Fetch monthly case counts for time series trend."""
         # Use date_trunc for PostgreSQL monthly aggregation
         month_trunc = func.date_trunc('month', CaseMaster.crime_registered_date)
@@ -52,7 +79,8 @@ class AnalyticsRepository:
             .group_by(month_trunc)
             .order_by(month_trunc)
         )
-        stmt = self._apply_filters(stmt, district, crime_type, police_station, start_date, end_date)
+        stmt = self._apply_filters(stmt, district, crime_type, police_station, start_date, end_date, gravity, status)
+
         res = await self.db.execute(stmt)
         results = []
         for row in res.all():
@@ -67,7 +95,8 @@ class AnalyticsRepository:
 
     async def get_daily_trends(self, district: str | None = None, crime_type: str | None = None,
                                  police_station: str | None = None, start_date: datetime.date | None = None,
-                                 end_date: datetime.date | None = None) -> list[dict]:
+                                 end_date: datetime.date | None = None, gravity: str | None = None,
+                                 status: str | None = None) -> list[dict]:
         """Fetch daily case counts."""
         stmt = (
             select(CaseMaster.crime_registered_date.label('day_date'), func.count(CaseMaster.case_master_id).label('count'))
@@ -75,7 +104,8 @@ class AnalyticsRepository:
             .group_by(CaseMaster.crime_registered_date)
             .order_by(CaseMaster.crime_registered_date)
         )
-        stmt = self._apply_filters(stmt, district, crime_type, police_station, start_date, end_date)
+        stmt = self._apply_filters(stmt, district, crime_type, police_station, start_date, end_date, gravity, status)
+
         res = await self.db.execute(stmt)
         return [
             {
@@ -99,9 +129,15 @@ class AnalyticsRepository:
         return [{"district": row.district or "Unknown", "cases": row.count} for row in res.all()]
 
     async def get_police_station_counts(self, district: str | None = None, limit: int = 10) -> list[dict]:
-        """Fetch top police stations by case count."""
+        """Fetch top police stations by case count with avg lat/lng derived from case coordinates."""
         stmt = (
-            select(PoliceStation.name, PoliceStation.district, func.count(CaseMaster.case_master_id).label('count'))
+            select(
+                PoliceStation.name,
+                PoliceStation.district,
+                func.count(CaseMaster.case_master_id).label('count'),
+                func.avg(CaseMaster.latitude).label('avg_lat'),
+                func.avg(CaseMaster.longitude).label('avg_lng'),
+            )
             .select_from(CaseMaster)
             .join(CaseMaster.police_station)
             .group_by(PoliceStation.name, PoliceStation.district)
@@ -111,7 +147,16 @@ class AnalyticsRepository:
             stmt = stmt.where(PoliceStation.district == district)
         stmt = stmt.limit(limit)
         res = await self.db.execute(stmt)
-        return [{"station": row.name, "district": row.district, "cases": row.count} for row in res.all()]
+        return [
+            {
+                "station": row.name,
+                "district": row.district,
+                "cases": row.count,
+                "latitude": float(row.avg_lat) if row.avg_lat is not None else None,
+                "longitude": float(row.avg_lng) if row.avg_lng is not None else None,
+            }
+            for row in res.all()
+        ]
 
     async def get_crime_type_counts(self, district: str | None = None, limit: int = 15) -> list[dict]:
         """Fetch case counts by crime type."""
@@ -172,8 +217,10 @@ class AnalyticsRepository:
 
     async def get_crime_coordinates(self, district: str | None = None, crime_type: str | None = None,
                                      police_station: str | None = None, start_date: datetime.date | None = None,
-                                     end_date: datetime.date | None = None) -> list[dict]:
+                                     end_date: datetime.date | None = None, gravity: str | None = None,
+                                     status: str | None = None) -> list[dict]:
         """Fetch list of coordinates and metadata for spatial clustering."""
+        # Base query already joins crime_type and police_station
         stmt = (
             select(
                 CaseMaster.latitude,
@@ -188,7 +235,32 @@ class AnalyticsRepository:
             .where(CaseMaster.latitude.isnot(None))
             .where(CaseMaster.longitude.isnot(None))
         )
-        stmt = self._apply_filters(stmt, district, crime_type, police_station, start_date, end_date)
+
+        # Apply filters directly (skip joins — already joined above)
+        conditions = []
+        if district and district != "All":
+            conditions.append(PoliceStation.district == district)
+        if police_station and police_station != "All":
+            conditions.append(PoliceStation.name == police_station)
+        if crime_type and crime_type != "All":
+            conditions.append(CrimeType.name == crime_type)
+        if start_date:
+            conditions.append(CaseMaster.crime_registered_date >= start_date)
+        if end_date:
+            conditions.append(CaseMaster.crime_registered_date <= end_date)
+        gravity_map = {"Low": 1, "Medium": 2, "High": 3, "Grievous": 4}
+        if gravity and gravity != "All":
+            g_id = gravity_map.get(gravity)
+            if g_id:
+                conditions.append(CaseMaster.gravity_offence_id == g_id)
+        status_id_map = {"Under Investigation": 1, "Charge Sheeted": 2, "Closed": 3, "Undetected": 4}
+        if status and status != "All":
+            s_id = status_id_map.get(status)
+            if s_id is not None:
+                conditions.append(CaseMaster.case_status_id == s_id)
+        if conditions:
+            stmt = stmt.where(and_(*conditions))
+
         res = await self.db.execute(stmt)
         return [
             {

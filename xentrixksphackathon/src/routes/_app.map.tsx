@@ -1,15 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 import { PageHeader } from "@/components/app/primitives";
-import { MockBadge } from "@/components/app/mock-badge";
-import { getHotspots } from "@/services/api";
-import { apiGet } from "@/lib/api/axios";
+import { getMapAnalytics } from "@/services/crimeMapApi";
 import { DISTRICTS, CRIME_HEADS, GRAVITY } from "@/mocks/firs";
-import { KARNATAKA_PATH } from "@/mocks/karnataka-map";
-
-
-import { Skeleton } from "@/components/ui/skeleton";
+import { CrimeMap } from "@/components/map/CrimeMap";
+import { useCrimeMap } from "@/hooks/useCrimeMap";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -17,70 +15,65 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
+import { Shield, Network, BarChart2, MapPin } from "lucide-react";
 
 export const Route = createFileRoute("/_app/map")({
+  ssr: false,
   head: () => ({ meta: [{ title: "Crime Map — Crime Intelligence Assistant" }] }),
   component: MapPage,
 });
 
-function intensityColor(v: number) {
-  // 0..100 → warm gradient
-  if (v > 75) return "rgba(192,80,77,0.85)";
-  if (v > 55) return "rgba(212,144,80,0.8)";
-  if (v > 35) return "rgba(212,192,80,0.75)";
-  return "rgba(80,144,192,0.65)";
-}
-
 function MapPage() {
-  const { data, isLoading } = useQuery({ queryKey: ["hotspots"], queryFn: getHotspots });
-  const [selected, setSelected] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const { zoomLevel, setZoomLevel, selectedDistrict, setSelectedDistrict, filters, layers } = useCrimeMap();
 
-  const { data: districtTrends } = useQuery({
-    queryKey: ["districtTrends", selected],
-    queryFn: () => apiGet<any>("/pattern/trends", { district: selected }),
-    enabled: !!selected,
+  const queryFilters = {
+    district: filters.selDistrict !== "All" ? filters.selDistrict : undefined,
+    crime_type: filters.crimeType !== "All" ? filters.crimeType : undefined,
+    date_range: filters.dateRange,
+    gravity: filters.gravity !== "All" ? filters.gravity : undefined,
+    status: filters.status !== "All" ? filters.status : undefined,
+  };
+
+  // Single aggregated query for all map layers and statistics
+  const { data, isLoading } = useQuery({
+    queryKey: ["mapAnalyticsPayload", queryFilters],
+    queryFn: () => getMapAnalytics(queryFilters),
   });
 
-  const { data: districtForecast } = useQuery({
-    queryKey: ["districtForecast", selected],
-    queryFn: () => apiGet<any>("/pattern/forecast", { district: selected }),
-    enabled: !!selected,
-  });
+  const mapData = data || {
+    heatmap_points: [],
+    hotspots: [],
+    police_stations: [],
+    district_statistics: {}
+  };
 
-  const { data: districtHotspots } = useQuery({
-    queryKey: ["districtHotspots", selected],
-    queryFn: () => apiGet<any>("/pattern/hotspots", { district: selected }),
-    enabled: !!selected,
-  });
-
-  const sel = data?.find((h) => h.district === selected);
-
+  const selectedStats = selectedDistrict ? mapData.district_statistics[selectedDistrict] : null;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-background text-foreground">
       <div className="px-6 pt-6">
         <PageHeader
-          title="Crime Hotspot Map"
-          subtitle="Heat clusters over Karnataka districts. Click a cluster for details."
-          actions={<MockBadge />}
+          title="Karnataka Crime Intelligence GIS"
+          subtitle="Dedicated state-level crime mapping and spatial intelligence portal."
+          actions={null}
         />
       </div>
 
       <div className="flex flex-1 gap-4 px-6 pb-6 min-h-0">
-        {/* Filters */}
-        <aside className="w-64 shrink-0 rounded-xl glass p-4 space-y-4 self-start">
-          <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
-            Filters
+        {/* Sidebar Filters */}
+        <aside className="w-64 shrink-0 rounded-xl bg-card border border-border p-4 space-y-4 self-start text-card-foreground">
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold border-b border-border pb-1">
+            GIS Filters
           </div>
+
           <div className="space-y-2">
-            <Label>Crime type</Label>
-            <Select defaultValue="All">
-              <SelectTrigger>
+            <Label className="text-xs text-foreground">Crime Type</Label>
+            <Select value={filters.crimeType} onValueChange={filters.setCrimeType}>
+              <SelectTrigger className="bg-background border-input text-foreground text-xs">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-popover border-border text-popover-foreground text-xs">
                 <SelectItem value="All">All types</SelectItem>
                 {CRIME_HEADS.map((c) => (
                   <SelectItem key={c} value={c}>
@@ -90,27 +83,32 @@ function MapPage() {
               </SelectContent>
             </Select>
           </div>
+
           <div className="space-y-2">
-            <Label>Date range</Label>
-            <Select defaultValue="30">
-              <SelectTrigger>
+            <Label className="text-xs text-foreground">Time Range</Label>
+            <Select value={filters.dateRange} onValueChange={filters.setDateRange}>
+              <SelectTrigger className="bg-background border-input text-foreground text-xs">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">Last 7 days</SelectItem>
-                <SelectItem value="30">Last 30 days</SelectItem>
-                <SelectItem value="90">Last 90 days</SelectItem>
-                <SelectItem value="365">Last 1 year</SelectItem>
+              <SelectContent className="bg-popover border-border text-popover-foreground text-xs">
+                <SelectItem value="7">Last 7 Days</SelectItem>
+                <SelectItem value="30">Last 30 Days</SelectItem>
+                <SelectItem value="90">Last 90 Days</SelectItem>
+                <SelectItem value="365">Last Year</SelectItem>
               </SelectContent>
             </Select>
           </div>
+
           <div className="space-y-2">
-            <Label>District</Label>
-            <Select defaultValue="All">
-              <SelectTrigger>
+            <Label className="text-xs text-foreground">District Focus</Label>
+            <Select value={filters.selDistrict} onValueChange={(val) => {
+              filters.setSelDistrict(val);
+              if (val !== "All") setSelectedDistrict(val);
+            }}>
+              <SelectTrigger className="bg-background border-input text-foreground text-xs">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-popover border-border text-popover-foreground text-xs">
                 <SelectItem value="All">All districts</SelectItem>
                 {DISTRICTS.map((d) => (
                   <SelectItem key={d} value={d}>
@@ -120,13 +118,14 @@ function MapPage() {
               </SelectContent>
             </Select>
           </div>
+
           <div className="space-y-2">
-            <Label>Gravity</Label>
-            <Select defaultValue="All">
-              <SelectTrigger>
+            <Label className="text-xs text-foreground">Severity Gravity</Label>
+            <Select value={filters.gravity} onValueChange={filters.setGravity}>
+              <SelectTrigger className="bg-background border-input text-foreground text-xs">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-popover border-border text-popover-foreground text-xs">
                 <SelectItem value="All">All</SelectItem>
                 {GRAVITY.map((g) => (
                   <SelectItem key={g} value={g}>
@@ -137,160 +136,134 @@ function MapPage() {
             </Select>
           </div>
 
-          <div className="border-t border-border pt-3">
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2">
-              Intensity
-            </div>
-            <div className="flex items-center gap-2 text-[11px]">
-              <div className="flex-1 h-2 rounded-full bg-gradient-to-r from-[rgba(80,144,192,0.6)] via-[rgba(212,192,80,0.75)] to-[rgba(192,80,77,0.85)]" />
-            </div>
-            <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
-              <span>Low</span>
-              <span>High</span>
-            </div>
+          <div className="space-y-2">
+            <Label className="text-xs text-foreground">Case Status</Label>
+            <Select value={filters.status} onValueChange={filters.setStatus}>
+              <SelectTrigger className="bg-background border-input text-foreground text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border-border text-popover-foreground text-xs">
+                <SelectItem value="All">All Statuses</SelectItem>
+                <SelectItem value="Under Investigation">Under Investigation</SelectItem>
+                <SelectItem value="Charge Sheeted">Charge Sheeted</SelectItem>
+                <SelectItem value="Closed">Closed</SelectItem>
+                <SelectItem value="Undetected">Undetected</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </aside>
 
-        {/* Map canvas */}
-        <div className="flex-1 relative rounded-xl glass overflow-hidden min-h-[500px]">
-          {isLoading || !data ? (
-            <Skeleton className="absolute inset-4" />
-          ) : (
-            <svg
-              viewBox="0 0 100 120"
-              className="w-full h-full"
-              preserveAspectRatio="xMidYMid meet"
-            >
-              {/* Karnataka state outline (simplified from GADM boundary) */}
-              <path
-                d={KARNATAKA_PATH}
-                fill="var(--color-muted)"
-                stroke="var(--color-primary)"
-                strokeWidth="0.35"
-                strokeLinejoin="round"
-              />
+        {/* Map Viewport */}
+        <div className="flex-1 relative rounded-xl overflow-hidden min-h-[500px]">
+          <CrimeMap
+            selected={selectedDistrict}
+            setSelected={setSelectedDistrict}
+            zoomLevel={zoomLevel}
+            setZoomLevel={setZoomLevel}
+            data={mapData}
+            layers={layers}
+            onOpenInvestigation={(district) => {
+              navigate({ to: "/network", search: { district } });
+            }}
+          />
 
-              {/* Hotspot circles */}
-              {data.map((h) => (
-                <g
-                  key={h.district}
-                  className="cursor-pointer"
-                  onClick={() => setSelected(h.district)}
-                >
-                  <circle
-                    cx={h.x}
-                    cy={h.y}
-                    r={2 + (h.intensity / 100) * 5}
-                    fill={intensityColor(h.intensity)}
-                    stroke={selected === h.district ? "var(--color-primary)" : "transparent"}
-                    strokeWidth="0.4"
-                    className="transition-all hover:opacity-80"
-                  />
-                  <text
-                    x={h.x}
-                    y={h.y + 8}
-                    fontSize="2"
-                    textAnchor="middle"
-                    fill="var(--color-foreground)"
-                    className="pointer-events-none select-none"
-                  >
-                    {h.district}
-                  </text>
-                </g>
-              ))}
-            </svg>
-          )}
-
-          {sel && (
-            <div className="absolute top-4 right-4 w-72 rounded-xl glass shadow-lg p-4 animate-in fade-in duration-200 text-foreground space-y-3">
-              <div>
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                  {sel.district}
-                </div>
-                <div className="mt-1 flex items-baseline gap-2">
-                  <span className="text-2xl font-bold tabular-nums">{sel.cases}</span>
-                  <span className="text-xs text-muted-foreground">cases (30d)</span>
-                </div>
-                <div className="text-xs mt-1">
-                  Dominant: <span className="font-semibold text-primary">{sel.dominant}</span>
-                </div>
-                <div
-                  className={cn(
-                    "text-xs mt-0.5 font-medium",
-                    sel.trend >= 0 ? "text-destructive" : "text-success",
-                  )}
-                >
-                  {sel.trend >= 0 ? "▲" : "▼"} {Math.abs(sel.trend)}% vs prior period
-                </div>
-              </div>
-
-              {/* District Top Crimes */}
-              <div className="border-t border-border pt-2">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
-                  Top Crimes
-                </div>
-                {districtTrends && districtTrends.top_crimes ? (
-                  <div className="space-y-1">
-                    {districtTrends.top_crimes.slice(0, 3).map((tc: any) => (
-                      <div key={tc.crime_type} className="text-xs flex justify-between">
-                        <span>{tc.crime_type}</span>
-                        <span className="font-medium tabular-nums">{tc.cases}</span>
-                      </div>
-                    ))}
-                    {districtTrends.top_crimes.length === 0 && (
-                      <div className="text-[11px] text-muted-foreground">No records</div>
-                    )}
+          {/* District Intelligence Panel */}
+          {selectedDistrict && selectedStats && (
+            <div className="absolute top-4 right-4 w-80 rounded-xl bg-card/95 backdrop-blur border border-border shadow-2xl p-4 animate-in fade-in duration-200 text-card-foreground space-y-4.5 z-[500]">
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-primary font-bold">
+                    District Intelligence Panel
                   </div>
-                ) : (
-                  <div className="h-4 bg-muted animate-pulse rounded" />
-                )}
-              </div>
-
-              {/* District Prediction */}
-              <div className="border-t border-border pt-2">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
-                  Forecast (Next Month)
+                  <h3 className="text-base font-bold text-foreground mt-0.5">{selectedDistrict}</h3>
                 </div>
-                {districtForecast ? (
-                  <div className="text-xs">
-                    <span className="font-semibold text-primary">{districtForecast.forecast_value}</span> cases
-                    <span className="text-[10px] text-muted-foreground ml-1">
-                      ({Math.round(districtForecast.confidence * 100)}% conf)
-                    </span>
-                  </div>
-                ) : (
-                  <div className="h-4 bg-muted animate-pulse rounded" />
-                )}
-              </div>
-
-              {/* DBSCAN Hotspots */}
-              <div className="border-t border-border pt-2">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
-                  Emerging Hotspots
-                </div>
-                {districtHotspots ? (
-                  <div className="text-xs font-medium text-foreground/80">
-                    {districtHotspots.dbscan_clusters?.length || 0} localized clusters detected
-                  </div>
-                ) : (
-                  <div className="h-4 bg-muted animate-pulse rounded" />
-                )}
-              </div>
-
-              <div className="border-t border-border pt-2 space-y-2">
-                <Link
-                  to="/network"
-                  search={{ district: sel.district }}
-                  className="block w-full text-center text-xs bg-primary text-primary-foreground py-2 rounded-lg font-medium hover:opacity-90 transition-opacity"
-                >
-                  View Criminal Network
-                </Link>
                 <button
-                  onClick={() => setSelected(null)}
-                  className="block w-full text-center text-[11px] text-muted-foreground hover:text-foreground"
+                  onClick={() => setSelectedDistrict(null)}
+                  className="text-muted-foreground hover:text-foreground text-xs font-medium"
                 >
-                  Close
+                  ✕
                 </button>
+              </div>
+
+              {/* Case Stats grid */}
+              <div className="grid grid-cols-3 gap-2 border-t border-border pt-2.5">
+                <div className="text-center bg-muted/50 p-1.5 rounded-lg border border-border/40">
+                  <div className="text-[9px] text-muted-foreground uppercase font-semibold">Total FIRs</div>
+                  <div className="text-base font-bold text-foreground mt-0.5 tabular-nums">{selectedStats.cases}</div>
+                </div>
+                <div className="text-center bg-muted/50 p-1.5 rounded-lg border border-border/40">
+                  <div className="text-[9px] text-emerald-500 uppercase font-semibold">Solved</div>
+                  <div className="text-base font-bold text-emerald-500 mt-0.5 tabular-nums">{selectedStats.solved}</div>
+                </div>
+                <div className="text-center bg-muted/50 p-1.5 rounded-lg border border-border/40">
+                  <div className="text-[9px] text-red-500 dark:text-red-400 uppercase font-semibold">Pending</div>
+                  <div className="text-base font-bold text-red-550 dark:text-red-400 mt-0.5 tabular-nums">{selectedStats.pending}</div>
+                </div>
+              </div>
+
+              {/* Details List */}
+              <div className="space-y-1.5 border-t border-border pt-2.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Dominant Crime:</span>
+                  <span className="font-semibold text-primary">{selectedStats.dominant}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Growth Rate:</span>
+                  <span className={cn("font-semibold flex items-center gap-1", selectedStats.growth >= 0 ? "text-red-550 dark:text-red-400" : "text-emerald-600 dark:text-emerald-500")}>
+                    {selectedStats.growth >= 0 ? `+${selectedStats.growth}%` : `${selectedStats.growth}%`}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Repeat Offenders:</span>
+                  <span className="font-semibold text-foreground">{selectedStats.repeat_offenders}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Gang Count:</span>
+                  <span className="font-semibold text-foreground">{selectedStats.gangs} gangs</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Emerging Hotspots:</span>
+                  <span className="font-semibold text-foreground">{selectedStats.hotspots} zones</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Forecast (Next Month):</span>
+                  <span className="font-bold text-primary">{selectedStats.prediction} cases</span>
+                </div>
+              </div>
+
+              {/* Tactical Buttons */}
+              <div className="border-t border-border pt-3 space-y-2">
+                <Button
+                  size="sm"
+                  className="w-full text-xs bg-primary hover:bg-primary/90 text-primary-foreground font-semibold flex items-center justify-center gap-1.5"
+                  onClick={() => navigate({ to: "/network", search: { district: selectedDistrict } })}
+                >
+                  <Network className="h-3.5 w-3.5" />
+                  Open Criminal Network
+                </Button>
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full text-xs border-border hover:bg-accent hover:text-accent-foreground text-foreground font-semibold flex items-center justify-center gap-1.5"
+                  onClick={() => navigate({ to: "/sociological", search: { district: selectedDistrict } })}
+                >
+                  <BarChart2 className="h-3.5 w-3.5 text-primary" />
+                  View Pattern Analytics
+                </Button>
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full text-xs border-border hover:bg-accent hover:text-accent-foreground text-foreground font-semibold flex items-center justify-center gap-1.5"
+                  onClick={() => {
+                    layers.setShowStations(true);
+                    setZoomLevel(10); // make stations visible
+                  }}
+                >
+                  <MapPin className="h-3.5 w-3.5 text-primary" />
+                  View Police Stations
+                </Button>
               </div>
             </div>
           )}
@@ -299,4 +272,4 @@ function MapPage() {
     </div>
   );
 }
-
+export default MapPage;

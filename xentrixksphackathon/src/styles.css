@@ -375,3 +375,92 @@
   );
 }
 
+/* ─── Leaflet GIS Map Theme Overrides ─────────────────────────── */
+
+/* District name tooltip */
+.leaflet-district-tooltip {
+  background: rgba(255 255 255 / 0.92);
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #1e293b;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  pointer-events: none;
+}
+.dark .leaflet-district-tooltip {
+  background: rgba(15 23 42 / 0.92);
+  border-color: rgba(255 255 255 / 0.12);
+  color: #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+}
+.leaflet-district-tooltip::before { display: none; }
+
+/* Popup container */
+.leaflet-popup-content-wrapper {
+  background: #ffffff;
+  color: #1e293b;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  padding: 0;
+  overflow: hidden;
+}
+.dark .leaflet-popup-content-wrapper {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-color: rgba(255 255 255 / 0.10);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.55);
+}
+.leaflet-popup-content { margin: 0; }
+.leaflet-popup-tip {
+  background: #ffffff;
+}
+.dark .leaflet-popup-tip {
+  background: #0f172a;
+}
+.leaflet-popup-close-button {
+  color: #64748b !important;
+}
+.dark .leaflet-popup-close-button {
+  color: #94a3b8 !important;
+}
+
+/* Cluster marker bubble - override defaults to make our custom cluster icons render cleanly as perfect circles */
+.custom-station-cluster,
+.custom-crime-cluster {
+  background: transparent !important;
+  border: none !important;
+}
+
+.custom-station-cluster div,
+.custom-crime-cluster div {
+  margin: 0 !important;
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 50% !important;
+}
+
+.marker-cluster {
+  background: transparent !important;
+}
+.marker-cluster div {
+  margin: 0 !important;
+}
+
+/* Leaflet zoom controls (hidden — we use custom ones) */
+.leaflet-control-zoom { display: none; }
+
+/* Attribution styling */
+.leaflet-control-attribution {
+  background: rgba(255 255 255 / 0.7) !important;
+  color: #64748b !important;
+  font-size: 9px !important;
+}
+.dark .leaflet-control-attribution {
+  background: rgba(15 23 42 / 0.7) !important;
+  color: #475569 !important;
+}
+
+

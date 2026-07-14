@@ -1,0 +1,858 @@
+﻿{
+    "heatmap_points":  [
+                           {
+                               "latitude":  13.947602,
+                               "longitude":  75.579706,
+                               "crime_type":  "Financial Fraud",
+                               "gravity":  2,
+                               "district":  "Shivamogga"
+                           },
+                           {
+                               "latitude":  13.363849,
+                               "longitude":  74.776816,
+                               "crime_type":  "Drug Trafficking",
+                               "gravity":  3,
+                               "district":  "Udupi"
+                           },
+                           {
+                               "latitude":  13.961403,
+                               "longitude":  75.581674,
+                               "crime_type":  "Financial Fraud",
+                               "gravity":  4,
+                               "district":  "Shivamogga"
+                           },
+                           {
+                               "latitude":  13.354847,
+                               "longitude":  74.783698,
+                               "crime_type":  "Drug Trafficking",
+                               "gravity":  3,
+                               "district":  "Udupi"
+                           },
+                           {
+                               "latitude":  13.943426,
+                               "longitude":  75.573805,
+                               "crime_type":  "Financial Fraud",
+                               "gravity":  3,
+                               "district":  "Shivamogga"
+                           },
+                           {
+                               "latitude":  13.327265,
+                               "longitude":  74.728736,
+                               "crime_type":  "Drug Trafficking",
+                               "gravity":  1,
+                               "district":  "Udupi"
+                           },
+                           {
+                               "latitude":  13.929652,
+                               "longitude":  75.570411,
+                               "crime_type":  "Financial Fraud",
+                               "gravity":  3,
+                               "district":  "Shivamogga"
+                           },
+                           {
+                               "latitude":  17.339905,
+                               "longitude":  76.848801,
+                               "crime_type":  "Human Trafficking",
+                               "gravity":  1,
+                               "district":  "Kalaburagi"
+                           },
+                           {
+                               "latitude":  15.143643,
+                               "longitude":  76.893482,
+                               "crime_type":  "Murder",
+                               "gravity":  3,
+                               "district":  "Ballari"
+                           },
+                           {
+                               "latitude":  15.858479,
+                               "longitude":  74.500551,
+                               "crime_type":  "Human Trafficking",
+                               "gravity":  4,
+                               "district":  "Belagavi"
+                           },
+                           {
+                               "latitude":  17.314876,
+                               "longitude":  76.825968,
+                               "crime_type":  "Murder",
+                               "gravity":  3,
+                               "district":  "Kalaburagi"
+                           },
+                           {
+                               "latitude":  17.34225,
+                               "longitude":  76.844632,
+                               "crime_type":  "Human Trafficking",
+                               "gravity":  4,
+                               "district":  "Kalaburagi"
+                           },
+                           {
+                               "latitude":  15.139838,
+                               "longitude":  76.936044,
+                               "crime_type":  "Murder",
+                               "gravity":  1,
+                               "district":  "Ballari"
+                           },
+                           {
+                               "latitude":  15.855643,
+                               "longitude":  74.534194,
+                               "crime_type":  "Human Trafficking",
+                               "gravity":  3,
+                               "district":  "Belagavi"
+                           },
+                           {
+                               "latitude":  17.329366,
+                               "longitude":  76.827303,
+                               "crime_type":  "Murder",
+                               "gravity":  2,
+                               "district":  "Kalaburagi"
+                           },
+                           {
+                               "latitude":  15.152608,
+                               "longitude":  76.914967,
+                               "crime_type":  "Human Trafficking",
+                               "gravity":  3,
+                               "district":  "Ballari"
+                           },
+                           {
+                               "latitude":  15.881652,
+                               "longitude":  74.528772,
+                               "crime_type":  "Murder",
+                               "gravity":  2,
+                               "district":  "Belagavi"
+                           },
+                           {
+                               "latitude":  15.351945,
+                               "longitude":  75.132446,
+                               "crime_type":  "Vehicle Theft",
+                               "gravity":  1,
+                               "district":  "Hubballi-Dharwad"
+                           },
+                           {
+                               "latitude":  13.917611,
+                               "longitude":  75.58245,
+                               "crime_type":  "Vehicle Theft",
+                               "gravity":  2,
+                               "district":  "Shivamogga"
+                           },
+                           {
+                               "latitude":  15.872454,
+                               "longitude":  74.510402,
+                               "crime_type":  "Robbery",
+                               "gravity":  2,
+                               "district":  "Belagavi"
+                           },
+                           {
+                               "latitude":  15.452529,
+                               "longitude":  75.009198,
+                               "crime_type":  "Theft",
+                               "gravity":  4,
+                               "district":  "Hubballi-Dharwad"
+                           },
+                           {
+                               "latitude":  15.133257,
+                               "longitude":  76.935738,
+                               "crime_type":  "Kidnapping",
+                               "gravity":  1,
+                               "district":  "Ballari"
+                           },
+                           {
+                               "latitude":  13.357851,
+                               "longitude":  74.785609,
+                               "crime_type":  "Theft",
+                               "gravity":  3,
+                               "district":  "Udupi"
+                           },
+                           {
+                               "latitude":  13.341169,
+                               "longitude":  77.090185,
+                               "crime_type":  "Assault",
+                               "gravity":  3,
+                               "district":  "Tumakuru"
+                           },
+                           {
+                               "latitude":  12.306081,
+                               "longitude":  76.643973,
+                               "crime_type":  "Cyber Fraud",
+                               "gravity":  3,
+                               "district":  "Mysuru"
+                           },
+                           {
+                               "latitude":  15.450641,
+                               "longitude":  75.002943,
+                               "crime_type":  "Vehicle Theft",
+                               "gravity":  1,
+                               "district":  "Hubballi-Dharwad"
+                           },
+                           {
+                               "latitude":  17.358065,
+                               "longitude":  76.852131,
+                               "crime_type":  "Murder",
+                               "gravity":  2,
+                               "district":  "Kalaburagi"
+                           },
+                           {
+                               "latitude":  12.926979,
+                               "longitude":  77.577579,
+                               "crime_type":  "Cyber Fraud",
+                               "gravity":  4,
+                               "district":  "Bengaluru Urban"
+                           },
+                           {
+                               "latitude":  12.986578,
+                               "longitude":  77.604681,
+                               "crime_type":  "Cyber Fraud",
+                               "gravity":  4,
+                               "district":  "Bengaluru Urban"
+                           },
+                           {
+                               "latitude":  13.26212,
+                               "longitude":  77.727463,
+                               "crime_type":  "Theft",
+                               "gravity":  2,
+                               "district":  "Bengaluru Rural"
+                           },
+                           {
+                               "latitude":  12.942482,
+                               "longitude":  77.583334,
+                               "crime_type":  "Cyber Fraud",
+                               "gravity":  1,
+                               "district":  "Bengaluru Urban"
+                           },
+                           {
+                               "latitude":  12.93241,
+                               "longitude":  77.583083,
+                               "crime_type":  "Theft",
+                               "gravity":  2,
+                               "district":  "Bengaluru Urban"
+                           },
+                           {
+                               "latitude":  13.293429,
+                               "longitude":  77.543377,
+                               "crime_type":  "Cyber Fraud",
+                               "gravity":  3,
+                               "district":  "Bengaluru Rural"
+                           },
+                           {
+                               "latitude":  12.918929,
+                               "longitude":  77.570863,
+                               "crime_type":  "Cyber Fraud",
+                               "gravity":  3,
+                               "district":  "Bengaluru Urban"
+                           },
+                           {
+                               "latitude":  15.46878,
+                               "longitude":  74.994123,
+                               "crime_type":  "Theft",
+                               "gravity":  2,
+                               "district":  "Hubballi-Dharwad"
+                           },
+                           {
+                               "latitude":  13.290194,
+                               "longitude":  77.529455,
+                               "crime_type":  "Theft",
+                               "gravity":  2,
+                               "district":  "Bengaluru Rural"
+                           },
+                           {
+                               "latitude":  12.978697,
+                               "longitude":  77.589566,
+                               "crime_type":  "Cyber Fraud",
+                               "gravity":  3,
+                               "district":  "Bengaluru Urban"
+                           },
+                           {
+                               "latitude":  13.34676,
+                               "longitude":  77.092428,
+                               "crime_type":  "Robbery",
+                               "gravity":  3,
+                               "district":  "Tumakuru"
+                           },
+                           {
+                               "latitude":  12.310137,
+                               "longitude":  76.619256,
+                               "crime_type":  "Assault",
+                               "gravity":  4,
+                               "district":  "Mysuru"
+                           },
+                           {
+                               "latitude":  13.332317,
+                               "longitude":  77.11104,
+                               "crime_type":  "Robbery",
+                               "gravity":  4,
+                               "district":  "Tumakuru"
+                           },
+                           {
+                               "latitude":  12.309282,
+                               "longitude":  76.622412,
+                               "crime_type":  "Kidnapping",
+                               "gravity":  3,
+                               "district":  "Mysuru"
+                           },
+                           {
+                               "latitude":  13.359197,
+                               "longitude":  77.069421,
+                               "crime_type":  "Robbery",
+                               "gravity":  4,
+                               "district":  "Tumakuru"
+                           },
+                           {
+                               "latitude":  12.969354,
+                               "longitude":  77.584877,
+                               "crime_type":  "Assault",
+                               "gravity":  2,
+                               "district":  "Bengaluru Urban"
+                           },
+                           {
+                               "latitude":  12.312243,
+                               "longitude":  76.622317,
+                               "crime_type":  "Robbery",
+                               "gravity":  4,
+                               "district":  "Mysuru"
+                           },
+                           {
+                               "latitude":  13.331051,
+                               "longitude":  77.095191,
+                               "crime_type":  "Assault",
+                               "gravity":  2,
+                               "district":  "Tumakuru"
+                           },
+                           {
+                               "latitude":  13.362145,
+                               "longitude":  77.082522,
+                               "crime_type":  "Kidnapping",
+                               "gravity":  4,
+                               "district":  "Tumakuru"
+                           },
+                           {
+                               "latitude":  12.321044,
+                               "longitude":  76.619125,
+                               "crime_type":  "Assault",
+                               "gravity":  4,
+                               "district":  "Mysuru"
+                           },
+                           {
+                               "latitude":  13.336025,
+                               "longitude":  74.753489,
+                               "crime_type":  "Drug Trafficking",
+                               "gravity":  4,
+                               "district":  "Udupi"
+                           },
+                           {
+                               "latitude":  13.919471,
+                               "longitude":  75.556887,
+                               "crime_type":  "Financial Fraud",
+                               "gravity":  4,
+                               "district":  "Shivamogga"
+                           },
+                           {
+                               "latitude":  13.354645,
+                               "longitude":  74.739,
+                               "crime_type":  "Drug Trafficking",
+                               "gravity":  1,
+                               "district":  "Udupi"
+                           }
+                       ],
+    "hotspots":  [
+                     {
+                         "cluster_id":  8,
+                         "center":  {
+                                        "latitude":  12.95077557142857,
+                                        "longitude":  77.58485471428571
+                                    },
+                         "cases":  7,
+                         "severity":  2.71,
+                         "dominant":  "Cyber Fraud",
+                         "district":  "Bengaluru Urban"
+                     },
+                     {
+                         "cluster_id":  0,
+                         "center":  {
+                                        "latitude":  13.936527499999999,
+                                        "longitude":  75.5741555
+                                    },
+                         "cases":  6,
+                         "severity":  3.0,
+                         "dominant":  "Financial Fraud",
+                         "district":  "Shivamogga"
+                     },
+                     {
+                         "cluster_id":  1,
+                         "center":  {
+                                        "latitude":  13.349080333333333,
+                                        "longitude":  74.76122466666668
+                                    },
+                         "cases":  6,
+                         "severity":  2.5,
+                         "dominant":  "Drug Trafficking",
+                         "district":  "Udupi"
+                     },
+                     {
+                         "cluster_id":  6,
+                         "center":  {
+                                        "latitude":  13.345439833333332,
+                                        "longitude":  77.09013116666667
+                                    },
+                         "cases":  6,
+                         "severity":  3.33,
+                         "dominant":  "Robbery",
+                         "district":  "Tumakuru"
+                     },
+                     {
+                         "cluster_id":  2,
+                         "center":  {
+                                        "latitude":  17.3368924,
+                                        "longitude":  76.83976700000001
+                                    },
+                         "cases":  5,
+                         "severity":  2.4,
+                         "dominant":  "Murder",
+                         "district":  "Kalaburagi"
+                     },
+                     {
+                         "cluster_id":  7,
+                         "center":  {
+                                        "latitude":  12.311757400000001,
+                                        "longitude":  76.6254166
+                                    },
+                         "cases":  5,
+                         "severity":  3.6,
+                         "dominant":  "Assault",
+                         "district":  "Mysuru"
+                     },
+                     {
+                         "cluster_id":  3,
+                         "center":  {
+                                        "latitude":  15.1423365,
+                                        "longitude":  76.92005775
+                                    },
+                         "cases":  4,
+                         "severity":  2.0,
+                         "dominant":  "Murder",
+                         "district":  "Ballari"
+                     },
+                     {
+                         "cluster_id":  4,
+                         "center":  {
+                                        "latitude":  15.867057,
+                                        "longitude":  74.51847975
+                                    },
+                         "cases":  4,
+                         "severity":  2.75,
+                         "dominant":  "Human Trafficking",
+                         "district":  "Belagavi"
+                     },
+                     {
+                         "cluster_id":  5,
+                         "center":  {
+                                        "latitude":  15.457316666666665,
+                                        "longitude":  75.002088
+                                    },
+                         "cases":  3,
+                         "severity":  2.33,
+                         "dominant":  "Theft",
+                         "district":  "Hubballi-Dharwad"
+                     },
+                     {
+                         "cluster_id":  9,
+                         "center":  {
+                                        "latitude":  13.2918115,
+                                        "longitude":  77.536416
+                                    },
+                         "cases":  2,
+                         "severity":  2.5,
+                         "dominant":  "Cyber Fraud",
+                         "district":  "Bengaluru Rural"
+                     }
+                 ],
+    "police_stations":  [
+                            {
+                                "name":  "Shivamogga Town PS",
+                                "district":  "Shivamogga",
+                                "latitude":  13.92754,
+                                "longitude":  75.57088825,
+                                "cases":  4,
+                                "solved":  3,
+                                "pending":  1,
+                                "dominant":  "Financial Fraud",
+                                "repeat_offenders":  1
+                            },
+                            {
+                                "name":  "Mysuru West PS",
+                                "district":  "Mysuru",
+                                "latitude":  12.3131765,
+                                "longitude":  76.6207775,
+                                "cases":  4,
+                                "solved":  3,
+                                "pending":  1,
+                                "dominant":  "Assault",
+                                "repeat_offenders":  1
+                            },
+                            {
+                                "name":  "Tumakuru Town PS",
+                                "district":  "Tumakuru",
+                                "latitude":  13.33782425,
+                                "longitude":  77.097211,
+                                "cases":  4,
+                                "solved":  3,
+                                "pending":  1,
+                                "dominant":  "Robbery",
+                                "repeat_offenders":  1
+                            },
+                            {
+                                "name":  "Jayanagar PS",
+                                "district":  "Bengaluru Urban",
+                                "latitude":  12.9302,
+                                "longitude":  77.57871475,
+                                "cases":  4,
+                                "solved":  3,
+                                "pending":  1,
+                                "dominant":  "Cyber Fraud",
+                                "repeat_offenders":  1
+                            },
+                            {
+                                "name":  "Kalaburagi Station Bazar PS",
+                                "district":  "Kalaburagi",
+                                "latitude":  17.328049,
+                                "longitude":  76.834024,
+                                "cases":  3,
+                                "solved":  2,
+                                "pending":  1,
+                                "dominant":  "Murder",
+                                "repeat_offenders":  1
+                            },
+                            {
+                                "name":  "Manipal PS",
+                                "district":  "Udupi",
+                                "latitude":  13.358849,
+                                "longitude":  74.782041,
+                                "cases":  3,
+                                "solved":  2,
+                                "pending":  1,
+                                "dominant":  "Drug Trafficking",
+                                "repeat_offenders":  1
+                            },
+                            {
+                                "name":  "Dharwad Town PS",
+                                "district":  "Hubballi-Dharwad",
+                                "latitude":  15.457316666666667,
+                                "longitude":  75.002088,
+                                "cases":  3,
+                                "solved":  2,
+                                "pending":  1,
+                                "dominant":  "Vehicle Theft",
+                                "repeat_offenders":  1
+                            },
+                            {
+                                "name":  "Whitefield PS",
+                                "district":  "Bengaluru Urban",
+                                "latitude":  12.978209666666666,
+                                "longitude":  77.59304133333333,
+                                "cases":  3,
+                                "solved":  2,
+                                "pending":  1,
+                                "dominant":  "Cyber Fraud",
+                                "repeat_offenders":  1
+                            },
+                            {
+                                "name":  "Belagavi North PS",
+                                "district":  "Belagavi",
+                                "latitude":  15.869916333333334,
+                                "longitude":  74.524456,
+                                "cases":  3,
+                                "solved":  2,
+                                "pending":  1,
+                                "dominant":  "Human Trafficking",
+                                "repeat_offenders":  1
+                            },
+                            {
+                                "name":  "Udupi Town PS",
+                                "district":  "Udupi",
+                                "latitude":  13.339311666666667,
+                                "longitude":  74.74040833333333,
+                                "cases":  3,
+                                "solved":  2,
+                                "pending":  1,
+                                "dominant":  "Drug Trafficking",
+                                "repeat_offenders":  1
+                            },
+                            {
+                                "name":  "Ballari Rural PS",
+                                "district":  "Ballari",
+                                "latitude":  15.1481255,
+                                "longitude":  76.9042245,
+                                "cases":  2,
+                                "solved":  1,
+                                "pending":  1,
+                                "dominant":  "Murder",
+                                "repeat_offenders":  1
+                            },
+                            {
+                                "name":  "Doddaballapura PS",
+                                "district":  "Bengaluru Rural",
+                                "latitude":  13.2918115,
+                                "longitude":  77.536416,
+                                "cases":  2,
+                                "solved":  1,
+                                "pending":  1,
+                                "dominant":  "Theft",
+                                "repeat_offenders":  1
+                            },
+                            {
+                                "name":  "Kalaburagi Chowk PS",
+                                "district":  "Kalaburagi",
+                                "latitude":  17.3501575,
+                                "longitude":  76.8483815,
+                                "cases":  2,
+                                "solved":  1,
+                                "pending":  1,
+                                "dominant":  "Murder",
+                                "repeat_offenders":  1
+                            },
+                            {
+                                "name":  "Ballari Town PS",
+                                "district":  "Ballari",
+                                "latitude":  15.1365475,
+                                "longitude":  76.935891,
+                                "cases":  2,
+                                "solved":  1,
+                                "pending":  1,
+                                "dominant":  "Murder",
+                                "repeat_offenders":  1
+                            },
+                            {
+                                "name":  "Tumakuru Rural PS",
+                                "district":  "Tumakuru",
+                                "latitude":  13.360671,
+                                "longitude":  77.0759715,
+                                "cases":  2,
+                                "solved":  1,
+                                "pending":  1,
+                                "dominant":  "Robbery",
+                                "repeat_offenders":  1
+                            },
+                            {
+                                "name":  "Shivamogga Rural PS",
+                                "district":  "Shivamogga",
+                                "latitude":  13.9545025,
+                                "longitude":  75.58069,
+                                "cases":  2,
+                                "solved":  1,
+                                "pending":  1,
+                                "dominant":  "Financial Fraud",
+                                "repeat_offenders":  1
+                            },
+                            {
+                                "name":  "Hubballi North PS",
+                                "district":  "Hubballi-Dharwad",
+                                "latitude":  15.351945,
+                                "longitude":  75.132446,
+                                "cases":  1,
+                                "solved":  0,
+                                "pending":  1,
+                                "dominant":  "Vehicle Theft",
+                                "repeat_offenders":  1
+                            },
+                            {
+                                "name":  "Mysuru Town PS",
+                                "district":  "Mysuru",
+                                "latitude":  12.306081,
+                                "longitude":  76.643973,
+                                "cases":  1,
+                                "solved":  0,
+                                "pending":  1,
+                                "dominant":  "Assault",
+                                "repeat_offenders":  1
+                            },
+                            {
+                                "name":  "Devanahalli PS",
+                                "district":  "Bengaluru Rural",
+                                "latitude":  13.26212,
+                                "longitude":  77.727463,
+                                "cases":  1,
+                                "solved":  0,
+                                "pending":  1,
+                                "dominant":  "Theft",
+                                "repeat_offenders":  1
+                            },
+                            {
+                                "name":  "Belagavi Central PS",
+                                "district":  "Belagavi",
+                                "latitude":  15.858479,
+                                "longitude":  74.500551,
+                                "cases":  1,
+                                "solved":  0,
+                                "pending":  1,
+                                "dominant":  "Human Trafficking",
+                                "repeat_offenders":  1
+                            }
+                        ],
+    "district_statistics":  {
+                                "Bengaluru Urban":  {
+                                                        "district":  "Bengaluru Urban",
+                                                        "cases":  7,
+                                                        "solved":  5,
+                                                        "pending":  2,
+                                                        "growth":  1.0,
+                                                        "dominant":  "Cyber Fraud",
+                                                        "repeat_offenders":  2,
+                                                        "gangs":  1,
+                                                        "hotspots":  1,
+                                                        "prediction":  8
+                                                    },
+                                "Bengaluru Rural":  {
+                                                        "district":  "Bengaluru Rural",
+                                                        "cases":  3,
+                                                        "solved":  2,
+                                                        "pending":  1,
+                                                        "growth":  4.0,
+                                                        "dominant":  "Theft",
+                                                        "repeat_offenders":  2,
+                                                        "gangs":  1,
+                                                        "hotspots":  1,
+                                                        "prediction":  4
+                                                    },
+                                "Mysuru":  {
+                                               "district":  "Mysuru",
+                                               "cases":  5,
+                                               "solved":  3,
+                                               "pending":  2,
+                                               "growth":  -5.0,
+                                               "dominant":  "Assault",
+                                               "repeat_offenders":  2,
+                                               "gangs":  1,
+                                               "hotspots":  1,
+                                               "prediction":  6
+                                           },
+                                "Mangaluru":  {
+                                                  "district":  "Mangaluru",
+                                                  "cases":  0,
+                                                  "solved":  0,
+                                                  "pending":  0,
+                                                  "growth":  -5.0,
+                                                  "dominant":  "Unknown",
+                                                  "repeat_offenders":  2,
+                                                  "gangs":  1,
+                                                  "hotspots":  0,
+                                                  "prediction":  1
+                                              },
+                                "Belagavi":  {
+                                                 "district":  "Belagavi",
+                                                 "cases":  4,
+                                                 "solved":  3,
+                                                 "pending":  1,
+                                                 "growth":  7.0,
+                                                 "dominant":  "Human Trafficking",
+                                                 "repeat_offenders":  2,
+                                                 "gangs":  1,
+                                                 "hotspots":  1,
+                                                 "prediction":  5
+                                             },
+                                "Kalaburagi":  {
+                                                   "district":  "Kalaburagi",
+                                                   "cases":  5,
+                                                   "solved":  3,
+                                                   "pending":  2,
+                                                   "growth":  -5.0,
+                                                   "dominant":  "Murder",
+                                                   "repeat_offenders":  2,
+                                                   "gangs":  1,
+                                                   "hotspots":  1,
+                                                   "prediction":  6
+                                               },
+                                "Hubballi-Dharwad":  {
+                                                         "district":  "Hubballi-Dharwad",
+                                                         "cases":  4,
+                                                         "solved":  3,
+                                                         "pending":  1,
+                                                         "growth":  7.0,
+                                                         "dominant":  "Vehicle Theft",
+                                                         "repeat_offenders":  2,
+                                                         "gangs":  1,
+                                                         "hotspots":  1,
+                                                         "prediction":  5
+                                                     },
+                                "Tumakuru":  {
+                                                 "district":  "Tumakuru",
+                                                 "cases":  6,
+                                                 "solved":  4,
+                                                 "pending":  2,
+                                                 "growth":  -2.0,
+                                                 "dominant":  "Robbery",
+                                                 "repeat_offenders":  2,
+                                                 "gangs":  1,
+                                                 "hotspots":  1,
+                                                 "prediction":  7
+                                             },
+                                "Shivamogga":  {
+                                                   "district":  "Shivamogga",
+                                                   "cases":  6,
+                                                   "solved":  4,
+                                                   "pending":  2,
+                                                   "growth":  -2.0,
+                                                   "dominant":  "Financial Fraud",
+                                                   "repeat_offenders":  2,
+                                                   "gangs":  1,
+                                                   "hotspots":  1,
+                                                   "prediction":  7
+                                               },
+                                "Ballari":  {
+                                                "district":  "Ballari",
+                                                "cases":  4,
+                                                "solved":  3,
+                                                "pending":  1,
+                                                "growth":  7.0,
+                                                "dominant":  "Murder",
+                                                "repeat_offenders":  2,
+                                                "gangs":  1,
+                                                "hotspots":  1,
+                                                "prediction":  5
+                                            },
+                                "Vijayapura":  {
+                                                   "district":  "Vijayapura",
+                                                   "cases":  0,
+                                                   "solved":  0,
+                                                   "pending":  0,
+                                                   "growth":  -5.0,
+                                                   "dominant":  "Unknown",
+                                                   "repeat_offenders":  2,
+                                                   "gangs":  1,
+                                                   "hotspots":  0,
+                                                   "prediction":  1
+                                               },
+                                "Udupi":  {
+                                              "district":  "Udupi",
+                                              "cases":  6,
+                                              "solved":  4,
+                                              "pending":  2,
+                                              "growth":  -2.0,
+                                              "dominant":  "Drug Trafficking",
+                                              "repeat_offenders":  2,
+                                              "gangs":  1,
+                                              "hotspots":  1,
+                                              "prediction":  7
+                                          },
+                                "Chitradurga":  {
+                                                    "district":  "Chitradurga",
+                                                    "cases":  0,
+                                                    "solved":  0,
+                                                    "pending":  0,
+                                                    "growth":  -5.0,
+                                                    "dominant":  "Unknown",
+                                                    "repeat_offenders":  2,
+                                                    "gangs":  1,
+                                                    "hotspots":  0,
+                                                    "prediction":  1
+                                                },
+                                "Hassan":  {
+                                               "district":  "Hassan",
+                                               "cases":  0,
+                                               "solved":  0,
+                                               "pending":  0,
+                                               "growth":  -5.0,
+                                               "dominant":  "Unknown",
+                                               "repeat_offenders":  2,
+                                               "gangs":  1,
+                                               "hotspots":  0,
+                                               "prediction":  1
+                                           }
+                            }
+}

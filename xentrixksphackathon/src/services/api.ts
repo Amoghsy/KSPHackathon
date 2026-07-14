@@ -177,15 +177,16 @@ export async function getFinancialNetwork(params?: {
 }
 
 // ─── Real Pattern Analysis API Calls ──────────────────────────────────────────
-export async function getHotspots(): Promise<any[]> {
+export async function getHotspots(filters?: any): Promise<any[]> {
   try {
-    const raw = await apiGet<any>("/pattern/hotspots");
+    const raw = await apiGet<any>("/pattern/hotspots", filters);
     return raw.district_hotspots || [];
   } catch (err) {
     console.error("Error fetching hotspots from backend:", err);
     return [];
   }
 }
+
 
 export async function getAlerts(): Promise<any[]> {
   try {

@@ -15,6 +15,8 @@ async def get_trends(
     police_station: str | None = Query(None, description="Filter by police station"),
     start_date: datetime.date | None = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: datetime.date | None = Query(None, description="End date (YYYY-MM-DD)"),
+    gravity: str | None = Query(None, description="Filter by gravity"),
+    status: str | None = Query(None, description="Filter by status"),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve daily and monthly crime trends with growth and frequency metrics."""
@@ -24,7 +26,9 @@ async def get_trends(
         crime_type=crime_type,
         police_station=police_station,
         start_date=start_date,
-        end_date=end_date
+        end_date=end_date,
+        gravity=gravity,
+        status=status
     )
     return res
 
@@ -36,6 +40,8 @@ async def get_hotspots(
     police_station: str | None = Query(None, description="Filter by police station"),
     start_date: datetime.date | None = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: datetime.date | None = Query(None, description="End date (YYYY-MM-DD)"),
+    gravity: str | None = Query(None, description="Filter by gravity"),
+    status: str | None = Query(None, description="Filter by status"),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve geographical clusters (DBSCAN) and district-level SVG map hotspot metrics."""
@@ -45,7 +51,9 @@ async def get_hotspots(
         crime_type=crime_type,
         police_station=police_station,
         start_date=start_date,
-        end_date=end_date
+        end_date=end_date,
+        gravity=gravity,
+        status=status
     )
     return res
 
@@ -57,6 +65,8 @@ async def get_anomalies(
     police_station: str | None = Query(None, description="Filter by police station"),
     start_date: datetime.date | None = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: datetime.date | None = Query(None, description="End date (YYYY-MM-DD)"),
+    gravity: str | None = Query(None, description="Filter by gravity"),
+    status: str | None = Query(None, description="Filter by status"),
     db: AsyncSession = Depends(get_db)
 ):
     """Identify unexpected spikes in crime count using Z-score checks."""
@@ -66,7 +76,9 @@ async def get_anomalies(
         crime_type=crime_type,
         police_station=police_station,
         start_date=start_date,
-        end_date=end_date
+        end_date=end_date,
+        gravity=gravity,
+        status=status
     )
     return res
 
@@ -75,13 +87,17 @@ async def get_anomalies(
 async def get_distribution(
     district: str | None = Query(None, description="Filter by district"),
     crime_type: str | None = Query(None, description="Filter by crime type"),
+    gravity: str | None = Query(None, description="Filter by gravity"),
+    status: str | None = Query(None, description="Filter by status"),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve district distribution, solved vs pending rates, and demographics."""
     service = AnalyticsService(db)
     res = await service.get_distribution(
         district=district,
-        crime_type=crime_type
+        crime_type=crime_type,
+        gravity=gravity,
+        status=status
     )
     return res
 
@@ -90,13 +106,17 @@ async def get_distribution(
 async def get_forecast(
     district: str | None = Query(None, description="Filter by district"),
     crime_type: str | None = Query(None, description="Filter by crime type"),
+    gravity: str | None = Query(None, description="Filter by gravity"),
+    status: str | None = Query(None, description="Filter by status"),
     db: AsyncSession = Depends(get_db)
 ):
     """Generate linear regression and moving average forecasts for next month."""
     service = AnalyticsService(db)
     res = await service.get_forecast(
         district=district,
-        crime_type=crime_type
+        crime_type=crime_type,
+        gravity=gravity,
+        status=status
     )
     return res
 
@@ -108,6 +128,8 @@ async def get_agent_summary(
     police_station: str | None = Query(None, description="Filter by police station"),
     start_date: datetime.date | None = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: datetime.date | None = Query(None, description="End date (YYYY-MM-DD)"),
+    gravity: str | None = Query(None, description="Filter by gravity"),
+    status: str | None = Query(None, description="Filter by status"),
     db: AsyncSession = Depends(get_db)
 ):
     """Invoke the PatternAgent to analyze patterns and return Gemini summary briefing."""
@@ -119,6 +141,59 @@ async def get_agent_summary(
         crime_type=crime_type,
         police_station=police_station,
         start_date=start_date,
-        end_date=end_date
+        end_date=end_date,
+        gravity=gravity,
+        status=status
     )
     return res
+
+
+@router.get("/heatmap")
+async def get_heatmap(
+    district: str | None = Query(None, description="Filter by district"),
+    crime_type: str | None = Query(None, description="Filter by crime type"),
+    police_station: str | None = Query(None, description="Filter by police station"),
+    start_date: datetime.date | None = Query(None, description="Start date (YYYY-MM-DD)"),
+    end_date: datetime.date | None = Query(None, description="End date (YYYY-MM-DD)"),
+    gravity: str | None = Query(None, description="Filter by gravity"),
+    status: str | None = Query(None, description="Filter by status"),
+    db: AsyncSession = Depends(get_db)
+):
+    """Retrieve raw coordinate points for generating Leaflet GIS heatmaps."""
+    service = AnalyticsService(db)
+    res = await service.get_heatmap(
+        district=district,
+        crime_type=crime_type,
+        police_station=police_station,
+        start_date=start_date,
+        end_date=end_date,
+        gravity=gravity,
+        status=status
+    )
+    return res
+
+
+@router.get("/map")
+async def get_map_analytics(
+    district: str | None = Query(None, description="Filter by district"),
+    crime_type: str | None = Query(None, description="Filter by crime type"),
+    police_station: str | None = Query(None, description="Filter by police station"),
+    start_date: datetime.date | None = Query(None, description="Start date (YYYY-MM-DD)"),
+    end_date: datetime.date | None = Query(None, description="End date (YYYY-MM-DD)"),
+    gravity: str | None = Query(None, description="Filter by gravity"),
+    status: str | None = Query(None, description="Filter by status"),
+    db: AsyncSession = Depends(get_db)
+):
+    """Retrieve the aggregated GIS portal payload containing boundaries, stats, stations, and heatmaps."""
+    service = AnalyticsService(db)
+    res = await service.get_map_analytics(
+        district=district,
+        crime_type=crime_type,
+        police_station=police_station,
+        start_date=start_date,
+        end_date=end_date,
+        gravity=gravity,
+        status=status
+    )
+    return res
+
