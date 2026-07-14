@@ -3,7 +3,6 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, lazy, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/app/primitives";
-import { MockBadge } from "@/components/app/mock-badge";
 import { getNetwork, getNetworkExpansion } from "@/services/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -22,8 +21,7 @@ import {
   History,
   ShieldAlert,
   ChevronRight,
-  Play,
-  RotateCcw
+  Play
 } from "lucide-react";
 
 const ForceGraph2D = lazy(() => import("react-force-graph-2d"));
@@ -101,11 +99,21 @@ function NetworkPage() {
     if (!containerRef.current) return;
     const ro = new ResizeObserver(() => {
       const r = containerRef.current!.getBoundingClientRect();
-      setDims({ w: r.width, h: r.height });
+      const newW = Math.round(r.width);
+      const newH = Math.round(r.height);
+      setDims((prev) => {
+        // Only trigger dimensions state updates if they differ by more than 2px
+        // to filter out sub-pixel layout jitter during scrolling and zooming.
+        if (Math.abs(prev.w - newW) > 2 || Math.abs(prev.h - newH) > 2) {
+          return { w: newW, h: newH };
+        }
+        return prev;
+      });
     });
     ro.observe(containerRef.current);
     return () => ro.disconnect();
   }, []);
+
 
   useEffect(() => {
     if (graphRef.current) {
@@ -122,10 +130,15 @@ function NetworkPage() {
         nodes: [...data.nodes],
         links: [...data.links]
       });
+      // Zoom to fit on initial filters / search load
+      setTimeout(() => {
+        graphRef.current?.zoomToFit(400, 80);
+      }, 500);
     } else {
       setGraphState({ nodes: [], links: [] });
     }
   }, [data]);
+
 
   const addToRecent = (target: string, type: string) => {
     const item = { target, type, timestamp: new Date().toLocaleTimeString() };
@@ -215,14 +228,14 @@ function NetworkPage() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-background text-foreground">
+    <div className="flex flex-col min-h-full bg-background text-foreground">
+
       <div className="px-6 pt-6 border-b border-border pb-4 bg-background/40">
         <PageHeader
           title="Criminal Intelligence Network"
           subtitle="Workspace for co-offending links, Modularity gang clustering, and visual tracing."
           actions={
             <div className="flex items-center gap-3">
-              <MockBadge />
               {isWorkspace && (
                 <>
                   {/* Slider control */}
@@ -252,7 +265,7 @@ function NetworkPage() {
                     }}
                     title="Close active investigation"
                   >
-                    <RotateCcw className="h-4 w-4 mr-2" />
+                    <X className="h-4 w-4 mr-2" />
                     Close
                   </Button>
                 </>
@@ -272,7 +285,8 @@ function NetworkPage() {
         )}
       </div>
 
-      <div className="flex-1 relative flex overflow-hidden">
+      <div className="flex-1 relative flex">
+
         {!isWorkspace ? (
           /* Level 1 Dashboard View */
           <div className="flex-1 overflow-y-auto p-6 max-w-[1600px] mx-auto w-full space-y-6 animate-in fade-in duration-300">
@@ -534,7 +548,8 @@ function NetworkPage() {
           </div>
         ) : (
           /* Level 2 Workspace View */
-          <div className="flex-1 relative flex overflow-hidden border-t border-border bg-muted/30 mt-4" ref={containerRef}>
+          <div className="w-full h-[650px] min-h-[600px] relative flex border-t border-border bg-muted/30 mt-4" ref={containerRef}>
+
             {data?.focus_reason && (
               <div className="absolute top-4 left-4 z-10 rounded-xl bg-card border border-border shadow-md p-2.5 text-xs text-foreground flex items-center gap-2 animate-in fade-in duration-200">
                 <span className="font-semibold text-primary">Workspace Focus:</span>
@@ -562,14 +577,21 @@ function NetworkPage() {
                   width={dims.w}
                   height={dims.h}
                   nodeColor={(n: any) => n.color || DEFAULT_COLORS[n.kind]}
-                  nodeVal={(n: any) => n.val || 5}
-                  nodeRelSize={1.5}
+                  nodeVal={(n: any) => Math.sqrt(n.val || 5)}
+                  nodeRelSize={3.0}
+                  minZoom={0.15}
+                  maxZoom={10}
                   linkColor={() => "rgba(148,163,184,0.15)"}
                   linkWidth={(l: any) => Math.sqrt(l.weight || 1) * 0.75}
                   nodeLabel={(n: any) => `${n.label} · ${n.kind}`}
-                  onNodeClick={(n: any) => setSelected(n)}
+                  onNodeClick={(n: any) => {
+                    setSelected(n);
+                    graphRef.current?.centerAt(n.x, n.y, 300);
+                  }}
                   cooldownTicks={120}
                 />
+
+
               </Suspense>
             )}
 
@@ -613,6 +635,7 @@ function NetworkPage() {
                 variant="outline"
                 className="h-8 w-8 bg-background border-border hover:bg-muted text-foreground"
                 onClick={() => graphRef.current?.zoom((graphRef.current?.zoom() ?? 1) * 1.4, 300)}
+                title="Zoom In"
               >
                 <ZoomIn className="h-4 w-4" />
               </Button>
@@ -621,10 +644,23 @@ function NetworkPage() {
                 variant="outline"
                 className="h-8 w-8 bg-background border-border hover:bg-muted text-foreground"
                 onClick={() => graphRef.current?.zoom((graphRef.current?.zoom() ?? 1) / 1.4, 300)}
+                title="Zoom Out"
               >
                 <ZoomOut className="h-4 w-4" />
               </Button>
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-8 w-8 bg-background border-border hover:bg-muted text-foreground"
+                onClick={() => {
+                  graphRef.current?.zoomToFit(400, 80);
+                }}
+                title="Fit to Screen"
+              >
+                <Maximize2 className="h-4 w-4" />
+              </Button>
             </div>
+
 
             {/* Side panel for node details (Level 3 Expansion) */}
             {selected && (

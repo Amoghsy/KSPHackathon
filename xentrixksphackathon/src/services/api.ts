@@ -1,7 +1,7 @@
 // src/services/api.ts — Real backend API calls only. Mock fallbacks removed for all
-// pages that have backend endpoints. Stubs (empty arrays) are kept for pages where
-// no backend route exists (hotspots, alerts, audit, sociological, forecast).
+// pages that have backend endpoints.
 
+import { apiGet } from "@/lib/api/axios";
 import {
   getDashboardData,
   listConversations,
@@ -15,6 +15,7 @@ import {
 } from "@/lib/api/services";
 import type { DashboardResponse } from "@/lib/api/types";
 import type { ForecastCrime } from "@/mocks/forecast";
+
 
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 export async function getDashboard(): Promise<DashboardResponse> {
@@ -175,37 +176,97 @@ export async function getFinancialNetwork(params?: {
   }
 }
 
-// ─── Stubs (no backend endpoints) ────────────────────────────────────────────
+// ─── Real Pattern Analysis API Calls ──────────────────────────────────────────
 export async function getHotspots(): Promise<any[]> {
-  return [];
+  try {
+    const raw = await apiGet<any>("/pattern/hotspots");
+    return raw.district_hotspots || [];
+  } catch (err) {
+    console.error("Error fetching hotspots from backend:", err);
+    return [];
+  }
 }
 
 export async function getAlerts(): Promise<any[]> {
-  return [];
+  try {
+    const raw = await apiGet<any[]>("/pattern/anomalies");
+    return raw.map((a, i) => ({
+      id: `alert-${i}`,
+      severity: a.z_score > 2.5 ? "Critical" : "Warning",
+      title: `Anomaly Detected in Crime Volume`,
+      area: a.time_period || "Statewide",
+      ts: new Date().toISOString(),
+      detail: a.reason
+    }));
+  } catch (err) {
+    console.error("Error fetching alerts (anomalies) from backend:", err);
+    return [];
+  }
 }
 
 export async function getAudit(): Promise<any[]> {
+  // Stubs for audit (out of scope for day 6, belongs to audit agent/pages)
   return [];
 }
 
 export async function getSociologicalInsights(): Promise<any> {
-  return {
-    crimeByHour: [],
-    crimeByDay: [],
-    recidivismRate: 0,
-    avgCaseDuration: 0,
-    crimeCategories: [],
-    districtHeatmap: [],
-    byAge: [],
-    byGender: [],
-    bySocioEconomic: [],
-    callouts: [],
-  };
+  try {
+    const raw = await apiGet<any>("/pattern/distribution");
+    return raw.demographics || {
+      byAge: [],
+      byGender: [],
+      bySocioEconomic: [],
+      callouts: []
+    };
+  } catch (err) {
+    console.error("Error fetching sociological insights from backend:", err);
+    return {
+      byAge: [],
+      byGender: [],
+      bySocioEconomic: [],
+      callouts: []
+    };
+  }
 }
 
-export async function getForecast(_crime: ForecastCrime) {
-  return { points: [], commentary: "Forecast data unavailable." };
+export async function getForecast(crime: ForecastCrime) {
+  try {
+    // Map frontend crime type names if they differ from DB seed data
+    let dbCrimeType = crime;
+    if (crime === "Cybercrime") {
+      dbCrimeType = "Cyber Fraud" as any;
+    }
+    
+    const raw = await apiGet<any>("/pattern/forecast", { crime_type: dbCrimeType });
+    const points = (raw.points || []).map((p: any) => {
+      const isForecast = p.is_forecast;
+      const count = p.count;
+      return {
+        week: p.period,
+        actual: isForecast ? null : count,
+        forecast: isForecast ? count : null,
+        band: isForecast ? [Math.max(0, count - count * 0.15), count + count * 0.15] : null
+      };
+    });
+
+    if (points.length >= 2) {
+      const crossoverIdx = points.length - 2;
+      if (crossoverIdx >= 0) {
+        points[crossoverIdx].forecast = points[crossoverIdx].actual;
+        points[crossoverIdx].band = [points[crossoverIdx].actual, points[crossoverIdx].actual];
+      }
+    }
+
+    return {
+      points,
+      commentary: raw.commentary
+    };
+  } catch (err) {
+    console.error("Error fetching forecast from backend:", err);
+    return { points: [], commentary: "Forecast data unavailable." };
+  }
 }
 
 export type { ForecastCrime };
 export { listConversations };
+

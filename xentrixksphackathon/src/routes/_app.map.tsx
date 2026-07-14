@@ -4,8 +4,10 @@ import { useState } from "react";
 import { PageHeader } from "@/components/app/primitives";
 import { MockBadge } from "@/components/app/mock-badge";
 import { getHotspots } from "@/services/api";
+import { apiGet } from "@/lib/api/axios";
 import { DISTRICTS, CRIME_HEADS, GRAVITY } from "@/mocks/firs";
 import { KARNATAKA_PATH } from "@/mocks/karnataka-map";
+
 
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -35,7 +37,26 @@ function MapPage() {
   const { data, isLoading } = useQuery({ queryKey: ["hotspots"], queryFn: getHotspots });
   const [selected, setSelected] = useState<string | null>(null);
 
+  const { data: districtTrends } = useQuery({
+    queryKey: ["districtTrends", selected],
+    queryFn: () => apiGet<any>("/pattern/trends", { district: selected }),
+    enabled: !!selected,
+  });
+
+  const { data: districtForecast } = useQuery({
+    queryKey: ["districtForecast", selected],
+    queryFn: () => apiGet<any>("/pattern/forecast", { district: selected }),
+    enabled: !!selected,
+  });
+
+  const { data: districtHotspots } = useQuery({
+    queryKey: ["districtHotspots", selected],
+    queryFn: () => apiGet<any>("/pattern/hotspots", { district: selected }),
+    enabled: !!selected,
+  });
+
   const sel = data?.find((h) => h.district === selected);
+
 
   return (
     <div className="flex flex-col h-full">
@@ -181,38 +202,96 @@ function MapPage() {
           )}
 
           {sel && (
-            <div className="absolute top-4 right-4 w-64 rounded-xl glass shadow-lg p-3 animate-in fade-in duration-200">
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                {sel.district}
+            <div className="absolute top-4 right-4 w-72 rounded-xl glass shadow-lg p-4 animate-in fade-in duration-200 text-foreground space-y-3">
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                  {sel.district}
+                </div>
+                <div className="mt-1 flex items-baseline gap-2">
+                  <span className="text-2xl font-bold tabular-nums">{sel.cases}</span>
+                  <span className="text-xs text-muted-foreground">cases (30d)</span>
+                </div>
+                <div className="text-xs mt-1">
+                  Dominant: <span className="font-semibold text-primary">{sel.dominant}</span>
+                </div>
+                <div
+                  className={cn(
+                    "text-xs mt-0.5 font-medium",
+                    sel.trend >= 0 ? "text-destructive" : "text-success",
+                  )}
+                >
+                  {sel.trend >= 0 ? "▲" : "▼"} {Math.abs(sel.trend)}% vs prior period
+                </div>
               </div>
-              <div className="mt-1 flex items-baseline gap-2">
-                <span className="text-2xl font-semibold tabular-nums">{sel.cases}</span>
-                <span className="text-xs text-muted-foreground">cases (30d)</span>
-              </div>
-              <div className="text-xs mt-1">
-                Dominant: <span className="font-medium">{sel.dominant}</span>
-              </div>
-              <div
-                className={cn(
-                  "text-xs mt-0.5 font-medium",
-                  sel.trend >= 0 ? "text-destructive" : "text-success",
+
+              {/* District Top Crimes */}
+              <div className="border-t border-border pt-2">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+                  Top Crimes
+                </div>
+                {districtTrends && districtTrends.top_crimes ? (
+                  <div className="space-y-1">
+                    {districtTrends.top_crimes.slice(0, 3).map((tc: any) => (
+                      <div key={tc.crime_type} className="text-xs flex justify-between">
+                        <span>{tc.crime_type}</span>
+                        <span className="font-medium tabular-nums">{tc.cases}</span>
+                      </div>
+                    ))}
+                    {districtTrends.top_crimes.length === 0 && (
+                      <div className="text-[11px] text-muted-foreground">No records</div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="h-4 bg-muted animate-pulse rounded" />
                 )}
-              >
-                {sel.trend >= 0 ? "▲" : "▼"} {Math.abs(sel.trend)}% vs prior period
               </div>
-              <Link
-                to="/network"
-                search={{ district: sel.district }}
-                className="mt-3 block w-full text-center text-xs bg-primary text-primary-foreground py-2 rounded-lg font-medium hover:opacity-90 transition-opacity"
-              >
-                View Criminal Network
-              </Link>
-              <button
-                onClick={() => setSelected(null)}
-                className="mt-2 block w-full text-center text-[11px] text-muted-foreground hover:text-foreground"
-              >
-                Close
-              </button>
+
+              {/* District Prediction */}
+              <div className="border-t border-border pt-2">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+                  Forecast (Next Month)
+                </div>
+                {districtForecast ? (
+                  <div className="text-xs">
+                    <span className="font-semibold text-primary">{districtForecast.forecast_value}</span> cases
+                    <span className="text-[10px] text-muted-foreground ml-1">
+                      ({Math.round(districtForecast.confidence * 100)}% conf)
+                    </span>
+                  </div>
+                ) : (
+                  <div className="h-4 bg-muted animate-pulse rounded" />
+                )}
+              </div>
+
+              {/* DBSCAN Hotspots */}
+              <div className="border-t border-border pt-2">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+                  Emerging Hotspots
+                </div>
+                {districtHotspots ? (
+                  <div className="text-xs font-medium text-foreground/80">
+                    {districtHotspots.dbscan_clusters?.length || 0} localized clusters detected
+                  </div>
+                ) : (
+                  <div className="h-4 bg-muted animate-pulse rounded" />
+                )}
+              </div>
+
+              <div className="border-t border-border pt-2 space-y-2">
+                <Link
+                  to="/network"
+                  search={{ district: sel.district }}
+                  className="block w-full text-center text-xs bg-primary text-primary-foreground py-2 rounded-lg font-medium hover:opacity-90 transition-opacity"
+                >
+                  View Criminal Network
+                </Link>
+                <button
+                  onClick={() => setSelected(null)}
+                  className="block w-full text-center text-[11px] text-muted-foreground hover:text-foreground"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           )}
         </div>

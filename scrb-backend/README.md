@@ -246,3 +246,25 @@ All endpoints are fully integrated with Swagger/OpenAPI docs at `http://localhos
 - In-memory fallback is used in environments where Redis is not active/available (e.g., local unit test runs) to prevent backend failure.
 - Deterministic extraction uses keyword lookup; complex phrase parsing without explicitly defined keywords is not supported.
 
+
+---
+
+## Day 6: Pattern Intelligence Agent
+
+We implemented the Pattern Intelligence Agent to analyze historical crime data across **Time**, **Location**, and **Crime Distribution**. 
+
+### Capabilities and Endpoints
+1. **Crime Trends** (`GET /api/v1/pattern/trends`): Calculates daily/weekly/monthly/yearly time series, moving averages (rolling 3-month window), overall case volume growth/decline rate (comparison of latest month against prior month), top crime types, and district-wise rankings.
+2. **Hotspot Detection** (`GET /api/v1/pattern/hotspots`):
+   - Runs a custom, pure-Python **DBSCAN** clustering algorithm over case coordinates (latitude/longitude) to identify density clusters (center, case count, average severity index, dominant crime).
+   - Generates stylized SVG-compatible hotspot markers (`district`, `x`, `y`, `cases`, `dominant`, `trend`, `intensity`) for drawing circles on the Karnataka state outline map.
+3. **Anomaly Detection** (`GET /api/v1/pattern/anomalies`): Runs Z-score analysis over chronological volumes to flag months/weeks with unexpected spikes ($|Z| > 2.0$), providing reason commentary and confidence scores.
+4. **Crime Distribution** (`GET /api/v1/pattern/distribution`): Computes status ratios (Solved vs Pending), temporal distribution (hour of day, day of week, weekdays vs weekends), accused demographics (age band, gender distribution), and calculates a custom **Crime Heat Index** (cases $\times$ severity) per district.
+5. **Crime Forecasting** (`GET /api/v1/pattern/forecast`): Generates next-month volume forecasts using Linear Regression ($y = mx + c$) and 3-month Moving Average, yielding projected counts and $R^2$-based confidence levels.
+6. **Gemini Intelligence Briefing** (`GET /api/v1/pattern/summary`): Compiles all calculated statistical metrics into a prompt, querying Gemini to generate a concise, government-grade narrative brief for senior officials without performing direct mathematical calculation.
+
+### Performance & Caching
+- **Aggregation in SQL**: Aggregates all trend counts, district groups, and temporal stats directly in PostgreSQL using indexes (e.g. `CaseMaster.crime_registered_date`, `CaseMaster.police_station_id`, `CaseMaster.crime_type_id`) to avoid loading individual rows.
+- **Redis Cache Layer**: Intercepts queries using a 15-minute Time-To-Live (TTL = 900s) on endpoint responses. Cached keys are generated from a SHA-256 hash of the query parameters.
+
+

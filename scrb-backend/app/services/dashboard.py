@@ -9,14 +9,14 @@ class DashboardService:
 
     async def get_dashboard_summary(self) -> dict:
         """Fetch summary of key metrics for the dashboard."""
-        stats = await self.repository.get_stats()
-        # Add placeholder charts/trends logic if needed, or keep it minimal
+        kpis = await self.repository.get_stats_kpis()
+        monthly_trend = await self.repository.get_monthly_trends()
+        district_counts = await self.repository.get_district_counts()
+        status_breakdown = await self.repository.get_status_breakdown()
+        
         return {
-            "stats": stats,
-            "crime_trends": [
-                {"month": "Jan", "count": 45},
-                {"month": "Feb", "count": 52},
-                {"month": "Mar", "count": 48},
-            ],  # Placeholder trend data
-            "status": "success",
+            "kpis": kpis,
+            "monthlyTrend": monthly_trend,
+            "districtCounts": district_counts,
+            "statusBreakdown": status_breakdown
         }
