@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
+import { requiredRoleLabel, PERMISSIONS } from "@/lib/rbac";
 import { useEffect, useState } from "react";
 import { useAuthStore, type Role } from "@/stores/auth";
 import { PageHeader } from "@/components/app/primitives";
@@ -44,7 +45,14 @@ export const Route = createFileRoute("/_app/admin")({
     if (typeof window === "undefined") return;
     const user = useAuthStore.getState().user;
     if (user?.role !== "Admin") {
-      throw redirect({ to: "/" });
+      throw redirect({
+        to: "/access-restricted",
+        search: {
+          module: "Admin Console",
+          required: requiredRoleLabel([PERMISSIONS.MANAGE_USERS]),
+          from: "/admin",
+        },
+      });
     }
   },
   component: AdminPage,

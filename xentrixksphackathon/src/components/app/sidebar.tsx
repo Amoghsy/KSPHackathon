@@ -14,16 +14,17 @@ import {
   ChevronLeft,
   ShieldAlert,
 } from "lucide-react";
-import { useAuthStore, type Role } from "@/stores/auth";
+import { useAuthStore } from "@/stores/auth";
 import { usePrefs } from "@/stores/prefs";
 import { useT, type DictKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { hasAnyPermission, PERMISSIONS, type Permission } from "@/lib/rbac";
 
 interface NavItem {
   to: string;
   labelKey: DictKey;
   icon: React.ComponentType<{ className?: string }>;
-  roles?: Role[];
+  permissions?: Permission[];
 }
 
 const NAV: NavItem[] = [
@@ -31,74 +32,76 @@ const NAV: NavItem[] = [
     to: "/",
     labelKey: "chat",
     icon: MessageSquare,
-    roles: ["Investigator", "Senior Investigator", "Analyst", "Supervisor", "Policymaker"],
+    permissions: [PERMISSIONS.CHAT_ASSISTANT],
   },
   {
     to: "/dashboard",
     labelKey: "dashboard",
     icon: LayoutDashboard,
-    roles: ["Investigator", "Senior Investigator", "Analyst", "Supervisor", "Policymaker"],
+    permissions: [PERMISSIONS.SEARCH_CASES],
   },
   {
     to: "/network",
     labelKey: "network",
     icon: Network,
-    roles: ["Investigator", "Senior Investigator", "Analyst", "Supervisor"],
+    permissions: [PERMISSIONS.CRIMINAL_NETWORK],
   },
   {
     to: "/financial",
     labelKey: "financial",
     icon: Wallet,
-    roles: ["Senior Investigator", "Analyst", "Supervisor"],
+    permissions: [PERMISSIONS.FINANCIAL_CRIME],
   },
   {
     to: "/map",
     labelKey: "map",
     icon: Map,
-    roles: ["Investigator", "Senior Investigator", "Analyst", "Supervisor", "Policymaker"],
+    permissions: [PERMISSIONS.CRIME_MAP],
   },
   {
     to: "/sociological",
     labelKey: "sociological",
     icon: PieChart,
-    roles: ["Investigator", "Senior Investigator", "Analyst", "Supervisor", "Policymaker"],
+    permissions: [PERMISSIONS.PATTERN_ANALYSIS],
   },
   {
     to: "/cases",
     labelKey: "cases",
     icon: FileSearch,
-    roles: ["Investigator", "Senior Investigator", "Analyst", "Supervisor"],
+    permissions: [PERMISSIONS.SEARCH_CASES],
   },
   {
     to: "/offenders",
     labelKey: "offenders",
     icon: Users,
-    roles: ["Investigator", "Senior Investigator", "Analyst", "Supervisor"],
+    permissions: [PERMISSIONS.SEARCH_CASES],
   },
   {
     to: "/alerts",
     labelKey: "alerts",
     icon: AlertTriangle,
-    roles: ["Investigator", "Senior Investigator", "Analyst", "Supervisor", "Policymaker"],
+    permissions: [PERMISSIONS.PATTERN_ANALYSIS],
   },
-  { to: "/audit", labelKey: "audit", icon: ClipboardList, roles: ["Supervisor", "Admin"] },
+  { to: "/audit", labelKey: "audit", icon: ClipboardList, permissions: [PERMISSIONS.VIEW_AUDIT_LOGS] },
   { to: "/settings", labelKey: "settings", icon: SettingsIcon },
-  { to: "/admin", labelKey: "admin", icon: ShieldAlert, roles: ["Admin"] },
+  { to: "/admin", labelKey: "admin", icon: ShieldAlert, permissions: [PERMISSIONS.MANAGE_USERS] },
 ];
+
+import { useRBAC } from "@/hooks/useRBAC";
 
 interface SidebarProps {
   forceExpanded?: boolean;
   onNavigate?: () => void;
 }
 
-export function Sidebar({ forceExpanded, onNavigate }: SidebarProps = {}) {
-  const role = useAuthStore((s) => s.user?.role);
+export function DynamicSidebar({ forceExpanded, onNavigate }: SidebarProps = {}) {
+  const { user } = useRBAC();
   const { sidebarCollapsed, toggleSidebar } = usePrefs();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const t = useT();
 
   const collapsed = forceExpanded ? false : sidebarCollapsed;
-  const items = NAV.filter((n) => !n.roles || (role && n.roles.includes(role)));
+  const items = NAV.filter((n) => !n.permissions || hasAnyPermission(user, n.permissions));
 
   return (
     <aside
@@ -201,3 +204,5 @@ export function Sidebar({ forceExpanded, onNavigate }: SidebarProps = {}) {
     </aside>
   );
 }
+
+export { DynamicSidebar as Sidebar };

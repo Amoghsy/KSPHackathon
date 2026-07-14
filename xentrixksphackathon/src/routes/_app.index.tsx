@@ -67,6 +67,8 @@ import { askAssistant, detectContextRef, extractAccusedId } from "@/services/ass
 import { listConversations, deleteConversation } from "@/lib/api/services";
 import { queryKeys } from "@/lib/api/query-keys";
 import { toast } from "sonner";
+import { useAuthStore } from "@/stores/auth";
+import { hasPermission, PERMISSIONS } from "@/lib/rbac";
 import type { Language } from "@/context/LanguageContext";
 
 export const Route = createFileRoute("/_app/")({
@@ -300,6 +302,7 @@ function VoiceStatusBar({
 
 function ChatPage() {
   const t = useT();
+  const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const { language, setLanguage, recognitionLanguage, resolvedLanguage } = useLanguage();
 
@@ -570,6 +573,23 @@ function ChatPage() {
       if (!q || loading) return;
       setChatError(null);
 
+      const asksForSensitiveData = /\b(victim address|victim phone|phone number|bank account|account number|address)\b/i.test(q);
+      if (asksForSensitiveData && !hasPermission(user, PERMISSIONS.SENSITIVE_CASE_ACCESS)) {
+        const denied: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          text: "You do not have permission to access victim addresses, phone numbers, or financial account details. I can still help with permitted case summaries, trends, maps, and pattern analysis for your role.",
+          ts: new Date().toISOString(),
+        };
+        setMessages((m) => [
+          ...m,
+          { id: crypto.randomUUID(), role: "user", text: q, ts: new Date().toISOString() },
+          denied,
+        ]);
+        setInput("");
+        return;
+      }
+
       if (listening) {
         stopListening();
       }
@@ -607,7 +627,7 @@ function ChatPage() {
         setTimeout(() => inputRef.current?.focus(), 50);
       }
     },
-    [loading, conversationId, queryClient, autoSpeak, handleSpeak, language, listening, stopListening],
+    [loading, conversationId, queryClient, autoSpeak, handleSpeak, language, listening, stopListening, user],
   );
 
   function startNewConversation() {
@@ -1615,7 +1635,7 @@ function MessageRow({
   isSpeaking?: boolean;
 }) {
   const t = useT();
-  const [showSql, setShowSql] = useState(false);
+ const [showSql, setShowSql] = useState(false);
   const isUser = m.role === "user";
 
   return (

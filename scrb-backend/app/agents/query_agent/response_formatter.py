@@ -59,7 +59,7 @@ def format_success(
         "summary": summary,
         "rows": rows,
         "columns": columns,
-        "confidence": conf_pct,
+        "confidence": confidence,
         "explain": explain_block
     }
 

@@ -22,6 +22,7 @@ import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppAuditRouteImport } from './routes/_app.audit'
 import { Route as AppAlertsRouteImport } from './routes/_app.alerts'
 import { Route as AppAdminRouteImport } from './routes/_app.admin'
+import { Route as AppAccessRestrictedRouteImport } from './routes/_app.access-restricted'
 import { Route as AppOffendersIndexRouteImport } from './routes/_app.offenders.index'
 import { Route as AppCasesIndexRouteImport } from './routes/_app.cases.index'
 import { Route as AppOffendersIdRouteImport } from './routes/_app.offenders.$id'
@@ -91,6 +92,11 @@ const AppAdminRoute = AppAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAccessRestrictedRoute = AppAccessRestrictedRouteImport.update({
+  id: '/access-restricted',
+  path: '/access-restricted',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppOffendersIndexRoute = AppOffendersIndexRouteImport.update({
   id: '/offenders/',
   path: '/offenders/',
@@ -116,6 +122,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/admin-login': typeof AdminLoginRoute
   '/login': typeof LoginRoute
+  '/access-restricted': typeof AppAccessRestrictedRoute
   '/admin': typeof AppAdminRoute
   '/alerts': typeof AppAlertsRoute
   '/audit': typeof AppAuditRoute
@@ -133,6 +140,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/admin-login': typeof AdminLoginRoute
   '/login': typeof LoginRoute
+  '/access-restricted': typeof AppAccessRestrictedRoute
   '/admin': typeof AppAdminRoute
   '/alerts': typeof AppAlertsRoute
   '/audit': typeof AppAuditRoute
@@ -153,6 +161,7 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/admin-login': typeof AdminLoginRoute
   '/login': typeof LoginRoute
+  '/_app/access-restricted': typeof AppAccessRestrictedRoute
   '/_app/admin': typeof AppAdminRoute
   '/_app/alerts': typeof AppAlertsRoute
   '/_app/audit': typeof AppAuditRoute
@@ -174,6 +183,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin-login'
     | '/login'
+    | '/access-restricted'
     | '/admin'
     | '/alerts'
     | '/audit'
@@ -191,6 +201,7 @@ export interface FileRouteTypes {
   to:
     | '/admin-login'
     | '/login'
+    | '/access-restricted'
     | '/admin'
     | '/alerts'
     | '/audit'
@@ -210,6 +221,7 @@ export interface FileRouteTypes {
     | '/_app'
     | '/admin-login'
     | '/login'
+    | '/_app/access-restricted'
     | '/_app/admin'
     | '/_app/alerts'
     | '/_app/audit'
@@ -325,6 +337,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/access-restricted': {
+      id: '/_app/access-restricted'
+      path: '/access-restricted'
+      fullPath: '/access-restricted'
+      preLoaderRoute: typeof AppAccessRestrictedRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/offenders/': {
       id: '/_app/offenders/'
       path: '/offenders'
@@ -357,6 +376,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppAccessRestrictedRoute: typeof AppAccessRestrictedRoute
   AppAdminRoute: typeof AppAdminRoute
   AppAlertsRoute: typeof AppAlertsRoute
   AppAuditRoute: typeof AppAuditRoute
@@ -374,6 +394,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAccessRestrictedRoute: AppAccessRestrictedRoute,
   AppAdminRoute: AppAdminRoute,
   AppAlertsRoute: AppAlertsRoute,
   AppAuditRoute: AppAuditRoute,

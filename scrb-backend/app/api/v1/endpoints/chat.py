@@ -248,7 +248,7 @@ def _concat_mp3(chunks: list[bytes]) -> BytesIO:
 async def chat_endpoint(
     request: ChatRequest,
     db: AsyncSession = Depends(get_db),
-    token: str | None = Depends(oauth2_scheme),
+    current_user: dict = Depends(get_current_user),
 ) -> dict:
     """
     Accept a natural-language question and return AI-powered analytics.
@@ -268,14 +268,7 @@ async def chat_endpoint(
         request.question,
     )
 
-    user_id = None
-    current_user = None
-    if token:
-        try:
-            current_user = await get_current_user(token)
-            user_id = current_user.get("id")
-        except HTTPException:
-            pass
+    user_id = current_user.get("id")
 
     try:
         response = await handle_chat(

@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { loginUser } from "@/lib/api/services";
 import type { LoginRequest } from "@/lib/api/types";
+import { getPermissionsForRole, type Permission } from "@/lib/rbac";
 
 export type Role = "Investigator" | "Senior Investigator" | "Analyst" | "Supervisor" | "Policymaker" | "Admin";
 
@@ -12,6 +13,9 @@ export interface AuthUser {
   name: string;
   username: string;
   role: Role;
+  permissions: Permission[];
+  assignedDistricts: string[];
+  assignedPoliceStations: string[];
   badgeNo: string;
   station: string;
 }
@@ -27,6 +31,22 @@ interface AuthState {
   logout: () => void;
   /** Clear any error state */
   clearError: () => void;
+}
+
+function normalizeRole(role?: string): Role {
+  if (role === "Policy Maker") return "Policymaker";
+  if (role === "Administrator") return "Admin";
+  if (
+    role === "Investigator" ||
+    role === "Senior Investigator" ||
+    role === "Analyst" ||
+    role === "Supervisor" ||
+    role === "Policymaker" ||
+    role === "Admin"
+  ) {
+    return role;
+  }
+  return "Investigator";
 }
 
 const DISPLAY_NAMES: Record<string, string> = {
@@ -49,7 +69,7 @@ export const useAuthStore = create<AuthState>()(
         try {
           const resp = await loginUser(credentials);
 
-          const role = (credentials.role ?? "Investigator") as Role;
+          const role = normalizeRole(resp.role ?? credentials.role);
           
           // Formulate name from username by replacing separators and capitalizing
           let rawName = credentials.username
@@ -102,7 +122,16 @@ export const useAuthStore = create<AuthState>()(
               id: crypto.randomUUID(),
               name: displayName,
               username: resp.username ?? credentials.username,
-              role: (resp.role as Role) ?? role,
+              role,
+              permissions: getPermissionsForRole(role),
+              assignedDistricts:
+                role === "Investigator"
+                  ? ["Bengaluru Urban"]
+                  : role === "Senior Investigator"
+                    ? ["Bengaluru Urban", "Bengaluru Rural", "Mysuru"]
+                    : [],
+              assignedPoliceStations:
+                role === "Investigator" ? ["SCRB HQ, Bengaluru"] : [],
               badgeNo: badgeNo,
               station: "SCRB HQ, Bengaluru",
             },

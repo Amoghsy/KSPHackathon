@@ -58,6 +58,7 @@ class QueryAgent:
         session: AsyncSession,
         *,
         response_language: str = "auto",
+        current_user: dict | None = None,
     ) -> dict[str, Any]:
         """
         Execute the full query pipeline.
@@ -68,6 +69,8 @@ class QueryAgent:
             Natural-language question from the user.
         session : AsyncSession
             Active database session (injected by the caller).
+        current_user : dict, optional
+            The authenticated user context containing role and districts.
 
         Returns
         -------
@@ -84,7 +87,7 @@ class QueryAgent:
 
         # ---- Step 1: Generate SQL ----
         try:
-            generated_sql = await self._sql_generator.generate(question)
+            generated_sql = await self._sql_generator.generate(question, current_user=current_user)
         except (RuntimeError, ValueError) as exc:
             logger.warning("SQL generation failed: %s", exc)
             return format_error(
@@ -95,7 +98,7 @@ class QueryAgent:
             )
 
         # ---- Step 2: Validate SQL ----
-        validation = self._sql_validator.validate(generated_sql)
+        validation = self._sql_validator.validate(generated_sql, current_user=current_user)
         if not validation.valid:
             logger.warning("SQL validation failed: %s", validation.errors)
             return format_error(

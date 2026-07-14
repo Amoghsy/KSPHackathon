@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useRBAC } from "@/hooks/useRBAC";
 import {
   X,
   ZoomIn,
@@ -58,6 +59,10 @@ const DEFAULT_COLORS: Record<string, string> = {
 function NetworkPage() {
   const navigate = useNavigate({ from: Route.fullPath });
   const filters = Route.useSearch();
+  const rbac = useRBAC();
+  const { user, role } = rbac;
+  const isSuperOrAdmin = role === "Supervisor" || role === "Admin" || role === "Analyst" || role === "Policymaker" || role === "Policy Maker";
+  const userDistricts = user?.assignedDistricts ?? [];
   
   const { data, isLoading } = useQuery({
     queryKey: ["network", filters],
@@ -371,10 +376,19 @@ function NetworkPage() {
                       className="w-full bg-background/50 border border-border rounded-lg text-xs px-2.5 py-1.5 h-8 focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
                     >
                       <option value="">Select District…</option>
-                      <option value="All">All Districts</option>
-                      <option value="Mysuru">Mysuru</option>
-                      <option value="Bengaluru">Bengaluru</option>
-                      <option value="Mangaluru">Mangaluru</option>
+                      {isSuperOrAdmin && <option value="All">All Districts</option>}
+                      {isSuperOrAdmin ? (
+                        <>
+                          <option value="Mysuru">Mysuru</option>
+                          <option value="Bengaluru Urban">Bengaluru Urban</option>
+                          <option value="Bengaluru Rural">Bengaluru Rural</option>
+                          <option value="Mangaluru">Mangaluru</option>
+                        </>
+                      ) : (
+                        userDistricts.map((d) => (
+                          <option key={d} value={d}>{d}</option>
+                        ))
+                      )}
                     </select>
                   </div>
                 </div>

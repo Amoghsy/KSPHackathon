@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useCallback, useState } from "react";
+import { useMemo, useCallback, useState, useEffect } from "react";
 import { PageHeader } from "@/components/app/primitives";
 import { getMapAnalytics } from "@/services/crimeMapApi";
 import { DISTRICTS, CRIME_HEADS, GRAVITY } from "@/config/constants";
@@ -9,6 +9,7 @@ import { useCrimeMap } from "@/hooks/useCrimeMap";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useRBAC } from "@/hooks/useRBAC";
 import {
   Select,
   SelectContent,
@@ -61,14 +62,37 @@ function buildFilters(
 
 function MapPage() {
   const navigate = useNavigate();
+  const rbac = useRBAC();
+  const { user, role } = rbac;
+
+  const districtOptions = useMemo(() => {
+    if (!user) return [];
+    if (role === "Admin" || role === "Analyst" || role === "Policymaker" || role === "Policy Maker") {
+      return DISTRICTS;
+    }
+    return user.assignedDistricts ?? [];
+  }, [user, role]);
+
+  const canSelectAll = role === "Admin" || role === "Analyst" || role === "Policymaker" || role === "Policy Maker";
+
   const [activeTab, setActiveTab] = useState<"data" | "layers">("data");
   const { zoomLevel, setZoomLevel, selectedDistrict, setSelectedDistrict, filters, layers } =
     useCrimeMap();
 
+  // Enforce district restrictions on mount / load
+  useEffect(() => {
+    if (!canSelectAll && districtOptions.length > 0) {
+      if (filters.selDistrict === "All" || !districtOptions.includes(filters.selDistrict)) {
+        filters.setSelDistrict(districtOptions[0]);
+        setSelectedDistrict(districtOptions[0]);
+      }
+    }
+  }, [canSelectAll, districtOptions, filters.selDistrict]);
+
   // "Applied" filters — only updated when the user clicks "Load Statistics"
   const [appliedFilters, setAppliedFilters] = useState(() =>
     buildFilters(
-      filters.selDistrict,
+      !canSelectAll && districtOptions.length > 0 ? districtOptions[0] : filters.selDistrict,
       filters.crimeType,
       filters.dateRange,
       filters.gravity,
@@ -245,8 +269,8 @@ function MapPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-popover border-border text-popover-foreground text-xs">
-                    <SelectItem value="All">All districts</SelectItem>
-                    {DISTRICTS.map((d) => (
+                    {canSelectAll && <SelectItem value="All">All districts</SelectItem>}
+                    {districtOptions.map((d) => (
                       <SelectItem key={d} value={d}>
                         {d}
                       </SelectItem>

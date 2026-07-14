@@ -136,3 +136,24 @@ The console features a complete Multilingual Voice Interaction layer supporting 
 - **Speech Synthesis (TTS) Offline**: Cascades gracefully to browser-native synthesis speech fallback if the backend TTS service returns an error or is unreachable.
 - **Gemini / Database / Redis Down**: The frontend captures HTTP exceptions, renders detailed, retryable error states inside the message thread, and defaults to memory session storage on the backend to prevent crashes.
 
+
+## Enterprise RBAC UX
+
+The frontend is role-aware through `src/lib/rbac.ts`. Login stores the user role, permissions, assigned districts, and assigned police stations in the Zustand auth store. UI components should read capabilities from that centralized model instead of hardcoding role checks.
+
+Permission flow:
+- `ROLE_PERMISSIONS` mirrors the backend permission names such as `search_cases`, `crime_map`, `financial_crime`, `view_audit_logs`, and `manage_users`.
+- The sidebar is generated from permissions, so inaccessible modules are hidden instead of shown as broken pages.
+- The app shell protects direct route navigation and redirects unauthorized users to `/access-restricted` with the module name, current role, and required access.
+- Component-level controls use `PermissionGuard`, `PermissionCard`, `PermissionTooltip`, `RestrictedButton`, and `MaskField` from `src/components/rbac/permission.tsx`.
+- Backend RBAC remains authoritative. Frontend RBAC only improves UX and must not be treated as a security boundary.
+
+Role highlights:
+- Investigator: cases, assigned district intelligence, chat, crime map, network, and pattern intelligence.
+- Senior Investigator: cross-district investigation, financial crime, gang detection, sensitive case access, map, and network.
+- Analyst: trends, forecasts, heatmaps, district rankings, and masked sensitive fields.
+- Supervisor: investigations, audit dashboard, reports, financial/network intelligence, and export.
+- Policymaker: executive analytics, state trends, heatmaps, forecasts, and hidden personal identifiers.
+- Admin: all permissions, user management, audit, system health, and settings.
+
+Sensitive fields should be masked rather than removing entire pages. For example, analysts see masked victim identity, policymakers hide victim columns, and roles without sensitive access cannot request victim addresses or account details through the chat UI.

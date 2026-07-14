@@ -104,13 +104,18 @@ class Orchestrator:
             # Fire-and-forget audit log — don't block the error response
             asyncio.create_task(
                 self._log_conversation(
-                    None, question, resolved_question, response, req_id, conv_id, current_user
+                    None, question, resolved_question, response, req_id, conv_id, current_user, user_id=user_id
                 )
             )
             return response
 
         try:
-            response = await agent.run(resolved_question, session, response_language=response_language)
+            response = await agent.run(
+                resolved_question,
+                session,
+                response_language=response_language,
+                current_user=current_user,
+            )
         except Exception as exc:
             logger.exception(
                 "Agent '%s' raised an unexpected error: %s", agent_name, exc
@@ -124,7 +129,7 @@ class Orchestrator:
             }
             asyncio.create_task(
                 self._log_conversation(
-                    None, question, resolved_question, response, req_id, conv_id, current_user
+                    None, question, resolved_question, response, req_id, conv_id, current_user, user_id=user_id
                 )
             )
             return response
@@ -171,7 +176,7 @@ class Orchestrator:
                         ),
                         self._log_conversation(
                             None, question, resolved_question, response,
-                            req_id, conv_id, current_user,
+                            req_id, conv_id, current_user, user_id=user_id,
                         ),
                     )
                 except Exception as bg_exc:
@@ -184,7 +189,7 @@ class Orchestrator:
             # Still log the conversation even if entity resolution failed
             asyncio.create_task(
                 self._log_conversation(
-                    None, question, resolved_question, response, req_id, conv_id, current_user
+                    None, question, resolved_question, response, req_id, conv_id, current_user, user_id=user_id
                 )
             )
 
@@ -200,11 +205,12 @@ class Orchestrator:
         req_id: str,
         conv_id: str,
         current_user: dict | None,
+        user_id: int | None = None,
     ) -> None:
         """Helper to write conversation details to AuditLog. Safe from failures."""
         try:
             summary_content = response.get("summary") or response.get("error") or ""
-            user_id = current_user.get("id") if current_user else None
+            final_user_id = current_user.get("id") if current_user else user_id
             username = current_user.get("username") if current_user else None
             role = current_user.get("role") if current_user else None
 
@@ -217,7 +223,7 @@ class Orchestrator:
                 response.get("generated_sql"),
                 summary_content,
                 response.get("execution_time_ms"),
-                user_id,
+                final_user_id,
             )
 
             from app.db.session import SessionLocal
@@ -227,7 +233,7 @@ class Orchestrator:
                 audit_agent = AuditAgent()
                 await audit_agent.log_action(
                     db_session,
-                    user_id=user_id,
+                    user_id=final_user_id,
                     username=username,
                     role=role,
                     api="chat",

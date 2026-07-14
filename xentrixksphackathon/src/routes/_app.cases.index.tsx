@@ -15,6 +15,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth";
+import { hasPermission, PERMISSIONS } from "@/lib/rbac";
+import { MaskField, PermissionCard, RestrictedButton } from "@/components/rbac/permission";
 
 const STATUSES = ["Under Investigation", "Charge Sheeted", "Closed", "Undetected"] as const;
 
@@ -45,6 +48,10 @@ function statusBadge(s: string) {
 }
 
 function CasesPage() {
+  const user = useAuthStore((s) => s.user);
+  const canSeeSensitive = hasPermission(user, PERMISSIONS.SENSITIVE_CASE_ACCESS);
+  const hideVictimColumn = user?.role === "Policymaker";
+  const districtOptions = user?.assignedDistricts?.length ? user.assignedDistricts : DISTRICTS;
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<string>("All");
   const [district, setDistrict] = useState<string>("All");
@@ -62,7 +69,12 @@ function CasesPage() {
     <div className="p-6 max-w-[1600px] mx-auto">
       <PageHeader
         title="Case Search"
-        subtitle={`${total.toLocaleString()} FIRs indexed · full-text search across crime number, station, district, complainant.`}
+        subtitle={`${total.toLocaleString()} FIRs indexed - scoped to ${user?.assignedDistricts?.length ? user.assignedDistricts.join(", ") : "authorized Karnataka districts"}.`}
+        actions={
+          <RestrictedButton size="sm" variant="outline" permissions={[PERMISSIONS.EXPORT_DATA]}>
+            Export
+          </RestrictedButton>
+        }
       />
 
       <div className="flex flex-wrap items-end gap-3 mb-4">
@@ -110,7 +122,7 @@ function CasesPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="All">All districts</SelectItem>
-              {DISTRICTS.map((d) => (
+              {districtOptions.map((d) => (
                 <SelectItem key={d} value={d}>
                   {d}
                 </SelectItem>
@@ -128,6 +140,7 @@ function CasesPage() {
                 <th className="text-left px-3 py-2 font-medium">Crime No.</th>
                 <th className="text-left px-3 py-2 font-medium">Case No.</th>
                 <th className="text-left px-3 py-2 font-medium">Date</th>
+                {!hideVictimColumn && <th className="text-left px-3 py-2 font-medium">Victim</th>}
                 <th className="text-left px-3 py-2 font-medium">Station</th>
                 <th className="text-left px-3 py-2 font-medium">District</th>
                 <th className="text-left px-3 py-2 font-medium">Crime Head</th>
@@ -139,15 +152,19 @@ function CasesPage() {
               {isLoading &&
                 Array.from({ length: 8 }).map((_, i) => (
                   <tr key={i} className="border-b border-border">
-                    <td colSpan={8} className="p-2">
+                    <td colSpan={hideVictimColumn ? 8 : 9} className="p-2">
                       <Skeleton className="h-6" />
                     </td>
                   </tr>
                 ))}
               {!isLoading && data?.items.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-muted-foreground">
-                    No cases match the current filters.
+                  <td colSpan={hideVictimColumn ? 8 : 9} className="p-8">
+                    <PermissionCard
+                      moduleName="Assigned Investigations"
+                      reason={q || status !== "All" || district !== "All" ? "No assigned investigations match the current filters." : "You currently have no assigned investigations in your permitted scope."}
+                      className="mx-auto max-w-xl text-left"
+                    />
                   </td>
                 </tr>
               )}
@@ -164,6 +181,18 @@ function CasesPage() {
                   </td>
                   <td className="px-3 py-2 font-mono text-[11px]">{f.caseNo}</td>
                   <td className="px-3 py-2 whitespace-nowrap">{f.date}</td>
+                  {!hideVictimColumn && (
+                    <td className="px-3 py-2">
+                      <MaskField
+                        value={(f as any).victimName ?? (f as any).complainant ?? "Victim record"}
+                        permission={PERMISSIONS.SENSITIVE_CASE_ACCESS}
+                        kind="name"
+                      />
+                      {!canSeeSensitive && (
+                        <span className="ml-2 text-[10px] text-muted-foreground">masked</span>
+                      )}
+                    </td>
+                  )}
                   <td className="px-3 py-2">{f.station}</td>
                   <td className="px-3 py-2">{f.district}</td>
                   <td className="px-3 py-2">{f.crimeHead}</td>

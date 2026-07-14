@@ -53,7 +53,7 @@ class SQLGenerator:
         )
         logger.info("SQLGenerator initialised")
 
-    async def generate(self, question: str) -> str:
+    async def generate(self, question: str, current_user: dict | None = None) -> str:
         """
         Generate a PostgreSQL SQL query from a natural-language question.
 
@@ -61,6 +61,8 @@ class SQLGenerator:
         ----------
         question : str
             The user's question in natural language.
+        current_user : dict, optional
+            The authenticated user context containing role and districts.
 
         Returns
         -------
@@ -75,8 +77,25 @@ class SQLGenerator:
         if not question or not question.strip():
             raise ValueError("Question must not be empty.")
 
+        # Build district constraints if restricted
+        user_constraints = ""
+        if current_user:
+            role = current_user.get("role")
+            districts = current_user.get("districts")
+            if role not in ("Admin", "Administrator", "Policy Maker", "Policymaker", "Analyst") and districts:
+                dist_list = [d.strip() for d in districts.split(",") if d.strip()]
+                if dist_list:
+                    dist_quoted = ", ".join(f"'{d}'" for d in dist_list)
+                    user_constraints = (
+                        f"\nSTRICT USER ACCESS CONSTRAINT:\n"
+                        f"- You are generating SQL for a user who ONLY has access to districts: {dist_quoted}.\n"
+                        f"- You MUST filter all queries referencing case_master, accused_master, victim_master, or police_station "
+                        f"by joining with police_station and adding: police_station.district IN ({dist_quoted}).\n"
+                        f"- Never return records from other districts."
+                    )
+
         system_prompt, user_prompt = self._prompt_builder.build_nl2sql_prompt(
-            question.strip()
+            question.strip(), user_constraints=user_constraints
         )
 
         result = await self._provider.generate(

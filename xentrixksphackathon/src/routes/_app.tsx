@@ -1,9 +1,10 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { Sidebar } from "@/components/app/sidebar";
+import { DynamicSidebar } from "@/components/app/sidebar";
 import { Topbar } from "@/components/app/topbar";
 import { useAuthStore } from "@/stores/auth";
 import { usePrefs } from "@/stores/prefs";
 import { cn } from "@/lib/utils";
+import { canAccessRoute, findRouteAccess, requiredRoleLabel } from "@/lib/rbac";
 
 export const Route = createFileRoute("/_app")({
   ssr: false,
@@ -11,8 +12,16 @@ export const Route = createFileRoute("/_app")({
     if (typeof window === "undefined") return;
     const user = useAuthStore.getState().user;
     if (!user) throw redirect({ to: "/login" });
-    if (user.role === "Admin" && location.pathname !== "/admin" && location.pathname !== "/settings") {
-      throw redirect({ to: "/admin" });
+    const routeAccess = findRouteAccess(location.pathname);
+    if (routeAccess && !canAccessRoute(user, routeAccess)) {
+      throw redirect({
+        to: "/access-restricted",
+        search: {
+          module: routeAccess.moduleName,
+          required: requiredRoleLabel(routeAccess.permissions),
+          from: location.pathname,
+        },
+      });
     }
   },
   component: AppShell,
@@ -60,7 +69,7 @@ function AppShell() {
 
       {/* Desktop sidebar */}
       <div className="hidden md:block h-full shrink-0">
-        <Sidebar />
+        <DynamicSidebar />
       </div>
 
       {/* Mobile drawer */}
@@ -80,7 +89,7 @@ function AppShell() {
             mobileNavOpen ? "translate-x-0" : "-translate-x-full",
           )}
         >
-          <Sidebar forceExpanded onNavigate={() => setMobileNavOpen(false)} />
+          <DynamicSidebar forceExpanded onNavigate={() => setMobileNavOpen(false)} />
         </div>
       </div>
 

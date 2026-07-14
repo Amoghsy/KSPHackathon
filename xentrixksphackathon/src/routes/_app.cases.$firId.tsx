@@ -1,12 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { PageHeader, Masked } from "@/components/app/primitives";
+import { PageHeader } from "@/components/app/primitives";
 import { getFIR } from "@/services/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useRBAC } from "@/hooks/useRBAC";
+import { MaskField } from "@/components/rbac/permission";
+import { PERMISSIONS } from "@/lib/rbac";
 
 export const Route = createFileRoute("/_app/cases/$firId")({
   head: () => ({ meta: [{ title: "Case Detail — Crime Intelligence Assistant" }] }),
@@ -15,6 +18,7 @@ export const Route = createFileRoute("/_app/cases/$firId")({
 
 function CaseDetailPage() {
   const { firId } = Route.useParams();
+  const rbac = useRBAC();
   const { data: fir, isLoading } = useQuery({
     queryKey: ["fir", firId],
     queryFn: () => getFIR(firId),
@@ -23,7 +27,7 @@ function CaseDetailPage() {
   if (isLoading)
     return (
       <div className="p-6">
-        <Skeleton className="h-64" />
+        <Skeleton className="h-64 animate-pulse rounded-xl" />
       </div>
     );
   if (!fir) return <div className="p-6 text-muted-foreground">Case not found.</div>;
@@ -32,7 +36,7 @@ function CaseDetailPage() {
     <div className="p-6 max-w-[1400px] mx-auto">
       <Link
         to="/cases"
-        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mb-3"
+        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mb-3 transition-colors"
       >
         <ArrowLeft className="h-3.5 w-3.5" /> Back to case search
       </Link>
@@ -50,7 +54,7 @@ function CaseDetailPage() {
       />
 
       <Tabs defaultValue="overview">
-        <TabsList className="mb-4">
+        <TabsList className="mb-4 bg-muted/40 p-1 border border-border/30 rounded-lg">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="complainant">Complainant</TabsTrigger>
           <TabsTrigger value="accused">Accused</TabsTrigger>
@@ -79,11 +83,38 @@ function CaseDetailPage() {
         </TabsContent>
 
         <TabsContent value="complainant">
-          <Card title="Complainant">
+          <Card title="Complainant Details">
             <dl className="text-sm space-y-2">
-              <Row label="Name" value={fir.complainant} />
-              <Row label="Category" value={<Masked>General</Masked>} />
-              <Row label="Religion" value={<Masked>Category A</Masked>} />
+              <Row
+                label="Complainant Name"
+                value={
+                  <MaskField
+                    value={fir.complainant}
+                    permission={PERMISSIONS.SENSITIVE_CASE_ACCESS}
+                    kind="name"
+                  />
+                }
+              />
+              <Row
+                label="Category"
+                value={
+                  <MaskField
+                    value="General Category"
+                    permission={PERMISSIONS.SENSITIVE_CASE_ACCESS}
+                    kind="name"
+                  />
+                }
+              />
+              <Row
+                label="Religion/Belief"
+                value={
+                  <MaskField
+                    value="Category A"
+                    permission={PERMISSIONS.SENSITIVE_CASE_ACCESS}
+                    kind="name"
+                  />
+                }
+              />
             </dl>
           </Card>
         </TabsContent>
@@ -91,10 +122,29 @@ function CaseDetailPage() {
         <TabsContent value="accused">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {(fir.accused ?? []).map((a: any) => (
-              <Card key={a.id} title={`${a.name} · ${a.id}`}>
-                <div className="text-sm text-muted-foreground">Age {a.age}</div>
-                <div className="text-xs mt-2">
-                  Category: <Masked>General</Masked> · Religion: <Masked>Category A</Masked>
+              <Card key={a.id} title={`Accused ID: ${a.id}`}>
+                <div className="text-sm font-semibold">
+                  Name:{" "}
+                  <MaskField
+                    value={a.name}
+                    permission={PERMISSIONS.SENSITIVE_CASE_ACCESS}
+                    kind="name"
+                  />
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">Age: {a.age}</div>
+                <div className="text-xs mt-2 text-muted-foreground/80">
+                  Category:{" "}
+                  <MaskField
+                    value="General"
+                    permission={PERMISSIONS.SENSITIVE_CASE_ACCESS}
+                    kind="name"
+                  />{" "}
+                  · Religion:{" "}
+                  <MaskField
+                    value="Category A"
+                    permission={PERMISSIONS.SENSITIVE_CASE_ACCESS}
+                    kind="name"
+                  />
                 </div>
               </Card>
             ))}
@@ -104,8 +154,16 @@ function CaseDetailPage() {
         <TabsContent value="victims">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {(fir.victims ?? []).map((v: any, i: number) => (
-              <Card key={i} title={v.name}>
-                <div className="text-sm text-muted-foreground">Age {v.age}</div>
+              <Card key={i} title={`Victim Record #${i + 1}`}>
+                <div className="text-sm font-semibold">
+                  Name:{" "}
+                  <MaskField
+                    value={v.name}
+                    permission={PERMISSIONS.SENSITIVE_CASE_ACCESS}
+                    kind="name"
+                  />
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">Age: {v.age}</div>
               </Card>
             ))}
           </div>
@@ -124,14 +182,20 @@ function CaseDetailPage() {
         </TabsContent>
 
         <TabsContent value="arrests">
-          <Card title="Arrests">
+          <Card title="Arrests Registry">
             {!fir.arrests || fir.arrests.length === 0 ? (
               <div className="text-sm text-muted-foreground">No arrests recorded.</div>
             ) : (
               <ul className="text-sm divide-y divide-border">
                 {fir.arrests.map((a: any, i: number) => (
-                  <li key={i} className="py-2 flex justify-between">
-                    <span>{a.name}</span>
+                  <li key={i} className="py-2.5 flex justify-between">
+                    <span className="font-semibold">
+                      <MaskField
+                        value={a.name}
+                        permission={PERMISSIONS.SENSITIVE_CASE_ACCESS}
+                        kind="name"
+                      />
+                    </span>
                     <span className="text-muted-foreground tabular-nums">{a.date}</span>
                   </li>
                 ))}
@@ -141,9 +205,9 @@ function CaseDetailPage() {
         </TabsContent>
 
         <TabsContent value="chargesheet">
-          <Card title="Chargesheet">
+          <Card title="Chargesheet Details">
             {fir.chargesheet ? (
-              <div className="text-sm font-mono">{fir.chargesheet}</div>
+              <div className="text-sm font-mono whitespace-pre-wrap">{fir.chargesheet}</div>
             ) : (
               <div className="text-sm text-muted-foreground">No chargesheet filed yet.</div>
             )}

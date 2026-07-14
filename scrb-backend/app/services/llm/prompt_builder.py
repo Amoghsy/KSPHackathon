@@ -112,7 +112,7 @@ class PromptBuilder:
     # NL → SQL prompt
     # ------------------------------------------------------------------
 
-    def build_nl2sql_prompt(self, question: str) -> tuple[str, str]:
+    def build_nl2sql_prompt(self, question: str, user_constraints: str = "") -> tuple[str, str]:
         """
         Build system + user prompts for NL→SQL generation.
 
@@ -123,7 +123,7 @@ class PromptBuilder:
         system = _NL2SQL_SYSTEM_TEMPLATE.safe_substitute(
             schema_context=self._schema_context,
             examples=self._examples,
-            business_rules=self._business_rules,
+            business_rules=self._business_rules + user_constraints,
         )
         user = _NL2SQL_USER_TEMPLATE.safe_substitute(question=question)
         return system.strip(), user.strip()

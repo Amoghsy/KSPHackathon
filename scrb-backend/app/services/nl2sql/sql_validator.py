@@ -24,6 +24,7 @@ from dataclasses import dataclass, field
 import sqlparse
 from sqlparse.sql import Identifier, IdentifierList, Parenthesis, Where
 from sqlparse.tokens import DDL, DML, Keyword
+from app.core.rbac import check_permission, Permission
 
 logger = logging.getLogger(__name__)
 
@@ -193,9 +194,16 @@ class SQLValidator:
     # Public API
     # ------------------------------------------------------------------
 
-    def validate(self, sql: str) -> ValidationResult:
+    def validate(self, sql: str, current_user: dict | None = None) -> ValidationResult:
         """
         Validate the given SQL string.
+
+        Parameters
+        ----------
+        sql : str
+            The SQL statement to validate.
+        current_user : dict, optional
+            The authenticated user context for RBAC checks.
 
         Returns
         -------
@@ -287,7 +295,38 @@ class SQLValidator:
                     f"Unknown column(s): {', '.join(sorted(unknown_columns))}."
                 )
 
-        # 7. Well-formed check (sqlparse does not throw on *most* malformed SQL,
+        # 7. User-level RBAC & Permission validation (if user context is provided)
+        if current_user:
+            role = current_user.get("role")
+            
+            # Users table: Admin only
+            if "users" in referenced_tables:
+                if role not in ("Admin", "Administrator"):
+                    errors.append(f"Permission denied. Role '{role}' is not allowed to access user accounts.")
+                    
+            # Financial transactions: Requires FINANCIAL_CRIME permission
+            if "financial_transaction" in referenced_tables:
+                if not check_permission(role, Permission.FINANCIAL_CRIME):
+                    errors.append(f"Permission denied. Role '{role}' is not allowed to access financial transaction records.")
+                    
+            # Complainant/Victim names: Requires SENSITIVE_CASE_ACCESS permission
+            # Check if columns is strict, or fallback to name scanning
+            referenced_columns = self._extract_columns(stmt, cte_aliases)
+            has_sensitive_access = check_permission(role, Permission.SENSITIVE_CASE_ACCESS)
+            
+            if not has_sensitive_access:
+                # Crime Analyst and Policy Maker cannot access victim identities
+                if "victim_name" in referenced_columns or "victim_master" in referenced_tables:
+                    if "victim_name" in referenced_columns or "*" in referenced_columns:
+                        errors.append("You do not have permission to access victim identities.")
+                # Investigator/Analyst/Policymaker can have individual restrictions:
+                if role in ("Policy Maker", "Policymaker", "Analyst"):
+                    if "victim_name" in referenced_columns or "complainant" in referenced_columns or "accused_name" in referenced_columns:
+                        errors.append("You do not have permission to access personal identifiable information (PII) such as complainant, accused or victim names.")
+                    if "source_account" in referenced_columns or "destination_account" in referenced_columns:
+                        errors.append("You do not have permission to access financial bank accounts.")
+
+        # 8. Well-formed check (sqlparse does not throw on *most* malformed SQL,
         #    but we can flag obvious issues like unmatched parentheses).
         if normalised.count("(") != normalised.count(")"):
             errors.append("Mismatched parentheses in SQL statement.")
