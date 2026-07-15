@@ -198,4 +198,7 @@ class PromptBuilder:
             "- financial_transaction.is_suspicious is a boolean flag.\n"
             "- financial_transaction.amount is stored in INR (Indian Rupees).\n"
             "- 1 lakh = 100000, 1 crore = 10000000.\n"
+            "- case_master.case_status_id represents the case status. There is NO case_status table in the database; do NOT generate JOINs with a case_status table.\n"
+            "- case_status_id values are: 1 = Under Investigation (or Open), 2 = Charge Sheeted, 3 = Closed, 4 = Undetected. Filter status directly using these integer values. For example, for open cases, use: case_master.case_status_id = 1.\n"
         )
+

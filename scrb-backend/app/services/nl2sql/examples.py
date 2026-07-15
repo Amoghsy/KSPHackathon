@@ -224,6 +224,30 @@ FEW_SHOT_EXAMPLES: list[NLSQLExample] = [
             "LIMIT 100"
         ),
     ),
+    # 16. Total open cases this month
+    NLSQLExample(
+        question="Total open cases this month?",
+        sql=(
+            "SELECT COUNT(*) AS open_cases "
+            "FROM case_master cm "
+            "WHERE cm.case_status_id = 1 "
+            "AND cm.crime_registered_date >= DATE_TRUNC('month', CURRENT_DATE) "
+            "LIMIT 100"
+        ),
+    ),
+    # 17. Closed cases in a specific district
+    NLSQLExample(
+        question="Show closed cases in Mysuru.",
+        sql=(
+            "SELECT cm.case_master_id, cm.crime_no, cm.crime_registered_date "
+            "FROM case_master cm "
+            "JOIN police_station ps ON cm.police_station_id = ps.police_station_id "
+            "WHERE cm.case_status_id = 3 "
+            "AND ps.district ILIKE '%Mysuru%' "
+            "ORDER BY cm.crime_registered_date DESC "
+            "LIMIT 100"
+        ),
+    ),
 ]
 
 
