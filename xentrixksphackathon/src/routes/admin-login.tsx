@@ -46,7 +46,7 @@ function AdminLoginPage() {
 
   return (
     <div
-      className="relative min-h-screen w-full flex flex-col text-primary-foreground overflow-hidden"
+      className="relative min-h-screen w-full flex flex-col text-slate-100 overflow-hidden"
       style={{
         background:
           "radial-gradient(1000px 700px at 15% 10%, oklch(0.35 0.1 360 / 0.9), transparent 60%), radial-gradient(900px 600px at 90% 90%, oklch(0.4 0.08 240 / 0.7), transparent 60%), linear-gradient(180deg, oklch(0.18 0.04 262), oklch(0.1 0.02 262))",
@@ -64,7 +64,7 @@ function AdminLoginPage() {
         <div className="w-full max-w-md">
           <div className="flex flex-col items-center text-center mb-8">
             <div
-              className="h-20 w-20 rounded-2xl flex items-center justify-center bg-destructive/10 border border-destructive/30"
+              className="h-20 w-20 rounded-2xl flex items-center justify-center bg-destructive/10 border border-destructive/30 overflow-hidden"
               style={{
                 boxShadow:
                   "0 12px 40px -8px oklch(0.55 0.15 360 / 0.4), inset 0 1px 0 oklch(1 0 0 / 0.1)",
@@ -78,7 +78,7 @@ function AdminLoginPage() {
             <h1 className="mt-1.5 text-2xl sm:text-3xl font-semibold tracking-tight text-white">
               SCRB Intelligence Console
             </h1>
-            <p className="mt-2 text-sm text-primary-foreground/70">
+            <p className="mt-2 text-sm text-slate-300">
               Administrative credentials required. Active monitoring enabled.
             </p>
           </div>
@@ -143,7 +143,7 @@ function AdminLoginPage() {
           </form>
         </div>
       </div>
-      <footer className="border-t border-primary-foreground/10 py-3 text-center text-[11px] text-primary-foreground/70">
+      <footer className="border-t border-white/10 py-3 text-center text-[11px] text-slate-400">
         CONFIDENTIAL SECURITY SYSTEMS — INCIDENTS LOGGED TO AUDIT LOGS.
       </footer>
     </div>

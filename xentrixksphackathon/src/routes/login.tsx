@@ -55,7 +55,7 @@ function LoginPage() {
 
   return (
     <div
-      className="relative min-h-screen w-full flex flex-col text-primary-foreground overflow-hidden"
+      className="relative min-h-screen w-full flex flex-col text-slate-100 overflow-hidden"
       style={{
         background:
           "radial-gradient(1000px 700px at 15% 10%, oklch(0.4 0.1 220 / 0.9), transparent 60%), radial-gradient(900px 600px at 90% 90%, oklch(0.45 0.1 190 / 0.7), transparent 60%), linear-gradient(180deg, oklch(0.22 0.06 262), oklch(0.14 0.04 262))",
@@ -81,13 +81,13 @@ function LoginPage() {
             >
               <img src="/logo.png" alt="KSP Logo" className="h-full w-full object-cover" />
             </div>
-            <div className="mt-5 text-[11px] uppercase tracking-[0.24em] text-primary-foreground/70 font-medium">
+            <div className="mt-5 text-[11px] uppercase tracking-[0.24em] text-slate-300 font-medium">
               Karnataka State Police · SCRB
             </div>
             <h1 className="mt-1.5 text-2xl sm:text-3xl font-semibold tracking-tight">
               Crime Intelligence Assistant
             </h1>
-            <p className="mt-2 text-sm text-primary-foreground/70">
+            <p className="mt-2 text-sm text-slate-300">
               Authorised personnel only. All actions are audited.
             </p>
           </div>
@@ -154,7 +154,7 @@ function LoginPage() {
           </form>
         </div>
       </div>
-      <footer className="border-t border-primary-foreground/10 py-3 text-center text-[11px] text-primary-foreground/70">
+      <footer className="border-t border-white/10 py-3 text-center text-[11px] text-slate-400">
         Confidential Government System — Unauthorised access is a punishable offence under IT Act,
         2000.
       </footer>
