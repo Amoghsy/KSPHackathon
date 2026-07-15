@@ -206,6 +206,12 @@ def _clean_markdown(text: str) -> str:
 
 def _synthesize_segment(content: str, lang: str) -> bytes:
     """Synthesize one text segment and return raw MP3 bytes."""
+    if gTTS is None:
+        raise RuntimeError(
+            "gTTS (Google Text-to-Speech) library is not installed or failed to load. "
+            "Please verify that the backend is running inside the virtual environment (.venv) "
+            "where dependencies are installed, or install the gtts library: pip install gtts"
+        )
     tts = gTTS(text=content, lang=lang, slow=False)
     buf = BytesIO()
     tts.write_to_fp(buf)
