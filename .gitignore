@@ -40,7 +40,7 @@ alembic/versions/__pycache__/
 
 # Node / Frontend
 node_modules/
-xentrixksphackathon/node_modules/
+frontend/node_modules/
 .next/
 .nuxt/
 .output/

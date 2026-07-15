@@ -9,7 +9,7 @@
 
 The SCRB backend is a FastAPI application that powers a conversational crime analytics
 assistant for the Karnataka State Police.  It exposes a versioned REST API (`/api/v1`)
-consumed by the `xentrixksphackathon` Vite/TanStack frontend.
+consumed by the `frontend` Vite/TanStack frontend.
 
 Key capabilities (built across 12 days):
 
@@ -26,7 +26,7 @@ Key capabilities (built across 12 days):
 ## Folder Structure
 
 ```
-scrb-backend/
+backend/
 ├── alembic/              # Migration environment & versions
 │   ├── env.py
 │   └── versions/
@@ -91,7 +91,7 @@ cp .env.example .env
 
 ```bash
 git clone <repo-url>
-cd scrb-backend
+cd backend
 ```
 
 ### 2. Create and activate a virtual environment
