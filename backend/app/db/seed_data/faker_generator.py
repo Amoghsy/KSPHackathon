@@ -581,13 +581,13 @@ async def run_automated_validation(db: AsyncSession):
     hashed_pw = get_password_hash("password123")
 
     users_to_seed = [
-        ("insp_mysuru", "Investigator", "Mysuru"),
-        ("insp_bengaluru", "Investigator", "Bengaluru Urban"),
-        ("senior_sp", "Senior Investigator", "Mysuru,Bengaluru Urban"),
-        ("analyst_priya", "Analyst", "Mysuru,Bengaluru Urban,Mangaluru"),
-        ("supervisor_ramesh", "Supervisor", None),
-        ("policymaker_anitha", "Policy Maker", None),
-        ("admin_system", "Administrator", None),
+        ("insp_mysuru", "INVESTIGATOR", "Mysuru"),
+        ("insp_bengaluru", "INVESTIGATOR", "Bengaluru Urban"),
+        ("senior_sp", "SENIOR_INVESTIGATOR", "Mysuru,Bengaluru Urban"),
+        ("analyst_priya", "ANALYST", "Mysuru,Bengaluru Urban,Mangaluru"),
+        ("supervisor_ramesh", "SUPERVISOR", None),
+        ("policymaker_anitha", "POLICY_MAKER", None),
+        ("admin_system", "ADMINISTRATOR", None),
     ]
 
     user_objs = {}

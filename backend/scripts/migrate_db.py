@@ -45,12 +45,12 @@ async def run_migration():
         hashed_pw = get_password_hash("password123")
         users_to_seed = [
             # username, role, districts
-            ("insp_mysuru", "Investigator", "Mysuru"),
-            ("insp_bengaluru", "Investigator", "Bengaluru"),
-            ("senior_sp", "Senior Investigator", "Mysuru,Bengaluru"),
-            ("analyst_priya", "Analyst", "Mysuru,Bengaluru,Mangaluru"),
-            ("supervisor_ramesh", "Supervisor", None),
-            ("policymaker_anitha", "Policy Maker", None),
+            ("insp_mysuru", "INVESTIGATOR", "Mysuru"),
+            ("insp_bengaluru", "INVESTIGATOR", "Bengaluru"),
+            ("senior_sp", "SENIOR_INVESTIGATOR", "Mysuru,Bengaluru"),
+            ("analyst_priya", "ANALYST", "Mysuru,Bengaluru,Mangaluru"),
+            ("supervisor_ramesh", "SUPERVISOR", None),
+            ("policymaker_anitha", "POLICY_MAKER", None),
         ]
         
         for username, role, districts in users_to_seed:

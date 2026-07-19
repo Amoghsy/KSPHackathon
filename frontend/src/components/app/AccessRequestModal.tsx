@@ -18,9 +18,18 @@ export function AccessRequestModal() {
 
   React.useEffect(() => {
     const handleUnauthorized = (e: Event) => {
-      const customEvent = e as CustomEvent<{ district_id?: string }>;
-      if (customEvent.detail?.district_id) {
-        setDistrict(customEvent.detail.district_id);
+      const customEvent = e as CustomEvent<{
+        district_id?: string;
+        can_request_access?: boolean;
+        message?: string;
+      }>;
+      const detail = customEvent.detail;
+
+      // Only show the modal when the backend explicitly says the user CAN request access.
+      // SUPERVISOR, ANALYST, POLICY_MAKER never get can_request_access=true — they
+      // should never see this modal. Only INVESTIGATOR and SENIOR_INVESTIGATOR can.
+      if (detail?.can_request_access === true && detail?.district_id) {
+        setDistrict(detail.district_id);
         setIsOpen(true);
       }
     };

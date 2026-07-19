@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.services.analytics.analytics_service import AnalyticsService
 from app.core.security import get_current_user
-from app.core.permissions import require_permission, verify_district_access, get_user_authorized_districts
+from app.core.permissions import require_permission, verify_district_access, get_user_authorized_districts, resolve_authorized_districts
 from app.core.rbac import Permission
 
 router = APIRouter()
@@ -30,7 +30,7 @@ async def get_trends(
     allowed_district = await verify_district_access(current_user, district, db)
     auth_districts = await get_user_authorized_districts(current_user, db)
 
-    service = AnalyticsService(db, authorized_districts=auth_districts)
+    service = AnalyticsService(db, authorized_districts=resolve_authorized_districts(auth_districts))
     res = await service.get_trends(
         district=allowed_district,
         crime_type=crime_type,
@@ -62,7 +62,7 @@ async def get_hotspots(
     allowed_district = await verify_district_access(current_user, district, db)
     auth_districts = await get_user_authorized_districts(current_user, db)
 
-    service = AnalyticsService(db, authorized_districts=auth_districts)
+    service = AnalyticsService(db, authorized_districts=resolve_authorized_districts(auth_districts))
     res = await service.get_hotspots(
         district=allowed_district,
         crime_type=crime_type,
@@ -94,7 +94,7 @@ async def get_anomalies(
     allowed_district = await verify_district_access(current_user, district, db)
     auth_districts = await get_user_authorized_districts(current_user, db)
 
-    service = AnalyticsService(db, authorized_districts=auth_districts)
+    service = AnalyticsService(db, authorized_districts=resolve_authorized_districts(auth_districts))
     res = await service.get_anomalies(
         district=allowed_district,
         crime_type=crime_type,
@@ -123,7 +123,7 @@ async def get_distribution(
     allowed_district = await verify_district_access(current_user, district, db)
     auth_districts = await get_user_authorized_districts(current_user, db)
 
-    service = AnalyticsService(db, authorized_districts=auth_districts)
+    service = AnalyticsService(db, authorized_districts=resolve_authorized_districts(auth_districts))
     res = await service.get_distribution(
         district=allowed_district,
         crime_type=crime_type,
@@ -149,7 +149,7 @@ async def get_forecast(
     allowed_district = await verify_district_access(current_user, district, db)
     auth_districts = await get_user_authorized_districts(current_user, db)
 
-    service = AnalyticsService(db, authorized_districts=auth_districts)
+    service = AnalyticsService(db, authorized_districts=resolve_authorized_districts(auth_districts))
     res = await service.get_forecast(
         district=allowed_district,
         crime_type=crime_type,
@@ -187,7 +187,7 @@ async def get_agent_summary(
         police_station=police_station,
         start_date=start_date,
         end_date=end_date,
-        authorized_districts=auth_districts,
+        authorized_districts=resolve_authorized_districts(auth_districts),
     )
     return res
 
@@ -211,7 +211,7 @@ async def get_heatmap(
     allowed_district = await verify_district_access(current_user, district, db)
     auth_districts = await get_user_authorized_districts(current_user, db)
 
-    service = AnalyticsService(db, authorized_districts=auth_districts)
+    service = AnalyticsService(db, authorized_districts=resolve_authorized_districts(auth_districts))
     res = await service.get_heatmap(
         district=allowed_district,
         crime_type=crime_type,
@@ -252,7 +252,7 @@ async def get_map_analytics(
         except ValueError:
             pass
 
-    service = AnalyticsService(db, authorized_districts=auth_districts)
+    service = AnalyticsService(db, authorized_districts=resolve_authorized_districts(auth_districts))
     res = await service.get_map_analytics(
         district=allowed_district,
         crime_type=crime_type,

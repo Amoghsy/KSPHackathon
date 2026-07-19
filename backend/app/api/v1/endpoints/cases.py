@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.services.case import CaseService
 from app.core.security import get_current_user
-from app.core.permissions import verify_district_access
+from app.core.permissions import require_permission, verify_district_access
 from app.core.rbac import check_permission, Permission
 from app.utils.masking import mask_name, mask_brief_facts
 
@@ -22,7 +22,13 @@ async def get_cases(
     current_user: dict = Depends(get_current_user),
 ):
     """Retrieve cases list with query, status, district filters and pagination."""
-    # ABAC: Enforce district access containment
+    # RBAC: Ensure user has SEARCH_CASES permission
+    check_perm = require_permission(Permission.SEARCH_CASES)
+    await check_perm(current_user)
+
+    # ABAC: Enforce district access containment.
+    # For unrestricted roles (SUPERVISOR, ANALYST, POLICY_MAKER) this returns "All".
+    # For district-scoped roles (INVESTIGATOR, SENIOR_INVESTIGATOR) this returns their district.
     allowed_district = await verify_district_access(current_user, district, db)
 
     service = CaseService(db)
@@ -57,6 +63,10 @@ async def get_case_by_id(
     current_user: dict = Depends(get_current_user),
 ):
     """Retrieve specific case parameters by ID."""
+    # RBAC: Ensure user has SEARCH_CASES permission
+    check_perm = require_permission(Permission.SEARCH_CASES)
+    await check_perm(current_user)
+
     service = CaseService(db)
     case_detail = await service.get_case_detail(id)
     if not case_detail:

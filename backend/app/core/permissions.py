@@ -10,6 +10,13 @@ from app.core.rbac import check_permission, normalize_role
 from app.models.district_assignment import UserDistrictAssignment
 from app.models.access_request import TemporaryDistrictPermission
 
+# Roles that are NOT district-scoped — they see all districts without assignment.
+# RBAC controls which features they can access; ABAC does NOT restrict their data by district.
+_UNRESTRICTED_ROLES = {"SUPERVISOR", "ANALYST", "POLICY_MAKER"}
+
+# Sentinel value returned for unrestricted roles so callers know not to filter by district.
+_ALL_DISTRICTS_SENTINEL = "__ALL__"
+
 
 def require_permission(permission: str) -> Callable:
     """Dependency that requires a user to have a specific permission."""
@@ -28,11 +35,24 @@ async def get_user_authorized_districts(user: dict, db: AsyncSession) -> list[st
     """
     Retrieve all authorized districts for a user dynamically from the database.
     Includes active permanent assignments and valid temporary permissions.
+
+    Returns:
+      - [] for ADMINISTRATOR (no investigative data access)
+      - [\"__ALL__\"] for SUPERVISOR, ANALYST, POLICY_MAKER (unrestricted state-wide view)
+      - list of assigned district names for INVESTIGATOR and SENIOR_INVESTIGATOR
+
+    Use resolve_authorized_districts() when passing to service/repository queries.
     """
     role = normalize_role(user.get("role"))
-    # Platform administrators have no authorized districts for investigative data
+
+    # Platform administrators have no investigative district access
     if role == "ADMINISTRATOR":
         return []
+
+    # Supervisors, analysts, and policy makers are not district-scoped.
+    # They see all data across the state without requiring explicit assignments.
+    if role in _UNRESTRICTED_ROLES:
+        return [_ALL_DISTRICTS_SENTINEL]
 
     user_id = user.get("id")
     if not user_id:
@@ -62,16 +82,37 @@ async def get_user_authorized_districts(user: dict, db: AsyncSession) -> list[st
     return all_districts
 
 
+def resolve_authorized_districts(districts: list[str]) -> list[str] | None:
+    """
+    Convert the result of get_user_authorized_districts() into a form suitable for
+    service/repository queries.
+
+    - ["__ALL__"] (unrestricted roles) → None  (no district filter in SQL)
+    - []          (admin / unassigned)  → []   (empty list = no data shown)
+    - [d1, d2]    (assigned)            → [d1, d2]  (filter to those districts)
+    """
+    if districts == [_ALL_DISTRICTS_SENTINEL]:
+        return None  # No district filter — all data visible
+    return districts
+
+
 async def verify_district_access(user: dict, district: str | None, db: AsyncSession) -> str:
     """
     ABAC validator for district level data containment.
     Verifies if the user is authorized to access the requested district.
     If requested district is None/empty/all, resolves to the primary authorized district.
-    
+
     Raises 403 Forbidden with a structured JSON detail payload if unauthorized.
+
+    For unrestricted roles (SUPERVISOR, ANALYST, POLICY_MAKER), any district is allowed.
     """
     role = normalize_role(user.get("role"))
     authorized = await get_user_authorized_districts(user, db)
+
+    # Unrestricted roles pass through without district containment
+    if authorized == [_ALL_DISTRICTS_SENTINEL]:
+        # Return the requested district as-is, or "All" if none specified
+        return district if district else "All"
 
     if not authorized:
         raise HTTPException(
@@ -80,7 +121,8 @@ async def verify_district_access(user: dict, district: str | None, db: AsyncSess
                 "code": "DISTRICT_NOT_AUTHORIZED",
                 "message": "Access Denied. User has no assigned districts.",
                 "district_id": district,
-                "can_request_access": False
+                # Only INVESTIGATOR and SENIOR_INVESTIGATOR can request temporary access
+                "can_request_access": role in ("INVESTIGATOR", "SENIOR_INVESTIGATOR"),
             }
         )
 
@@ -105,7 +147,7 @@ async def verify_district_access(user: dict, district: str | None, db: AsyncSess
                 "code": "DISTRICT_NOT_AUTHORIZED",
                 "message": f"You are not authorized to access investigations from {district}.",
                 "district_id": district,
-                "can_request_access": can_request
+                "can_request_access": can_request,
             }
         )
 

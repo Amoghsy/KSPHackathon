@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.services.graph.graph_service import GraphService
 from app.core.security import get_current_user
-from app.core.permissions import require_permission, verify_district_access, get_user_authorized_districts
+from app.core.permissions import require_permission, verify_district_access, get_user_authorized_districts, resolve_authorized_districts
 from app.core.rbac import Permission, check_permission
 from app.utils.masking import mask_account, mask_name
 
@@ -38,7 +38,7 @@ async def get_financial_network(
         crime_type=crime_type,
         police_station=police_station,
         time_period=time_period,
-        authorized_districts=auth_districts,
+        authorized_districts=resolve_authorized_districts(auth_districts),
     )
 
     # Masking: Mask bank accounts if lacking sensitive access (mostly fallback)

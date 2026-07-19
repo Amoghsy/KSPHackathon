@@ -23,6 +23,7 @@ from app.services.llm.llm_factory import LLMFactory
 from app.services.llm.prompt_builder import PromptBuilder
 from app.services.nl2sql.examples import format_examples_for_prompt
 from app.services.nl2sql.schema_context import get_schema_context
+from app.core.rbac import normalize_role
 
 logger = logging.getLogger(__name__)
 
@@ -80,9 +81,11 @@ class SQLGenerator:
         # Build district constraints if restricted
         user_constraints = ""
         if current_user:
-            role = current_user.get("role")
+            role = normalize_role(current_user.get("role"))
             districts = current_user.get("districts")
-            if role not in ("Admin", "Administrator", "Policy Maker", "Policymaker", "Analyst") and districts:
+            # Admins, Supervisors, Analysts and Policy Makers are not district-scoped
+            _UNRESTRICTED = {"ADMINISTRATOR", "SUPERVISOR", "ANALYST", "POLICY_MAKER"}
+            if role not in _UNRESTRICTED and districts:
                 dist_list = [d.strip() for d in districts.split(",") if d.strip()]
                 if dist_list:
                     dist_quoted = ", ".join(f"'{d}'" for d in dist_list)

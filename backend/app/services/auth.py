@@ -1,7 +1,7 @@
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.rbac import UserRole
+from app.core.rbac import UserRole, normalize_role
 from app.core.security import create_access_token, verify_password
 from app.repositories.user import UserRepository
 
@@ -42,8 +42,11 @@ class AuthService:
         import json
         from app.core.redis import get_redis_client
 
+        # Normalize role to canonical uppercase before issuing tokens
+        normalized_role = normalize_role(db_user.role) or db_user.role
+
         # Create access token (expires in ACCESS_TOKEN_EXPIRE_MINUTES)
-        token_payload = {"sub": db_user.username, "role": db_user.role, "id": db_user.id}
+        token_payload = {"sub": db_user.username, "role": normalized_role, "id": db_user.id}
         token = create_access_token(token_payload)
 
         # Create refresh token (expires in 7 days)
@@ -58,7 +61,7 @@ class AuthService:
             user_info = {
                 "id": db_user.id,
                 "username": db_user.username,
-                "role": db_user.role,
+                "role": normalized_role,
                 "districts": db_user.districts,
             }
             await client.setex(f"session:{db_user.username}", 24 * 3600, json.dumps(user_info))
@@ -69,7 +72,7 @@ class AuthService:
             "access_token": token,
             "token_type": "bearer",
             "username": db_user.username,
-            "role": db_user.role,
+            "role": normalized_role,
             "refresh_token": refresh_token,
         }
 

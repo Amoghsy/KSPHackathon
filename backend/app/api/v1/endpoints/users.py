@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.rbac import UserRole
+from app.core.rbac import UserRole, normalize_role
 from app.core.security import get_current_user, get_password_hash
 from app.db.session import get_db
 from app.models.user import User
@@ -56,7 +56,7 @@ async def create_user(
     db_user = User(
         username=user_in.username,
         hashed_password=hashed,
-        role=user_in.role,
+        role=normalize_role(user_in.role) or user_in.role,
     )
     
     created = await user_repo.create_user(db_user)

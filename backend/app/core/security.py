@@ -7,7 +7,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
 from app.config import settings
-from app.core.rbac import UserRole
+from app.core.rbac import UserRole, normalize_role
 
 # OAuth2 scheme config
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
@@ -92,7 +92,7 @@ async def get_current_user(
         return {
             "id": 1,
             "username": "insp_mysuru",
-            "role": "Investigator",
+            "role": "INVESTIGATOR",
             "districts": "Mysuru",
         }
 
@@ -138,7 +138,7 @@ async def get_current_user(
     return {
         "id": db_user.id,
         "username": db_user.username,
-        "role": db_user.role,
+        "role": normalize_role(db_user.role),
         "districts": db_user.districts,
     }
 
