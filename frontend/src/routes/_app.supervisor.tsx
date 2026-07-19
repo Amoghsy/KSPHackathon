@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/auth";
 import { PageHeader } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -23,21 +22,17 @@ import {
 } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { 
-  Users, 
-  ShieldCheck, 
-  Clock, 
-  UserMinus, 
-  UserPlus, 
-  Check, 
-  X, 
-  HelpCircle, 
+import {
+  Users,
+  ShieldCheck,
+  Clock,
+  UserMinus,
+  UserPlus,
+  Check,
+  X,
+  HelpCircle,
   RefreshCw,
-  Search,
-  Activity,
-  AlertTriangle
 } from "lucide-react";
 import { apiClient } from "@/lib/api/axios";
 
@@ -46,8 +41,6 @@ export const Route = createFileRoute("/_app/supervisor")({
   beforeLoad: () => {
     if (typeof window === "undefined") return;
     const user = useAuthStore.getState().user;
-    // Only SUPERVISOR has ASSIGN_DISTRICTS / APPROVE_ACCESS_REQUESTS.
-    // ADMINISTRATOR is a platform admin — NOT a supervisory officer.
     const isAuthorized = user?.role === "SUPERVISOR";
     if (!isAuthorized) {
       throw redirect({
@@ -73,7 +66,7 @@ const KARNATAKA_DISTRICTS = [
   "Ballari",
   "Shivamogga",
   "Tumakuru",
-  "Udupi"
+  "Udupi",
 ];
 
 function SupervisorPage() {
@@ -82,18 +75,14 @@ function SupervisorPage() {
 
   const [activeTab, setActiveTab] = useState<"requests" | "assignments">("requests");
 
-  // State for Access Requests
   const [requests, setRequests] = useState<any[]>([]);
   const [requestsLoading, setRequestsLoading] = useState(true);
 
-  // State for District Assignments
   const [assignments, setAssignments] = useState<any[]>([]);
   const [assignmentsLoading, setAssignmentsLoading] = useState(true);
 
-  // State for User list (for assignment creator)
   const [usersList, setUsersList] = useState<any[]>([]);
 
-  // Dialog & Form State
   const [reviewDialogRequest, setReviewDialogRequest] = useState<any | null>(null);
   const [reviewComment, setReviewComment] = useState("");
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
@@ -143,8 +132,9 @@ function SupervisorPage() {
   const loadUsers = async () => {
     try {
       const res = await apiClient.get<any[]>("/users/");
-      // Exclude administrators and supervisors from investigators listing
-      const filtered = res.data.filter((u: any) => u.role !== "ADMINISTRATOR" && u.role !== "SUPERVISOR");
+      const filtered = res.data.filter(
+        (u: any) => u.role !== "ADMINISTRATOR" && u.role !== "SUPERVISOR"
+      );
       setUsersList(filtered);
     } catch (err) {
       console.error("Failed to load users:", err);
@@ -158,13 +148,14 @@ function SupervisorPage() {
       await apiClient.post(`/security/access-requests/${reviewDialogRequest.id}/${action}`, {
         review_comment: reviewComment,
       });
-      toast.success(`Access request successfully ${action === "approve" ? "approved" : action === "reject" ? "rejected" : "marked for more info"}.`);
+      toast.success(
+        `Access request ${action === "approve" ? "approved" : action === "reject" ? "rejected" : "marked for more info"}.`
+      );
       setReviewDialogRequest(null);
       setReviewComment("");
       loadRequests();
     } catch (err: any) {
-      const msg = err.response?.data?.detail ?? "Failed to submit review.";
-      toast.error(msg);
+      toast.error(err.response?.data?.detail ?? "Failed to submit review.");
     } finally {
       setIsSubmittingReview(false);
     }
@@ -172,10 +163,7 @@ function SupervisorPage() {
 
   const handleCreateAssignment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!assignUserId) {
-      toast.error("Please select a user.");
-      return;
-    }
+    if (!assignUserId) { toast.error("Please select a user."); return; }
     setIsSubmittingAssign(true);
     try {
       await apiClient.post("/security/district-assignments", {
@@ -187,8 +175,7 @@ function SupervisorPage() {
       setAssignUserId("");
       loadAssignments();
     } catch (err: any) {
-      const msg = err.response?.data?.detail ?? "Failed to create assignment.";
-      toast.error(msg);
+      toast.error(err.response?.data?.detail ?? "Failed to create assignment.");
     } finally {
       setIsSubmittingAssign(false);
     }
@@ -201,8 +188,7 @@ function SupervisorPage() {
       toast.success("District assignment revoked successfully.");
       loadAssignments();
     } catch (err: any) {
-      const msg = err.response?.data?.detail ?? "Failed to revoke assignment.";
-      toast.error(msg);
+      toast.error(err.response?.data?.detail ?? "Failed to revoke assignment.");
     }
   };
 
@@ -218,52 +204,46 @@ function SupervisorPage() {
       setReassignDialogTarget(null);
       loadAssignments();
     } catch (err: any) {
-      const msg = err.response?.data?.detail ?? "Failed to reassign user.";
-      toast.error(msg);
+      toast.error(err.response?.data?.detail ?? "Failed to reassign user.");
     } finally {
       setIsSubmittingReassign(false);
     }
   };
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8 p-6 text-white">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <PageHeader
-          title="Supervisor Security Panel"
-          subtitle="Review temporary investigator requests and manage district containment assignments."
-        />
-        <div className="flex items-center gap-3">
-          <Button
-            onClick={() => {
-              loadRequests();
-              loadAssignments();
-            }}
-            variant="outline"
-            className="border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800"
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
-          </Button>
-          <Button
-            onClick={() => setAssignDialogOpen(true)}
-            className="bg-sky-600 hover:bg-sky-700 text-white focus:ring-sky-500"
-          >
-            <UserPlus className="mr-2 h-4 w-4" />
-            Assign District
-          </Button>
-        </div>
-      </div>
-
-{/* ADMINISTRATOR cannot reach this page — route guard redirects them */}
+    <div className="p-6 max-w-7xl mx-auto space-y-6 animate-fade-in">
+      <PageHeader
+        title="Supervisor Security Panel"
+        subtitle="Review temporary investigator requests and manage district containment assignments."
+        actions={
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => { loadRequests(); loadAssignments(); }}
+              variant="outline"
+              size="sm"
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh
+            </Button>
+            <Button
+              onClick={() => { loadUsers(); setAssignDialogOpen(true); }}
+              size="sm"
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              Assign District
+            </Button>
+          </div>
+        }
+      />
 
       {/* Tabs Navigation */}
-      <div className="flex border-b border-slate-800">
+      <div className="flex border-b border-border">
         <button
           onClick={() => setActiveTab("requests")}
-          className={`flex items-center gap-2 border-b-2 px-6 py-3 text-sm font-medium transition-all ${
+          className={`-mb-[1px] flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-all ${
             activeTab === "requests"
-              ? "border-sky-500 text-sky-400"
-              : "border-transparent text-slate-400 hover:text-slate-200"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
           }`}
         >
           <Clock className="h-4 w-4" />
@@ -271,10 +251,10 @@ function SupervisorPage() {
         </button>
         <button
           onClick={() => setActiveTab("assignments")}
-          className={`flex items-center gap-2 border-b-2 px-6 py-3 text-sm font-medium transition-all ${
+          className={`-mb-[1px] flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-all ${
             activeTab === "assignments"
-              ? "border-sky-500 text-sky-400"
-              : "border-transparent text-slate-400 hover:text-slate-200"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
           }`}
         >
           <Users className="h-4 w-4" />
@@ -283,58 +263,58 @@ function SupervisorPage() {
       </div>
 
       {/* Tab Panels */}
-      <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-6 backdrop-blur-xl">
+      <div className="rounded-xl glass p-6">
         {activeTab === "requests" ? (
-          <div className="space-y-6">
+          <div className="space-y-5">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">Pending Requests Drawer</h2>
-              <span className="text-xs text-slate-400">Evaluating active ABAC conditions</span>
+              <h2 className="text-base font-semibold text-foreground">Pending Requests Drawer</h2>
+              <span className="text-xs text-muted-foreground">Evaluating active ABAC conditions</span>
             </div>
 
             {requestsLoading ? (
-              <div className="flex h-40 items-center justify-center text-slate-400">Loading pending requests...</div>
+              <div className="flex h-40 items-center justify-center text-muted-foreground text-sm">
+                Loading pending requests…
+              </div>
             ) : requests.length === 0 ? (
-              <div className="flex h-40 flex-col items-center justify-center gap-2 text-slate-500">
-                <ShieldCheck className="h-10 w-10 text-slate-600" />
-                <p>No pending temporary access requests.</p>
+              <div className="flex h-40 flex-col items-center justify-center gap-2 text-muted-foreground">
+                <ShieldCheck className="h-10 w-10 opacity-30" />
+                <p className="text-sm">No pending temporary access requests.</p>
               </div>
             ) : (
-              <div className="overflow-hidden border border-slate-800 rounded-lg">
+              <div className="overflow-hidden border border-border rounded-lg">
                 <Table>
-                  <TableHeader className="bg-slate-950/60">
-                    <TableRow className="border-slate-800 hover:bg-transparent">
-                      <TableHead className="text-slate-400 font-medium">Requester ID</TableHead>
-                      <TableHead className="text-slate-400 font-medium">Requested District</TableHead>
-                      <TableHead className="text-slate-400 font-medium">Case ID</TableHead>
-                      <TableHead className="text-slate-400 font-medium">Justification</TableHead>
-                      <TableHead className="text-slate-400 font-medium">Duration</TableHead>
-                      <TableHead className="text-slate-400 font-medium">Requested At</TableHead>
-                      <TableHead className="text-slate-400 font-medium text-right">Actions</TableHead>
+                  <TableHeader className="bg-muted/60">
+                    <TableRow className="border-border hover:bg-transparent">
+                      <TableHead className="font-medium">Requester ID</TableHead>
+                      <TableHead className="font-medium">Requested District</TableHead>
+                      <TableHead className="font-medium">Case ID</TableHead>
+                      <TableHead className="font-medium">Justification</TableHead>
+                      <TableHead className="font-medium">Duration</TableHead>
+                      <TableHead className="font-medium">Requested At</TableHead>
+                      <TableHead className="font-medium text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {requests.map((req) => (
-                      <TableRow key={req.id} className="border-slate-800 hover:bg-slate-800/20">
-                        <TableCell className="font-semibold text-slate-300">User #{req.requester_id}</TableCell>
-                        <TableCell className="text-sky-400 font-semibold">{req.requested_district}</TableCell>
-                        <TableCell className="text-slate-300">{req.related_case_id ?? "N/A"}</TableCell>
-                        <TableCell className="max-w-xs truncate text-slate-400" title={req.reason}>
+                      <TableRow key={req.id} className="border-border hover:bg-accent/40">
+                        <TableCell className="font-semibold">User #{req.requester_id}</TableCell>
+                        <TableCell className="text-primary font-semibold">{req.requested_district}</TableCell>
+                        <TableCell>{req.related_case_id ?? "N/A"}</TableCell>
+                        <TableCell className="max-w-xs truncate text-muted-foreground" title={req.reason}>
                           {req.reason}
                         </TableCell>
-                        <TableCell className="text-slate-300">{req.duration_hours} Hours</TableCell>
-                        <TableCell className="text-slate-400 text-xs">
+                        <TableCell>{req.duration_hours} Hours</TableCell>
+                        <TableCell className="text-muted-foreground text-xs">
                           {new Date(req.requested_at).toLocaleString()}
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              onClick={() => setReviewDialogRequest(req)}
-                              size="sm"
-                              className="bg-sky-600 hover:bg-sky-700 text-white"
-                            >
-                              Review
-                            </Button>
-                          </div>
+                          <Button
+                            onClick={() => setReviewDialogRequest(req)}
+                            size="sm"
+                            variant="outline"
+                          >
+                            Review
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -344,40 +324,44 @@ function SupervisorPage() {
             )}
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-5">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">Active District Containments</h2>
-              <span className="text-xs text-slate-400">Restricting read operations to scoped boundaries</span>
+              <h2 className="text-base font-semibold text-foreground">Active District Containments</h2>
+              <span className="text-xs text-muted-foreground">Restricting read operations to scoped boundaries</span>
             </div>
 
             {assignmentsLoading ? (
-              <div className="flex h-40 items-center justify-center text-slate-400">Loading assignments...</div>
+              <div className="flex h-40 items-center justify-center text-muted-foreground text-sm">
+                Loading assignments…
+              </div>
             ) : assignments.length === 0 ? (
-              <div className="flex h-40 flex-col items-center justify-center gap-2 text-slate-500">
-                <Users className="h-10 w-10 text-slate-600" />
-                <p>No active district assignments found.</p>
+              <div className="flex h-40 flex-col items-center justify-center gap-2 text-muted-foreground">
+                <Users className="h-10 w-10 opacity-30" />
+                <p className="text-sm">No active district assignments found.</p>
               </div>
             ) : (
-              <div className="overflow-hidden border border-slate-800 rounded-lg">
+              <div className="overflow-hidden border border-border rounded-lg">
                 <Table>
-                  <TableHeader className="bg-slate-950/60">
-                    <TableRow className="border-slate-800 hover:bg-transparent">
-                      <TableHead className="text-slate-400 font-medium">Username</TableHead>
-                      <TableHead className="text-slate-400 font-medium">System Role</TableHead>
-                      <TableHead className="text-slate-400 font-medium">Containment District</TableHead>
-                      <TableHead className="text-slate-400 font-medium">Assigned At</TableHead>
-                      <TableHead className="text-slate-400 font-medium text-right">Actions</TableHead>
+                  <TableHeader className="bg-muted/60">
+                    <TableRow className="border-border hover:bg-transparent">
+                      <TableHead className="font-medium">Username</TableHead>
+                      <TableHead className="font-medium">System Role</TableHead>
+                      <TableHead className="font-medium">Containment District</TableHead>
+                      <TableHead className="font-medium">Assigned At</TableHead>
+                      <TableHead className="font-medium text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {assignments.map((asn) => (
-                      <TableRow key={asn.id} className="border-slate-800 hover:bg-slate-800/20">
-                        <TableCell className="font-semibold text-slate-300">{asn.username}</TableCell>
-                        <TableCell className="text-slate-400 text-xs">
-                          <span className="bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full">{asn.role}</span>
+                      <TableRow key={asn.id} className="border-border hover:bg-accent/40">
+                        <TableCell className="font-semibold">{asn.username}</TableCell>
+                        <TableCell>
+                          <span className="bg-muted text-muted-foreground px-2.5 py-1 rounded-full text-xs font-medium">
+                            {asn.role}
+                          </span>
                         </TableCell>
-                        <TableCell className="text-sky-400 font-semibold">{asn.district}</TableCell>
-                        <TableCell className="text-slate-400 text-xs">
+                        <TableCell className="text-primary font-semibold">{asn.district}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs">
                           {new Date(asn.assigned_at).toLocaleString()}
                         </TableCell>
                         <TableCell className="text-right">
@@ -389,7 +373,6 @@ function SupervisorPage() {
                               }}
                               size="sm"
                               variant="outline"
-                              className="border-slate-800 hover:bg-slate-800 text-slate-300"
                             >
                               Reassign
                             </Button>
@@ -397,7 +380,6 @@ function SupervisorPage() {
                               onClick={() => handleRevokeAssignment(asn.id)}
                               size="sm"
                               variant="destructive"
-                              className="bg-red-950/40 hover:bg-red-950/80 text-red-400 border border-red-900/60"
                             >
                               <UserMinus className="h-4 w-4" />
                             </Button>
@@ -415,39 +397,39 @@ function SupervisorPage() {
 
       {/* Review Access Request Dialog */}
       <Dialog open={!!reviewDialogRequest} onOpenChange={(open) => !open && setReviewDialogRequest(null)}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-white">Review Temporary Access Request</DialogTitle>
-            <DialogDescription className="text-slate-400">
-              Reviewing request from Investigator User #{reviewDialogRequest?.requester_id} for district{" "}
-              <span className="text-sky-400 font-semibold">{reviewDialogRequest?.requested_district}</span>.
+            <DialogTitle>Review Temporary Access Request</DialogTitle>
+            <DialogDescription>
+              Reviewing request from User #{reviewDialogRequest?.requester_id} for district{" "}
+              <span className="text-primary font-semibold">{reviewDialogRequest?.requested_district}</span>.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="bg-slate-950/60 p-4 border border-slate-800 rounded-lg text-sm space-y-2">
+          <div className="space-y-4 py-2">
+            <div className="bg-muted/60 p-4 border border-border rounded-lg text-sm space-y-2">
               <div>
-                <span className="text-slate-500 block text-xs">Justification Reason</span>
-                <span className="text-slate-300 font-medium">{reviewDialogRequest?.reason}</span>
+                <span className="text-muted-foreground block text-xs mb-0.5">Justification Reason</span>
+                <span className="font-medium">{reviewDialogRequest?.reason}</span>
               </div>
               <div className="flex gap-6 pt-2">
                 <div>
-                  <span className="text-slate-500 block text-xs">Case ID</span>
-                  <span className="text-slate-300 font-semibold">{reviewDialogRequest?.related_case_id ?? "None Specified"}</span>
+                  <span className="text-muted-foreground block text-xs mb-0.5">Case ID</span>
+                  <span className="font-semibold">{reviewDialogRequest?.related_case_id ?? "None Specified"}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-xs">Duration Limit</span>
-                  <span className="text-slate-300 font-semibold">{reviewDialogRequest?.duration_hours} Hours</span>
+                  <span className="text-muted-foreground block text-xs mb-0.5">Duration Limit</span>
+                  <span className="font-semibold">{reviewDialogRequest?.duration_hours} Hours</span>
                 </div>
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="comment" className="text-slate-300">Decision Comment / Feedback</Label>
+              <Label htmlFor="comment">Decision Comment / Feedback</Label>
               <Textarea
                 id="comment"
-                placeholder="Enter review decision notes, instructions, or conditions..."
+                placeholder="Enter review decision notes, instructions, or conditions…"
                 value={reviewComment}
                 onChange={(e) => setReviewComment(e.target.value)}
-                className="bg-slate-950 border-slate-800 text-white placeholder-slate-600 focus:ring-sky-500 min-h-[80px]"
+                className="min-h-[80px]"
               />
             </div>
           </div>
@@ -456,7 +438,7 @@ function SupervisorPage() {
               onClick={() => handleReviewAction("more-info")}
               disabled={isSubmittingReview}
               variant="outline"
-              className="border-slate-800 hover:bg-slate-800 text-yellow-500 gap-1.5"
+              className="gap-1.5"
             >
               <HelpCircle className="h-4 w-4" />
               Need Info
@@ -465,7 +447,7 @@ function SupervisorPage() {
               onClick={() => handleReviewAction("reject")}
               disabled={isSubmittingReview}
               variant="destructive"
-              className="bg-red-650 hover:bg-red-750 text-white gap-1.5"
+              className="gap-1.5"
             >
               <X className="h-4 w-4" />
               Reject
@@ -473,7 +455,7 @@ function SupervisorPage() {
             <Button
               onClick={() => handleReviewAction("approve")}
               disabled={isSubmittingReview}
-              className="bg-green-605 hover:bg-green-705 text-white gap-1.5"
+              className="gap-1.5"
             >
               <Check className="h-4 w-4" />
               Approve Access
@@ -484,21 +466,21 @@ function SupervisorPage() {
 
       {/* Assign District Dialog */}
       <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-white">New Permanent District Assignment</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogTitle>New Permanent District Assignment</DialogTitle>
+            <DialogDescription>
               Create a database record assigning an investigator to a containment scope.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleCreateAssignment} className="space-y-4 py-4">
+          <form onSubmit={handleCreateAssignment} className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="assignUser" className="text-slate-300">Select Investigator / Analyst</Label>
+              <Label htmlFor="assignUser">Select Investigator / Analyst</Label>
               <Select value={assignUserId} onValueChange={setAssignUserId}>
-                <SelectTrigger className="bg-slate-950 border-slate-800 text-white">
+                <SelectTrigger>
                   <SelectValue placeholder="Select an investigator" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-800 text-white">
+                <SelectContent>
                   {usersList.map((u) => (
                     <SelectItem key={u.id} value={u.id.toString()}>
                       {u.username} ({u.role})
@@ -508,35 +490,24 @@ function SupervisorPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="assignDistrict" className="text-slate-300">Containment District</Label>
+              <Label htmlFor="assignDistrict">Containment District</Label>
               <Select value={assignDistrict} onValueChange={setAssignDistrict}>
-                <SelectTrigger className="bg-slate-950 border-slate-800 text-white">
+                <SelectTrigger>
                   <SelectValue placeholder="Select district" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-800 text-white">
+                <SelectContent>
                   {KARNATAKA_DISTRICTS.map((d) => (
-                    <SelectItem key={d} value={d}>
-                      {d}
-                    </SelectItem>
+                    <SelectItem key={d} value={d}>{d}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <DialogFooter className="pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setAssignDialogOpen(false)}
-                className="border-slate-800 text-slate-300 hover:bg-slate-800"
-              >
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="outline" onClick={() => setAssignDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                disabled={isSubmittingAssign}
-                className="bg-sky-600 hover:bg-sky-700 text-white focus:ring-sky-500"
-              >
-                {isSubmittingAssign ? "Creating..." : "Create Assignment"}
+              <Button type="submit" disabled={isSubmittingAssign}>
+                {isSubmittingAssign ? "Creating…" : "Create Assignment"}
               </Button>
             </DialogFooter>
           </form>
@@ -545,45 +516,34 @@ function SupervisorPage() {
 
       {/* Reassign Dialog */}
       <Dialog open={!!reassignDialogTarget} onOpenChange={(open) => !open && setReassignDialogTarget(null)}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-white">Reassign District Containment</DialogTitle>
-            <DialogDescription className="text-slate-400">
-              Reassign investigator <span className="font-semibold text-slate-200">{reassignDialogTarget?.username}</span> from{" "}
-              <span className="font-semibold text-sky-400">{reassignDialogTarget?.district}</span> to a new district scope.
+            <DialogTitle>Reassign District Containment</DialogTitle>
+            <DialogDescription>
+              Reassign <span className="font-semibold">{reassignDialogTarget?.username}</span> from{" "}
+              <span className="font-semibold text-primary">{reassignDialogTarget?.district}</span> to a new scope.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleReassign} className="space-y-4 py-4">
+          <form onSubmit={handleReassign} className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="reassignDistrict" className="text-slate-300">New Containment District</Label>
+              <Label htmlFor="reassignDistrict">New Containment District</Label>
               <Select value={reassignNewDistrict} onValueChange={setReassignNewDistrict}>
-                <SelectTrigger className="bg-slate-950 border-slate-800 text-white">
+                <SelectTrigger>
                   <SelectValue placeholder="Select new district" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-800 text-white">
+                <SelectContent>
                   {KARNATAKA_DISTRICTS.map((d) => (
-                    <SelectItem key={d} value={d}>
-                      {d}
-                    </SelectItem>
+                    <SelectItem key={d} value={d}>{d}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <DialogFooter className="pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setReassignDialogTarget(null)}
-                className="border-slate-800 text-slate-300 hover:bg-slate-800"
-              >
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="outline" onClick={() => setReassignDialogTarget(null)}>
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                disabled={isSubmittingReassign}
-                className="bg-sky-600 hover:bg-sky-700 text-white focus:ring-sky-500"
-              >
-                {isSubmittingReassign ? "Reassigning..." : "Confirm Reassignment"}
+              <Button type="submit" disabled={isSubmittingReassign}>
+                {isSubmittingReassign ? "Reassigning…" : "Confirm Reassignment"}
               </Button>
             </DialogFooter>
           </form>

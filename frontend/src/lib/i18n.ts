@@ -33,9 +33,6 @@ const en = {
   send: "Send",
   askPlaceholder: "Ask about FIRs, offenders, districts, or trends…",
   analysing: "Assistant is analysing the request…",
-  explainabilityNote:
-    "Responses include the generated SQL and row count for explainability. Every query is audited.",
-  translationNote: "",
   historyTitle: "Conversation history",
   showReasoning: "Show reasoning",
   voiceUnsupported: "Voice input not supported in this browser",
@@ -85,9 +82,6 @@ const kn: typeof en = {
   send: "ಕಳುಹಿಸಿ",
   askPlaceholder: "ಎಫ್‌ಐಆರ್, ಅಪರಾಧಿ, ಜಿಲ್ಲೆ ಅಥವಾ ಪ್ರವೃತ್ತಿಗಳ ಬಗ್ಗೆ ಕೇಳಿ…",
   analysing: "ಸಹಾಯಕ ವಿಶ್ಲೇಷಿಸುತ್ತಿದೆ…",
-  explainabilityNote:
-    "ಪ್ರತಿ ಪ್ರತಿಕ್ರಿಯೆಯು ರಚಿಸಲಾದ SQL ಮತ್ತು ಸಾಲುಗಳ ಎಣಿಕೆಯನ್ನು ಒಳಗೊಂಡಿದೆ. ಎಲ್ಲಾ ಪ್ರಶ್ನೆಗಳು ಆಡಿಟ್ ಆಗಿವೆ.",
-  translationNote: "ಪ್ರತಿಕ್ರಿಯೆ ಅನುವಾದವು ಬ್ಯಾಕೆಂಡ್ ಸಂಯೋಜನೆಗೆ ಅಗತ್ಯವಿದೆ — ಇದೀಗ UI ಲೇಬಲ್‌ಗಳು ಮಾತ್ರ.",
   historyTitle: "ಸಂಭಾಷಣೆ ಇತಿಹಾಸ",
   showReasoning: "ತಾರ್ಕಿಕತೆ ತೋರಿಸಿ",
   voiceUnsupported: "ಈ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಧ್ವನಿ ಇನ್‌ಪುಟ್ ಬೆಂಬಲಿತವಾಗಿಲ್ಲ",
