@@ -76,8 +76,8 @@ apiClient.interceptors.response.use(
 
     // 403 and DISTRICT_NOT_AUTHORIZED — trigger access request modal globally
     if (status === 403) {
-      const detail = error.response?.data?.detail;
-      if (detail && typeof detail === "object" && detail.code === "DISTRICT_NOT_AUTHORIZED") {
+      const detail = (error.response?.data as Record<string, unknown>)?.detail as Record<string, unknown> | undefined;
+      if (detail && typeof detail === "object" && detail["code"] === "DISTRICT_NOT_AUTHORIZED") {
         if (typeof window !== "undefined") {
           window.dispatchEvent(new CustomEvent("district-not-authorized", { detail }));
         }

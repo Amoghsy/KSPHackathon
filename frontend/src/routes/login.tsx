@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { ROLE_DEFAULT_LANDING } from "@/lib/rbac";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -21,7 +22,15 @@ export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
-const ROLES: Role[] = ["Investigator", "Senior Investigator", "Analyst", "Supervisor", "Policymaker"];
+
+// Canonical role identifiers and their human-readable display labels for the login form
+const ROLES: { value: Role; label: string }[] = [
+  { value: "INVESTIGATOR", label: "Investigator" },
+  { value: "SENIOR_INVESTIGATOR", label: "Senior Investigator" },
+  { value: "ANALYST", label: "Analyst" },
+  { value: "SUPERVISOR", label: "Supervisor" },
+  { value: "POLICY_MAKER", label: "Policy Maker" },
+];
 
 function LoginPage() {
   const login = useAuthStore((s) => s.login);
@@ -32,7 +41,7 @@ function LoginPage() {
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<Role>("Investigator");
+  const [role, setRole] = useState<Role>("INVESTIGATOR");
 
   useEffect(() => {
     if (user) navigate({ to: "/" });
@@ -44,7 +53,9 @@ function LoginPage() {
     try {
       await login({ username, password, role });
       toast.success("Signed in successfully");
-      navigate({ to: "/" });
+      // Navigate to role-appropriate landing page
+      const landing = ROLE_DEFAULT_LANDING[role] ?? "/";
+      navigate({ to: landing as string });
     } catch {
       // error is already set in the store; toast for visibility
       toast.error("Sign in failed", {
@@ -134,8 +145,8 @@ function LoginPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {ROLES.map((r) => (
-                    <SelectItem key={r} value={r}>
-                      {r}
+                    <SelectItem key={r.value} value={r.value}>
+                      {r.label}
                     </SelectItem>
                   ))}
                 </SelectContent>

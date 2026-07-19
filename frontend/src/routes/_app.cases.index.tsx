@@ -50,7 +50,7 @@ function statusBadge(s: string) {
 function CasesPage() {
   const user = useAuthStore((s) => s.user);
   const canSeeSensitive = hasPermission(user, PERMISSIONS.SENSITIVE_CASE_ACCESS);
-  const hideVictimColumn = user?.role === "Policymaker";
+  const hideVictimColumn = user?.role === "POLICY_MAKER";
 
   const { data: metadata } = useQuery({
     queryKey: ["casesMetadata"],

@@ -60,8 +60,14 @@ function NetworkPage() {
   const navigate = useNavigate({ from: Route.fullPath });
   const filters = Route.useSearch();
   const rbac = useRBAC();
-  const { user, role } = rbac;
-  const isSuperOrAdmin = role === "Supervisor" || role === "Admin" || role === "Analyst" || role === "Policymaker" || role === "Policy Maker";
+  const { user } = rbac;
+  // Roles that see aggregated/all-district data: Analyst, Policy Maker, Supervisor, Administrator
+  // (i.e., roles that do not have ABAC-scoped district assignments for investigative data)
+  const isSuperOrAdmin =
+    user?.role === "SUPERVISOR" ||
+    user?.role === "ANALYST" ||
+    user?.role === "POLICY_MAKER" ||
+    user?.role === "ADMINISTRATOR";
   const userDistricts = user?.assignedDistricts ?? [];
 
   const { data, isLoading } = useQuery({

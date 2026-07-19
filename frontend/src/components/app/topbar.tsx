@@ -14,8 +14,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { hasPermission, PERMISSIONS } from "@/lib/rbac";
 
 import { LanguageSelector } from "./LanguageSelector";
+
+// Role badge color — uses canonical uppercase role names only
+const ROLE_COLORS: Record<string, string> = {
+  SUPERVISOR: "bg-primary text-primary-foreground",
+  SENIOR_INVESTIGATOR: "bg-destructive text-destructive-foreground",
+  INVESTIGATOR: "bg-info text-info-foreground",
+  ANALYST: "bg-chart-2/20 text-chart-2",
+  POLICY_MAKER: "bg-warning text-warning-foreground",
+  ADMINISTRATOR: "bg-rose-700 text-white",
+};
 
 export function Topbar() {
   const user = useAuthStore((s) => s.user);
@@ -31,14 +42,9 @@ export function Topbar() {
       .slice(-2)
       .join("") ?? "?";
 
-  const roleColor: Record<string, string> = {
-    Supervisor: "bg-primary text-primary-foreground",
-    "Senior Investigator": "bg-destructive text-destructive-foreground",
-    Investigator: "bg-info text-info-foreground",
-    Analyst: "bg-chart-2/20 text-chart-2",
-    Policymaker: "bg-warning text-warning-foreground",
-    Admin: "bg-red-500 text-white",
-  };
+  // Global search is only shown to roles with SEARCH_CASES permission.
+  // ADMINISTRATOR does not have SEARCH_CASES — they must not search investigative data.
+  const canSearch = hasPermission(user, PERMISSIONS.SEARCH_CASES);
 
   return (
     <header
@@ -65,18 +71,25 @@ export function Topbar() {
         </div>
       </div>
 
-      {/* Middle: search */}
+      {/* Middle: search — only shown to roles with SEARCH_CASES permission */}
       <div className="min-w-0 relative">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-        <input
-          type="text"
-          placeholder={t("search")}
-          className={cn(
-            "w-full h-9 rounded-lg border border-input/70 bg-background/60 backdrop-blur-md",
-            "pl-9 pr-3 text-sm placeholder:text-muted-foreground",
-            "focus:outline-none focus:ring-2 focus:ring-ring/40 focus:bg-background/90 transition-colors",
-          )}
-        />
+        {canSearch ? (
+          <>
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              placeholder={t("search")}
+              className={cn(
+                "w-full h-9 rounded-lg border border-input/70 bg-background/60 backdrop-blur-md",
+                "pl-9 pr-3 text-sm placeholder:text-muted-foreground",
+                "focus:outline-none focus:ring-2 focus:ring-ring/40 focus:bg-background/90 transition-colors",
+              )}
+            />
+          </>
+        ) : (
+          // Show a non-functional placeholder so layout is consistent, but no searchable input
+          <div className="w-full h-9" aria-hidden="true" />
+        )}
       </div>
 
       {/* Right cluster */}
@@ -115,7 +128,7 @@ export function Topbar() {
               <Badge
                 className={cn(
                   "hidden xl:inline-flex ml-1 text-[10px]",
-                  roleColor[user?.role ?? ""],
+                  ROLE_COLORS[user?.role ?? ""],
                 )}
               >
                 {user?.role}
@@ -126,7 +139,7 @@ export function Topbar() {
             <DropdownMenuLabel>
               <div className="text-sm font-medium">{user?.name}</div>
               <div className="text-xs text-muted-foreground">{user?.station}</div>
-              <Badge className={cn("mt-1.5 text-[10px]", roleColor[user?.role ?? ""])}>
+              <Badge className={cn("mt-1.5 text-[10px]", ROLE_COLORS[user?.role ?? ""])}>
                 {user?.role}
               </Badge>
             </DropdownMenuLabel>
@@ -136,8 +149,10 @@ export function Topbar() {
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
+                // Use canonical role check — ADMINISTRATOR goes to admin-login, all others to /login
+                const isAdmin = user?.role === "ADMINISTRATOR";
                 logout();
-                navigate({ to: "/login" });
+                navigate({ to: isAdmin ? "/admin-login" : "/login" });
               }}
               className="text-destructive focus:text-destructive"
             >

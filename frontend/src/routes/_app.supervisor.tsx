@@ -46,12 +46,15 @@ export const Route = createFileRoute("/_app/supervisor")({
   beforeLoad: () => {
     if (typeof window === "undefined") return;
     const user = useAuthStore.getState().user;
-    if (user?.role !== "SUPERVISOR" && user?.role !== "ADMINISTRATOR") {
+    // Only SUPERVISOR has ASSIGN_DISTRICTS / APPROVE_ACCESS_REQUESTS.
+    // ADMINISTRATOR is a platform admin — NOT a supervisory officer.
+    const isAuthorized = user?.role === "SUPERVISOR";
+    if (!isAuthorized) {
       throw redirect({
         to: "/access-restricted",
         search: {
-          module: "Supervisor Console",
-          required: requiredRoleLabel([PERMISSIONS.VIEW_AUDIT_LOGS]),
+          module: "Supervisor Panel",
+          required: requiredRoleLabel([PERMISSIONS.ASSIGN_DISTRICTS]),
           from: "/supervisor",
         },
       });
@@ -105,15 +108,9 @@ function SupervisorPage() {
   const [isSubmittingReassign, setIsSubmittingReassign] = useState(false);
 
   useEffect(() => {
-    if (currentUser) {
-      if (currentUser.role === "SUPERVISOR") {
-        loadRequests();
-        loadAssignments();
-      } else if (currentUser.role === "ADMINISTRATOR") {
-        loadUsers();
-        setRequestsLoading(false);
-        setAssignmentsLoading(false);
-      }
+    if (currentUser && currentUser.role === "SUPERVISOR") {
+      loadRequests();
+      loadAssignments();
     }
   }, [currentUser]);
 
@@ -257,15 +254,7 @@ function SupervisorPage() {
         </div>
       </div>
 
-      {currentUser?.role === "ADMINISTRATOR" && (
-        <Alert className="border-amber-900 bg-amber-950/20 text-amber-300">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Administrative View Mode Only</AlertTitle>
-          <AlertDescription>
-            You are logged in as an Administrator. Access request approvals and investigator containments are supervised and managed by regional Supervisors. Log in with a Supervisor account to review requests or assign scopes.
-          </AlertDescription>
-        </Alert>
-      )}
+{/* ADMINISTRATOR cannot reach this page — route guard redirects them */}
 
       {/* Tabs Navigation */}
       <div className="flex border-b border-slate-800">

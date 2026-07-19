@@ -339,7 +339,7 @@ function AdminPage() {
                   </TableHeader>
                   <TableBody>
                     {users.map((u) => {
-                      const isAdmin = u.role === "ADMINISTRATOR" || u.role === "Admin";
+                      const isAdmin = u.role === "ADMINISTRATOR";
                       const isSelf = u.username === currentUser.username;
 
                       return (
@@ -366,7 +366,7 @@ function AdminPage() {
                             <span
                               className={`text-[11px] px-2 py-0.5 rounded-full font-medium inline-block ${isAdmin
                                 ? "bg-primary/10 text-primary border border-primary/20"
-                                : (u.role === "SUPERVISOR" || u.role === "Supervisor")
+                                : (u.role === "SUPERVISOR")
                                   ? "bg-warning/10 text-warning border border-warning/20"
                                   : "bg-muted/60 text-muted-foreground border border-border"
                                 }`}

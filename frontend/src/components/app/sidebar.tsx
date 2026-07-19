@@ -13,6 +13,7 @@ import {
   Settings as SettingsIcon,
   ChevronLeft,
   ShieldAlert,
+  Shield,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth";
 import { usePrefs } from "@/stores/prefs";
@@ -20,10 +21,17 @@ import { useT, type DictKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { hasAnyPermission, PERMISSIONS, type Permission } from "@/lib/rbac";
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CENTRAL NAVIGATION DEFINITION
+// Each item declares which permission is required to see it.
+// Sidebar filters this list — unauthorized items are NEVER RENDERED.
+// Do NOT add role-specific conditions here. Use permissions only.
+// ─────────────────────────────────────────────────────────────────────────────
 interface NavItem {
   to: string;
   labelKey: DictKey;
   icon: React.ComponentType<{ className?: string }>;
+  /** If omitted or empty, item is visible to all authenticated users (e.g. Settings). */
   permissions?: Permission[];
 }
 
@@ -38,7 +46,7 @@ const NAV: NavItem[] = [
     to: "/dashboard",
     labelKey: "dashboard",
     icon: LayoutDashboard,
-    permissions: [PERMISSIONS.SEARCH_CASES],
+    permissions: [PERMISSIONS.DASHBOARD],
   },
   {
     to: "/network",
@@ -62,7 +70,7 @@ const NAV: NavItem[] = [
     to: "/sociological",
     labelKey: "sociological",
     icon: PieChart,
-    permissions: [PERMISSIONS.PATTERN_ANALYSIS],
+    permissions: [PERMISSIONS.PATTERN_INTELLIGENCE],
   },
   {
     to: "/cases",
@@ -80,12 +88,36 @@ const NAV: NavItem[] = [
     to: "/alerts",
     labelKey: "alerts",
     icon: AlertTriangle,
-    permissions: [PERMISSIONS.PATTERN_ANALYSIS],
+    permissions: [PERMISSIONS.PATTERN_INTELLIGENCE],
   },
-  { to: "/audit", labelKey: "audit", icon: ClipboardList, permissions: [PERMISSIONS.VIEW_AUDIT_LOGS] },
-  { to: "/supervisor", labelKey: "supervisor", icon: Users, permissions: [PERMISSIONS.VIEW_AUDIT_LOGS] },
-  { to: "/settings", labelKey: "settings", icon: SettingsIcon },
-  { to: "/admin", labelKey: "admin", icon: ShieldAlert, permissions: [PERMISSIONS.MANAGE_USERS] },
+  {
+    to: "/audit",
+    labelKey: "audit",
+    icon: ClipboardList,
+    permissions: [PERMISSIONS.VIEW_AUDIT_LOGS],
+  },
+  {
+    // Supervisor Panel: requires supervisory capability — NOT admin permission.
+    // ADMINISTRATOR does not have ASSIGN_DISTRICTS or APPROVE_ACCESS_REQUESTS.
+    to: "/supervisor",
+    labelKey: "supervisor",
+    icon: Shield,
+    permissions: [PERMISSIONS.ASSIGN_DISTRICTS, PERMISSIONS.APPROVE_ACCESS_REQUESTS],
+  },
+  {
+    // Admin Console: only users who can manage the platform
+    to: "/admin",
+    labelKey: "admin",
+    icon: ShieldAlert,
+    permissions: [PERMISSIONS.MANAGE_USERS],
+  },
+  {
+    // Settings: accessible to all authenticated users (personal preferences)
+    to: "/settings",
+    labelKey: "settings",
+    icon: SettingsIcon,
+    // No permissions field → visible to all authenticated users
+  },
 ];
 
 import { useRBAC } from "@/hooks/useRBAC";
@@ -102,6 +134,9 @@ export function DynamicSidebar({ forceExpanded, onNavigate }: SidebarProps = {})
   const t = useT();
 
   const collapsed = forceExpanded ? false : sidebarCollapsed;
+
+  // ── Core filtering: only render items the current user has permission for.
+  // Items without permissions are visible to all authenticated users.
   const items = NAV.filter((n) => !n.permissions || hasAnyPermission(user, n.permissions));
 
   return (

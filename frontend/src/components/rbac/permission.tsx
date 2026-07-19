@@ -144,8 +144,8 @@ export function MaskField({
   const user = useAuthStore((s) => s.user);
   if (hasPermission(user, permission)) return <>{value ?? ""}</>;
   
-  // Policymaker hides sensitive fields entirely.
-  if (user?.role === "Policymaker" || user?.role === "Policy Maker") {
+  // Policy Maker hides sensitive fields entirely.
+  if (user?.role === "POLICY_MAKER") {
     return <span className="text-muted-foreground/60 italic" title="Hidden for Policy Maker">{hiddenText}</span>;
   }
 
