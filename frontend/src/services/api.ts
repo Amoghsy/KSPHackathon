@@ -116,9 +116,67 @@ export async function listOffenders(params?: {
   return response as { items: any[]; total: number };
 }
 
+export async function getOffenderRisk(id: string): Promise<any | null> {
+  try {
+    return await apiGet<any>(`/risk/offender/${id}`);
+  } catch (err) {
+    console.error("Error fetching offender risk:", err);
+    return null;
+  }
+}
+
+export async function getRiskSummary(district?: string): Promise<any | null> {
+  try {
+    return await apiGet<any>("/risk/summary", { district });
+  } catch (err) {
+    console.error("Error fetching risk summary:", err);
+    return null;
+  }
+}
+
+export async function getOffenderIntelligence(id: string): Promise<any | null> {
+  try {
+    return await apiGet<any>("/risk/intelligence", { accused_id: id });
+  } catch (err) {
+    console.error("Error fetching offender intelligence:", err);
+    return null;
+  }
+}
+
+export async function getAdvancedForecast(params?: {
+  district?: string;
+  crimeType?: string;
+  periods?: number;
+}) {
+  try {
+    let crimeType = params?.crimeType;
+    if (crimeType === "Cybercrime") {
+      crimeType = "Cyber Fraud";
+    }
+    const apiParams = {
+      district: params?.district === "All" || params?.district === "" ? undefined : params?.district,
+      crime_type: crimeType === "All" || crimeType === "" ? undefined : crimeType,
+      periods: params?.periods ?? 3,
+    };
+    return await apiGet<any>("/forecasting/crime", apiParams);
+  } catch (err) {
+    console.error("Error fetching advanced forecast:", err);
+    return null;
+  }
+}
+
 export async function getOffender(id: string): Promise<any | null> {
   try {
     const response = await getAccused(id);
+    if (response) {
+      const risk = await getOffenderRisk(id);
+      if (risk) {
+        response.risk_score = risk.risk_score;
+        response.risk_level = risk.risk_level;
+        response.risk_factors = risk.risk_factors;
+        response.behavioral_tags = risk.behavioral_tags;
+      }
+    }
     return response ?? null;
   } catch (err) {
     console.error("Error fetching offender details:", err);

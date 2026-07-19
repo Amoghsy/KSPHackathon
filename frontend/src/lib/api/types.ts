@@ -164,3 +164,14 @@ export interface UserCreatePayload {
   password: string;
   role: string;
 }
+
+// ─── District Assignments ────────────────────────────────────────────────────
+
+export interface DistrictAssignmentRecord {
+  id: number;
+  user_id: number;
+  username: string;
+  role: string;
+  district: string;
+  assigned_at: string;
+}

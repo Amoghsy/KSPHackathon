@@ -223,7 +223,7 @@ class TestSQLGenerator:
             mock_factory.create.return_value = mock_provider
             gen = SQLGenerator()
             with pytest.raises(ValueError, match="empty"):
-                asyncio.get_event_loop().run_until_complete(gen.generate(""))
+                asyncio.run(gen.generate(""))
 
 
 # ========================================================================

@@ -15,6 +15,7 @@ import type {
   AccusedResponse,
   UserResponse,
   UserCreatePayload,
+  DistrictAssignmentRecord,
 } from "./types";
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
@@ -178,5 +179,20 @@ export async function addInvestigationHistory(body: { name: string; entity_type:
   return apiPost<any>(`/audit/history?name=${encodeURIComponent(body.name)}&entity_type=${encodeURIComponent(body.entity_type)}&entity_id=${encodeURIComponent(body.entity_id)}`);
 }
 
+// ─── Supervisor District Assignments (Admin only) ─────────────────────────────
 
+/** List all active assignments for investigators/supervisors */
+export async function listSupervisorAssignments(): Promise<DistrictAssignmentRecord[]> {
+  return apiGet<DistrictAssignmentRecord[]>("/security/district-assignments/investigators");
+}
+
+/** Assign a supervisor to a district permanently */
+export async function assignSupervisorDistrict(user_id: number, district: string): Promise<any> {
+  return apiPost<any>("/security/district-assignments", { user_id, district });
+}
+
+/** Deactivate / revoke a permanent district assignment by assignment ID */
+export async function revokeSupervisorAssignment(assignmentId: number): Promise<any> {
+  return apiDelete<any>(`/security/district-assignments/${assignmentId}`);
+}
 

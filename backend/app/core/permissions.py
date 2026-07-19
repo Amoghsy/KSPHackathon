@@ -12,7 +12,7 @@ from app.models.access_request import TemporaryDistrictPermission
 
 # Roles that are NOT district-scoped — they see all districts without assignment.
 # RBAC controls which features they can access; ABAC does NOT restrict their data by district.
-_UNRESTRICTED_ROLES = {"SUPERVISOR", "ANALYST", "POLICY_MAKER"}
+_UNRESTRICTED_ROLES = {"ANALYST", "POLICY_MAKER"}
 
 # Sentinel value returned for unrestricted roles so callers know not to filter by district.
 _ALL_DISTRICTS_SENTINEL = "__ALL__"
@@ -31,25 +31,27 @@ def require_permission(permission: str) -> Callable:
     return dependency
 
 
-async def get_user_authorized_districts(user: dict, db: AsyncSession) -> list[str]:
+async def get_user_authorized_districts(user: dict | None, db: AsyncSession) -> list[str]:
     """
     Retrieve all authorized districts for a user dynamically from the database.
     Includes active permanent assignments and valid temporary permissions.
 
     Returns:
       - [] for ADMINISTRATOR (no investigative data access)
-      - [\"__ALL__\"] for SUPERVISOR, ANALYST, POLICY_MAKER (unrestricted state-wide view)
-      - list of assigned district names for INVESTIGATOR and SENIOR_INVESTIGATOR
+      - [\"__ALL__\"] for ANALYST, POLICY_MAKER (unrestricted state-wide view)
+      - list of assigned district names for INVESTIGATOR, SENIOR_INVESTIGATOR, and SUPERVISOR
 
     Use resolve_authorized_districts() when passing to service/repository queries.
     """
+    if not user:
+        return [_ALL_DISTRICTS_SENTINEL]
     role = normalize_role(user.get("role"))
 
     # Platform administrators have no investigative district access
     if role == "ADMINISTRATOR":
         return []
 
-    # Supervisors, analysts, and policy makers are not district-scoped.
+    # Analysts and policy makers are not district-scoped.
     # They see all data across the state without requiring explicit assignments.
     if role in _UNRESTRICTED_ROLES:
         return [_ALL_DISTRICTS_SENTINEL]
@@ -96,7 +98,7 @@ def resolve_authorized_districts(districts: list[str]) -> list[str] | None:
     return districts
 
 
-async def verify_district_access(user: dict, district: str | None, db: AsyncSession) -> str:
+async def verify_district_access(user: dict | None, district: str | None, db: AsyncSession) -> str:
     """
     ABAC validator for district level data containment.
     Verifies if the user is authorized to access the requested district.
@@ -104,8 +106,13 @@ async def verify_district_access(user: dict, district: str | None, db: AsyncSess
 
     Raises 403 Forbidden with a structured JSON detail payload if unauthorized.
 
-    For unrestricted roles (SUPERVISOR, ANALYST, POLICY_MAKER), any district is allowed.
+    For unrestricted roles (ANALYST, POLICY_MAKER), any district is allowed.
     """
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User authentication context is missing.",
+        )
     role = normalize_role(user.get("role"))
     authorized = await get_user_authorized_districts(user, db)
 
