@@ -22,13 +22,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { 
-  ShieldAlert, 
-  UserPlus, 
-  Trash2, 
-  Shield, 
-  Users, 
-  Lock, 
+import {
+  ShieldAlert,
+  UserPlus,
+  Trash2,
+  Shield,
+  Users,
+  Lock,
   AlertCircle,
   Loader2,
   CheckCircle2,
@@ -44,7 +44,7 @@ export const Route = createFileRoute("/_app/admin")({
   beforeLoad: () => {
     if (typeof window === "undefined") return;
     const user = useAuthStore.getState().user;
-    if (user?.role !== "Admin") {
+    if (user?.role !== "ADMINISTRATOR") {
       throw redirect({
         to: "/access-restricted",
         search: {
@@ -58,21 +58,21 @@ export const Route = createFileRoute("/_app/admin")({
   component: AdminPage,
 });
 
-const ROLES: Role[] = ["Investigator", "Analyst", "Supervisor", "Policymaker", "Admin"];
+const ROLES: Role[] = ["INVESTIGATOR", "ANALYST", "SUPERVISOR", "POLICY_MAKER", "ADMINISTRATOR"];
 
 function AdminPage() {
   const currentUser = useAuthStore((s) => s.user);
   const navigate = useNavigate();
-  
+
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Form State
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<Role>("Investigator");
+  const [role, setRole] = useState<Role>("INVESTIGATOR");
   const [creating, setCreating] = useState(false);
-  
+
   // Dashboard stats
   const [stats, setStats] = useState<any>({
     activeUsers: 1,
@@ -83,13 +83,13 @@ function AdminPage() {
     totalReportsGenerated: 2
   });
   const [statsLoading, setStatsLoading] = useState(true);
-  
+
   // Deleting State
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (currentUser && currentUser.role !== "Admin") {
+    if (currentUser && currentUser.role !== "ADMINISTRATOR") {
       toast.error("Access denied", {
         description: "You do not have permission to view the Admin Console.",
       });
@@ -99,6 +99,7 @@ function AdminPage() {
       loadStats();
     }
   }, [currentUser, navigate]);
+
 
   async function loadStats() {
     setStatsLoading(true);
@@ -134,7 +135,7 @@ function AdminPage() {
       toast.warning("Missing Fields", { description: "Please enter both username and password." });
       return;
     }
-    
+
     setCreating(true);
     try {
       await createUser({
@@ -142,12 +143,12 @@ function AdminPage() {
         password: password.trim(),
         role: role,
       });
-      toast.success("User Created", { 
-        description: `Successfully added ${username} as a ${role}.` 
+      toast.success("User Created", {
+        description: `Successfully added ${username} as a ${role}.`
       });
       setUsername("");
       setPassword("");
-      setRole("Investigator");
+      setRole("INVESTIGATOR");
       await loadUsers();
     } catch (err: any) {
       const msg = err?.response?.data?.detail ?? "Failed to create user.";
@@ -174,7 +175,7 @@ function AdminPage() {
     }
   }
 
-  if (!currentUser || currentUser.role !== "Admin") {
+  if (!currentUser || currentUser.role !== "ADMINISTRATOR") {
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh] px-4 text-center">
         <div className="p-4 rounded-full bg-destructive/10 text-destructive mb-4 animate-bounce">
@@ -193,15 +194,15 @@ function AdminPage() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
-      <PageHeader 
-        title="Admin Console" 
+      <PageHeader
+        title="Admin Console"
         subtitle="Manage SCRB security keys, user accounts, and database roles."
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* User Registration Form */}
         <div className="lg:col-span-1 space-y-6">
-          <section 
+          <section
             className="rounded-xl glass-strong p-6 relative overflow-hidden"
             style={{
               boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.3)",
@@ -210,7 +211,7 @@ function AdminPage() {
           >
             {/* Ambient accent blob inside the card */}
             <div className="absolute -right-16 -top-16 h-32 w-32 bg-primary/10 rounded-full blur-2xl pointer-events-none" />
-            
+
             <div className="flex items-center gap-2 mb-4">
               <UserPlus className="h-5 w-5 text-primary" />
               <h2 className="text-lg font-semibold text-foreground">Register User</h2>
@@ -249,9 +250,9 @@ function AdminPage() {
 
               <div className="space-y-1.5">
                 <Label htmlFor="reg-r">System Role</Label>
-                <Select 
-                  value={role} 
-                  onValueChange={(v) => setRole(v as Role)} 
+                <Select
+                  value={role}
+                  onValueChange={(v) => setRole(v as Role)}
                   disabled={creating}
                 >
                   <SelectTrigger id="reg-r" className="bg-background/40">
@@ -295,7 +296,7 @@ function AdminPage() {
 
         {/* Registered Users List */}
         <div className="lg:col-span-2">
-          <section 
+          <section
             className="rounded-xl glass p-6 h-full"
             style={{
               boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.2)",
@@ -338,9 +339,9 @@ function AdminPage() {
                   </TableHeader>
                   <TableBody>
                     {users.map((u) => {
-                      const isAdmin = u.role === "Admin";
+                      const isAdmin = u.role === "ADMINISTRATOR" || u.role === "Admin";
                       const isSelf = u.username === currentUser.username;
-                      
+
                       return (
                         <TableRow key={u.id} className="hover:bg-muted/25 transition-colors">
                           <TableCell className="text-center font-mono text-xs text-muted-foreground">
@@ -362,14 +363,13 @@ function AdminPage() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <span 
-                              className={`text-[11px] px-2 py-0.5 rounded-full font-medium inline-block ${
-                                isAdmin 
-                                  ? "bg-primary/10 text-primary border border-primary/20" 
-                                  : u.role === "Supervisor"
+                            <span
+                              className={`text-[11px] px-2 py-0.5 rounded-full font-medium inline-block ${isAdmin
+                                ? "bg-primary/10 text-primary border border-primary/20"
+                                : (u.role === "SUPERVISOR" || u.role === "Supervisor")
                                   ? "bg-warning/10 text-warning border border-warning/20"
                                   : "bg-muted/60 text-muted-foreground border border-border"
-                              }`}
+                                }`}
                             >
                               {u.role}
                             </span>
@@ -428,7 +428,7 @@ function AdminPage() {
       </div>
 
       {/* User Activity Dashboard */}
-      <section 
+      <section
         className="rounded-xl glass p-6 mt-6 bg-card"
         style={{
           boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.2)",
@@ -439,7 +439,7 @@ function AdminPage() {
           <Activity className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-semibold text-foreground">User Activity Dashboard</h2>
         </div>
-        
+
         {statsLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Skeleton className="h-24 w-full" />

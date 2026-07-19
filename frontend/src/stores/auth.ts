@@ -6,7 +6,7 @@ import { loginUser } from "@/lib/api/services";
 import type { LoginRequest } from "@/lib/api/types";
 import { getPermissionsForRole, type Permission } from "@/lib/rbac";
 
-export type Role = "Investigator" | "Senior Investigator" | "Analyst" | "Supervisor" | "Policymaker" | "Admin";
+export type Role = "INVESTIGATOR" | "SENIOR_INVESTIGATOR" | "ANALYST" | "SUPERVISOR" | "POLICY_MAKER" | "ADMINISTRATOR";
 
 export interface AuthUser {
   id: string;
@@ -34,19 +34,15 @@ interface AuthState {
 }
 
 function normalizeRole(role?: string): Role {
-  if (role === "Policy Maker") return "Policymaker";
-  if (role === "Administrator") return "Admin";
-  if (
-    role === "Investigator" ||
-    role === "Senior Investigator" ||
-    role === "Analyst" ||
-    role === "Supervisor" ||
-    role === "Policymaker" ||
-    role === "Admin"
-  ) {
-    return role;
-  }
-  return "Investigator";
+  if (!role) return "INVESTIGATOR";
+  const r = role.toUpperCase().replace(" ", "_");
+  if (r === "ADMIN" || r === "ADMINISTRATOR") return "ADMINISTRATOR";
+  if (r === "POLICYMAKER" || r === "POLICY_MAKER") return "POLICY_MAKER";
+  if (r === "SENIOR_INVESTIGATOR") return "SENIOR_INVESTIGATOR";
+  if (r === "INVESTIGATOR") return "INVESTIGATOR";
+  if (r === "ANALYST") return "ANALYST";
+  if (r === "SUPERVISOR") return "SUPERVISOR";
+  return "INVESTIGATOR";
 }
 
 const DISPLAY_NAMES: Record<string, string> = {
@@ -94,15 +90,15 @@ export const useAuthStore = create<AuthState>()(
 
           // Prepend correct role prefix
           let displayName = rawName;
-          if (role === "Supervisor") {
+          if (role === "SUPERVISOR") {
             displayName = `SP ${rawName}`;
-          } else if (role === "Senior Investigator") {
+          } else if (role === "SENIOR_INVESTIGATOR") {
             displayName = `DySP ${rawName}`;
-          } else if (role === "Investigator") {
+          } else if (role === "INVESTIGATOR") {
             displayName = `Insp. ${rawName}`;
-          } else if (role === "Policymaker") {
+          } else if (role === "POLICY_MAKER") {
             displayName = `Dr. ${rawName}`;
-          } else if (role === "Admin") {
+          } else if (role === "ADMINISTRATOR") {
             displayName = `Admin ${rawName}`;
           }
 
@@ -125,13 +121,13 @@ export const useAuthStore = create<AuthState>()(
               role,
               permissions: getPermissionsForRole(role),
               assignedDistricts:
-                role === "Investigator"
+                role === "INVESTIGATOR"
                   ? ["Bengaluru Urban"]
-                  : role === "Senior Investigator"
+                  : role === "SENIOR_INVESTIGATOR"
                     ? ["Bengaluru Urban", "Bengaluru Rural", "Mysuru"]
                     : [],
               assignedPoliceStations:
-                role === "Investigator" ? ["SCRB HQ, Bengaluru"] : [],
+                role === "INVESTIGATOR" ? ["SCRB HQ, Bengaluru"] : [],
               badgeNo: badgeNo,
               station: "SCRB HQ, Bengaluru",
             },

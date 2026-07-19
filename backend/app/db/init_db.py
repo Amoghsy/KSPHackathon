@@ -37,7 +37,7 @@ async def seed_default_admin() -> None:
                 new_admin = User(
                     username="admin",
                     hashed_password=hashed_pw,
-                    role=UserRole.ADMIN.value,
+                    role=UserRole.ADMINISTRATOR.value,
                 )
                 db.add(new_admin)
                 await db.commit()

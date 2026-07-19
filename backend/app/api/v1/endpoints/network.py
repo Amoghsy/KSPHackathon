@@ -5,7 +5,7 @@ from app.db.session import get_db
 from app.agents.network_agent.network_agent import NetworkAgent
 from app.services.graph.graph_service import GraphService
 from app.core.security import get_current_user
-from app.core.permissions import require_permission, verify_district_access
+from app.core.permissions import require_permission, verify_district_access, get_user_authorized_districts
 from app.core.rbac import Permission, check_permission
 from app.utils.masking import mask_name
 
@@ -31,7 +31,8 @@ async def get_network(
     await check_perm(current_user)
 
     # ABAC: Enforce district access containment
-    allowed_district = verify_district_access(current_user, district)
+    allowed_district = await verify_district_access(current_user, district, db)
+    auth_districts = await get_user_authorized_districts(current_user, db)
 
     agent = NetworkAgent()
     data = await agent.analyze_network(
@@ -41,6 +42,7 @@ async def get_network(
         police_station=police_station,
         time_period=time_period,
         focus_id=focus_id,
+        authorized_districts=auth_districts,
     )
 
     # Sensitive data masking: mask victim names and accused names if no sensitive access
@@ -76,11 +78,9 @@ async def expand_node(
     """
     Get 1-degree neighbors of a node for lazy-loading.
     """
-    check_perm = require_permission(Permission.CRIMINAL_NETWORK)
-    await check_perm(current_user)
-
+    auth_districts = await get_user_authorized_districts(current_user, db)
     service = GraphService(db)
-    data = await service.get_node_expansion_data(node_id, kind)
+    data = await service.get_node_expansion_data(node_id, kind, authorized_districts=auth_districts)
 
     # Mask if necessary
     has_sensitive_access = check_permission(current_user["role"], Permission.SENSITIVE_CASE_ACCESS)
@@ -128,7 +128,7 @@ async def get_accused_network(
     # ABAC: check district access if the node has one in metadata
     district = accused_node.get("metadata", {}).get("district")
     if district:
-        verify_district_access(current_user, district)
+        await verify_district_access(current_user, district, db)
 
     target_id = accused_node["id"]
     connected_nodes = {target_id}
@@ -198,7 +198,7 @@ async def get_case_network(
     # ABAC: Check district
     district = case_node.get("metadata", {}).get("district")
     if district:
-        verify_district_access(current_user, district)
+        await verify_district_access(current_user, district, db)
 
     target_id = case_node["id"]
     connected_nodes = {target_id}
@@ -238,8 +238,9 @@ async def get_network_communities(
     check_perm = require_permission(Permission.GANG_DETECTION)
     await check_perm(current_user)
 
+    auth_districts = await get_user_authorized_districts(current_user, db)
     service = GraphService(db)
-    data = await service.get_criminal_network_data()
+    data = await service.get_criminal_network_data(authorized_districts=auth_districts)
     return {"communities": data["communities"]}
 
 
@@ -254,8 +255,9 @@ async def get_repeat_offenders(
     check_perm = require_permission(Permission.CRIMINAL_NETWORK)
     await check_perm(current_user)
 
+    auth_districts = await get_user_authorized_districts(current_user, db)
     service = GraphService(db)
-    data = await service.get_criminal_network_data()
+    data = await service.get_criminal_network_data(authorized_districts=auth_districts)
 
     # Mask if necessary
     has_sensitive_access = check_permission(current_user["role"], Permission.SENSITIVE_CASE_ACCESS)
@@ -278,8 +280,9 @@ async def get_network_analytics(
     check_perm = require_permission(Permission.CRIMINAL_NETWORK)
     await check_perm(current_user)
 
+    auth_districts = await get_user_authorized_districts(current_user, db)
     service = GraphService(db)
-    data = await service.get_criminal_network_data()
+    data = await service.get_criminal_network_data(authorized_districts=auth_districts)
     return {
         "density": data["density"],
         "node_count": data["node_count"],

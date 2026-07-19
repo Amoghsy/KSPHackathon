@@ -24,6 +24,14 @@ async def get_accused_list(
     check_perm = require_permission(Permission.SEARCH_CASES)
     await check_perm(current_user)
 
+    # Policy Makers cannot view raw accused profiles
+    from app.core.rbac import normalize_role
+    if normalize_role(current_user.get("role")) == "POLICY_MAKER":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Policy Makers are not authorized to view raw accused profiles."
+        )
+
     service = AccusedService(db)
     result = await service.list_offenders_paginated(q=q, page=page, page_size=pageSize)
 
@@ -35,7 +43,7 @@ async def get_accused_list(
     for item in result.get("items", []):
         try:
             # If verify_district_access raises HTTPException, it means they are not allowed to view this district
-            verify_district_access(current_user, item.get("lastKnown"))
+            await verify_district_access(current_user, item.get("lastKnown"), db)
             
             # Apply masking if necessary
             if not has_sensitive_access:
@@ -61,13 +69,21 @@ async def get_offender_by_id(
     check_perm = require_permission(Permission.SEARCH_CASES)
     await check_perm(current_user)
 
+    # Policy Makers cannot view raw accused profiles
+    from app.core.rbac import normalize_role
+    if normalize_role(current_user.get("role")) == "POLICY_MAKER":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Policy Makers are not authorized to view raw accused profiles."
+        )
+
     service = AccusedService(db)
     profile = await service.get_offender_detail(id)
     if not profile:
         raise HTTPException(status_code=404, detail=f"Suspect with ID {id} not found.")
 
     # ABAC check
-    verify_district_access(current_user, profile.get("lastKnown"))
+    await verify_district_access(current_user, profile.get("lastKnown"), db)
 
     # Mask if lacking sensitive access
     has_sensitive_access = check_permission(current_user["role"], Permission.SENSITIVE_CASE_ACCESS)

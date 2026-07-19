@@ -14,6 +14,10 @@ from app.models.accused import AccusedMaster
 from app.models.victim import VictimMaster
 from app.models.financial_transaction import FinancialTransaction
 from app.services.graph.graph_utils import normalize_name
+from app.models.user import User
+from app.models.district_assignment import UserDistrictAssignment
+from app.models.access_request import DistrictAccessRequest, TemporaryDistrictPermission
+from app.core.security import get_password_hash
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +80,10 @@ async def generate_realistic_network(db: AsyncSession):
 
     print("Cleaning up old database records...")
     # Delete child tables first to respect FK constraints
+    await db.execute(delete(TemporaryDistrictPermission))
+    await db.execute(delete(DistrictAccessRequest))
+    await db.execute(delete(UserDistrictAssignment))
+    await db.execute(delete(User))
     await db.execute(delete(FinancialTransaction))
     await db.execute(delete(VictimMaster))
     await db.execute(delete(AccusedMaster))
@@ -568,7 +576,160 @@ async def run_automated_validation(db: AsyncSession):
         assert len(cases_in_dist) > 0, f"No cases found in district {dist}"
     print("[OK] District filters return data for all 10 districts.")
 
-    # 8. Final Statistics Print
+    # 8. Seed users, assignments, and access request scenarios
+    print("Seeding deterministic users and ABAC district scopes...")
+    hashed_pw = get_password_hash("password123")
+
+    users_to_seed = [
+        ("insp_mysuru", "Investigator", "Mysuru"),
+        ("insp_bengaluru", "Investigator", "Bengaluru Urban"),
+        ("senior_sp", "Senior Investigator", "Mysuru,Bengaluru Urban"),
+        ("analyst_priya", "Analyst", "Mysuru,Bengaluru Urban,Mangaluru"),
+        ("supervisor_ramesh", "Supervisor", None),
+        ("policymaker_anitha", "Policy Maker", None),
+        ("admin_system", "Administrator", None),
+    ]
+
+    user_objs = {}
+    for username, role, legacy_districts in users_to_seed:
+        user = User(
+            username=username,
+            hashed_password=hashed_pw,
+            role=role,
+            districts=legacy_districts
+        )
+        db.add(user)
+        user_objs[username] = user
+    await db.flush()
+
+    assignments = [
+        # Ramesh supervises Bengaluru Urban, Mysuru, Tumakuru
+        UserDistrictAssignment(user_id=user_objs["supervisor_ramesh"].id, district="Bengaluru Urban", assigned_by=user_objs["admin_system"].id, is_active=True),
+        UserDistrictAssignment(user_id=user_objs["supervisor_ramesh"].id, district="Mysuru", assigned_by=user_objs["admin_system"].id, is_active=True),
+        UserDistrictAssignment(user_id=user_objs["supervisor_ramesh"].id, district="Tumakuru", assigned_by=user_objs["admin_system"].id, is_active=True),
+        # permanent assignments for investigators/analysts
+        UserDistrictAssignment(user_id=user_objs["insp_mysuru"].id, district="Mysuru", assigned_by=user_objs["supervisor_ramesh"].id, is_active=True),
+        UserDistrictAssignment(user_id=user_objs["insp_bengaluru"].id, district="Bengaluru Urban", assigned_by=user_objs["supervisor_ramesh"].id, is_active=True),
+        UserDistrictAssignment(user_id=user_objs["senior_sp"].id, district="Mysuru", assigned_by=user_objs["supervisor_ramesh"].id, is_active=True),
+        UserDistrictAssignment(user_id=user_objs["senior_sp"].id, district="Bengaluru Urban", assigned_by=user_objs["supervisor_ramesh"].id, is_active=True),
+        UserDistrictAssignment(user_id=user_objs["analyst_priya"].id, district="Mysuru", assigned_by=user_objs["supervisor_ramesh"].id, is_active=True),
+        UserDistrictAssignment(user_id=user_objs["analyst_priya"].id, district="Bengaluru Urban", assigned_by=user_objs["supervisor_ramesh"].id, is_active=True),
+        UserDistrictAssignment(user_id=user_objs["analyst_priya"].id, district="Hubballi-Dharwad", assigned_by=user_objs["supervisor_ramesh"].id, is_active=True),
+    ]
+    for asn in assignments:
+        db.add(asn)
+    await db.flush()
+
+    # Seed different access request scenarios
+    now = datetime.datetime.utcnow()
+
+    # Scenario 1: PENDING request
+    req_pending = DistrictAccessRequest(
+        requester_id=user_objs["insp_mysuru"].id,
+        requested_district="Bengaluru Urban",
+        reason="Tracking Bengaluru accomplices of gang",
+        duration_hours=24,
+        status="PENDING",
+        requested_at=now - datetime.timedelta(hours=2)
+    )
+    db.add(req_pending)
+
+    # Scenario 2: APPROVED & ACTIVE request
+    req_approved = DistrictAccessRequest(
+        requester_id=user_objs["insp_mysuru"].id,
+        requested_district="Bengaluru Urban",
+        reason="Need access to Whitefield case records",
+        duration_hours=48,
+        status="APPROVED",
+        requested_at=now - datetime.timedelta(days=1),
+        reviewed_by=user_objs["supervisor_ramesh"].id,
+        reviewed_at=now - datetime.timedelta(hours=23),
+        review_comment="Approved for 48 hours."
+    )
+    db.add(req_approved)
+    await db.flush()
+
+    perm_active = TemporaryDistrictPermission(
+        user_id=user_objs["insp_mysuru"].id,
+        district="Bengaluru Urban",
+        access_request_id=req_approved.id,
+        approved_by=user_objs["supervisor_ramesh"].id,
+        approved_at=now - datetime.timedelta(hours=23),
+        expires_at=now + datetime.timedelta(hours=25),
+        is_revoked=False
+    )
+    db.add(perm_active)
+
+    # Scenario 3: EXPIRED request
+    req_expired = DistrictAccessRequest(
+        requester_id=user_objs["insp_mysuru"].id,
+        requested_district="Bengaluru Urban",
+        reason="Follow up on previous investigation",
+        duration_hours=12,
+        status="APPROVED",
+        requested_at=now - datetime.timedelta(days=2),
+        reviewed_by=user_objs["supervisor_ramesh"].id,
+        reviewed_at=now - datetime.timedelta(days=2) + datetime.timedelta(minutes=10),
+        review_comment="Approved for 12 hours."
+    )
+    db.add(req_expired)
+    await db.flush()
+
+    perm_expired = TemporaryDistrictPermission(
+        user_id=user_objs["insp_mysuru"].id,
+        district="Bengaluru Urban",
+        access_request_id=req_expired.id,
+        approved_by=user_objs["supervisor_ramesh"].id,
+        approved_at=now - datetime.timedelta(days=2) + datetime.timedelta(minutes=10),
+        expires_at=now - datetime.timedelta(days=1, hours=12),
+        is_revoked=False
+    )
+    db.add(perm_expired)
+
+    # Scenario 4: REVOKED request
+    req_revoked = DistrictAccessRequest(
+        requester_id=user_objs["insp_mysuru"].id,
+        requested_district="Bengaluru Urban",
+        reason="Access Koramangala station logs",
+        duration_hours=24,
+        status="APPROVED",
+        requested_at=now - datetime.timedelta(hours=5),
+        reviewed_by=user_objs["supervisor_ramesh"].id,
+        reviewed_at=now - datetime.timedelta(hours=4)
+    )
+    db.add(req_revoked)
+    await db.flush()
+
+    perm_revoked = TemporaryDistrictPermission(
+        user_id=user_objs["insp_mysuru"].id,
+        district="Bengaluru Urban",
+        access_request_id=req_revoked.id,
+        approved_by=user_objs["supervisor_ramesh"].id,
+        approved_at=now - datetime.timedelta(hours=4),
+        expires_at=now + datetime.timedelta(hours=20),
+        is_revoked=True,
+        revoked_at=now - datetime.timedelta(hours=1),
+        revoked_by=user_objs["supervisor_ramesh"].id,
+        revocation_reason="Investigation concluded early"
+    )
+    db.add(perm_revoked)
+
+    # Scenario 5: REJECTED request
+    req_rejected = DistrictAccessRequest(
+        requester_id=user_objs["insp_mysuru"].id,
+        requested_district="Belagavi",
+        reason="Check Belagavi gang connections",
+        duration_hours=24,
+        status="REJECTED",
+        requested_at=now - datetime.timedelta(hours=10),
+        reviewed_by=user_objs["supervisor_ramesh"].id,
+        reviewed_at=now - datetime.timedelta(hours=9),
+        review_comment="Insufficient justification."
+    )
+    db.add(req_rejected)
+    await db.commit()
+
+    # 9. Final Statistics Print
     print("---------------------------------------------------------")
     print("DATABASES SEEDED AND VALIDATED SUCCESSFULLY:")
     print(f"  - Cases: {len(cases)}")
@@ -579,4 +740,7 @@ async def run_automated_validation(db: AsyncSession):
     print(f"  - Communities Found: {len(communities)}")
     print(f"  - Financial Cycles Detected: {len(patterns['circular_flows'])}")
     print(f"  - Shared Accounts Found: {len(patterns['shared_accounts'])}")
+    print(f"  - Users Seeded: {len(users_to_seed)}")
+    print(f"  - District Assignments Seeded: {len(assignments)}")
     print("---------------------------------------------------------")
+

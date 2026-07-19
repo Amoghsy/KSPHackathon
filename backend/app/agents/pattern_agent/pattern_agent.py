@@ -26,14 +26,15 @@ class PatternAgent:
         crime_type: str | None = None,
         police_station: str | None = None,
         start_date: datetime.date | None = None,
-        end_date: datetime.date | None = None
+        end_date: datetime.date | None = None,
+        authorized_districts: list[str] | None = None,
     ) -> dict:
         """
         Runs the pattern intelligence pipeline.
         Fetches all analytical metrics and prompts Gemini to write a professional summary briefing.
         """
         try:
-            service = AnalyticsService(db)
+            service = AnalyticsService(db, authorized_districts=authorized_districts)
 
             # Parallel fetching or sequential for simplicity
             trends = await service.get_trends(

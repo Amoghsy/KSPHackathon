@@ -34,10 +34,18 @@ SVG_DISTRICT_POSITIONS = {
 
 
 class AnalyticsService:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, authorized_districts: list[str] | None = None):
         self.db = db
-        self.repository = AnalyticsRepository(db)
+        self.authorized_districts = authorized_districts
+        self.repository = AnalyticsRepository(db, authorized_districts=authorized_districts)
         self.cache = AnalyticsCache()
+
+        # Bypass caching for user-restricted scopes to prevent leaking filters
+        if self.authorized_districts is not None:
+            class DummyCache:
+                async def get(self, *args, **kwargs): return None
+                async def set(self, *args, **kwargs): pass
+            self.cache = DummyCache()
 
     async def get_trends(self, district: str | None = None, crime_type: str | None = None,
                          police_station: str | None = None, start_date: datetime.date | None = None,

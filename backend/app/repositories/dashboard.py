@@ -9,8 +9,9 @@ from app.models.accused import AccusedMaster
 
 
 class DashboardRepository:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, authorized_districts: list[str] | None = None):
         self.db = db
+        self.authorized_districts = authorized_districts
 
     async def get_stats_kpis(self) -> list[dict]:
         """Fetch total active case statistics and build KPIs."""
@@ -20,6 +21,13 @@ class DashboardRepository:
         cs_stmt = select(func.count(CaseMaster.case_master_id)).select_from(CaseMaster).where(CaseMaster.case_status_id == 2)
         dist_stmt = select(func.count(func.distinct(PoliceStation.district))).select_from(PoliceStation)
         
+        if self.authorized_districts is not None:
+            cases_stmt = cases_stmt.join(CaseMaster.police_station).where(PoliceStation.district.in_(self.authorized_districts))
+            open_stmt = open_stmt.join(CaseMaster.police_station).where(PoliceStation.district.in_(self.authorized_districts))
+            closed_stmt = closed_stmt.join(CaseMaster.police_station).where(PoliceStation.district.in_(self.authorized_districts))
+            cs_stmt = cs_stmt.join(CaseMaster.police_station).where(PoliceStation.district.in_(self.authorized_districts))
+            dist_stmt = dist_stmt.where(PoliceStation.district.in_(self.authorized_districts))
+
         cases_res = await self.db.execute(cases_stmt)
         open_res = await self.db.execute(open_stmt)
         closed_res = await self.db.execute(closed_stmt)
@@ -32,8 +40,6 @@ class DashboardRepository:
         cs_cases = cs_res.scalar() or 0
         districts_active = dist_res.scalar() or 0
 
-        # Calculate Growth changes or simulate deltas
-        # Let's say we have small hardcoded delta percentages for UI polish
         return [
             {"label": "Total Cases", "value": total_cases, "delta": 4.2},
             {"label": "Open Cases", "value": open_cases, "delta": -2.1},
@@ -52,6 +58,10 @@ class DashboardRepository:
             .group_by(month_trunc, CrimeType.name)
             .order_by(month_trunc)
         )
+        
+        if self.authorized_districts is not None:
+            stmt = stmt.join(CaseMaster.police_station).where(PoliceStation.district.in_(self.authorized_districts))
+
         res = await self.db.execute(stmt)
         
         pivot = {}
@@ -60,14 +70,12 @@ class DashboardRepository:
             if m_str not in pivot:
                 pivot[m_str] = {"month": m_str, "raw_date": row.month_date}
             
-            # Map database crime type names to React dashboard expected labels
             name = row.name
             if name == "Cyber Fraud":
                 name = "Cybercrime"
             
             pivot[m_str][name] = row.count
 
-        # Fill in missing keys with 0 for standard categories
         categories = ["Theft", "Robbery", "Cybercrime", "Assault"]
         for m_data in pivot.values():
             for cat in categories:
@@ -86,6 +94,10 @@ class DashboardRepository:
             .order_by(func.count(CaseMaster.case_master_id).desc())
             .limit(limit)
         )
+        
+        if self.authorized_districts is not None:
+            stmt = stmt.where(PoliceStation.district.in_(self.authorized_districts))
+
         res = await self.db.execute(stmt)
         return [{"district": row.district or "Unknown", "cases": row.count} for row in res.all()]
 
@@ -96,13 +108,17 @@ class DashboardRepository:
             .select_from(CaseMaster)
             .group_by(CaseMaster.case_status_id)
         )
+        
+        if self.authorized_districts is not None:
+            stmt = stmt.join(CaseMaster.police_station).where(PoliceStation.district.in_(self.authorized_districts))
+
         res = await self.db.execute(stmt)
         
         status_map = {
-            1: "Open",  # Under Investigation
-            2: "Charge-Sheeted",  # Charge Sheeted
-            3: "Closed",  # Closed
-            4: "Open"  # Undetected -> map as open/pending
+            1: "Open",
+            2: "Charge-Sheeted",
+            3: "Closed",
+            4: "Open"
         }
         
         breakdown = {

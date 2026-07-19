@@ -14,7 +14,7 @@ router = APIRouter()
 
 async def check_admin(current_user: dict = Depends(get_current_user)):
     """Dependency to check if current user is an Admin."""
-    if current_user.get("role") != UserRole.ADMIN.value:
+    if current_user.get("role") != UserRole.ADMINISTRATOR.value:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Permission denied. Admin role required.",

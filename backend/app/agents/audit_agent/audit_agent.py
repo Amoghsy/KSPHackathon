@@ -22,14 +22,21 @@ class AuditAgent:
         username: str | None,
         role: str | None,
         api: str,
-        question: str,
+        question: str | None = None,
         generated_sql: str | None = None,
         execution_time_ms: float | None = None,
         response_size: int | None = None,
         ip_address: str | None = None,
         request_id: str,
         status: str = "success",
-        summary: str | None = None
+        summary: str | None = None,
+        action: str | None = None,
+        target_user_id: int | None = None,
+        supervisor_id: int | None = None,
+        district_id: str | None = None,
+        case_id: int | None = None,
+        reason: str | None = None,
+        user_agent: str | None = None
     ) -> None:
         try:
             # 1. Insert into database
@@ -46,7 +53,14 @@ class AuditAgent:
                 request_id=request_id,
                 status=status,
                 summary=summary,
-                timestamp=datetime.datetime.utcnow()
+                timestamp=datetime.datetime.utcnow(),
+                action=action,
+                target_user_id=target_user_id,
+                supervisor_id=supervisor_id,
+                district_id=district_id,
+                case_id=case_id,
+                reason=reason,
+                user_agent=user_agent
             )
             db.add(log)
             await db.commit()

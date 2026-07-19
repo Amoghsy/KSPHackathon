@@ -83,6 +83,7 @@ const NAV: NavItem[] = [
     permissions: [PERMISSIONS.PATTERN_ANALYSIS],
   },
   { to: "/audit", labelKey: "audit", icon: ClipboardList, permissions: [PERMISSIONS.VIEW_AUDIT_LOGS] },
+  { to: "/supervisor", labelKey: "supervisor", icon: Users, permissions: [PERMISSIONS.VIEW_AUDIT_LOGS] },
   { to: "/settings", labelKey: "settings", icon: SettingsIcon },
   { to: "/admin", labelKey: "admin", icon: ShieldAlert, permissions: [PERMISSIONS.MANAGE_USERS] },
 ];

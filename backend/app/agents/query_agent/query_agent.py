@@ -109,6 +109,32 @@ class QueryAgent:
                 retryable=True,
             )
 
+        # ---- Deterministic ABAC Scope Enforcement (Query Rewriting) ----
+        from app.core.permissions import get_user_authorized_districts
+        auth_districts = await get_user_authorized_districts(current_user, session)
+        
+        # Rewrite the query to restrict access to authorized districts deterministically
+        import re
+        dist_list = ", ".join(f"'{d}'" for d in auth_districts)
+        if not dist_list:
+            dist_list = "''"
+
+        replacements = {
+            "case_master": f"(SELECT * FROM case_master WHERE police_station_id IN (SELECT police_station_id FROM police_station WHERE district IN ({dist_list})))",
+            "police_station": f"(SELECT * FROM police_station WHERE district IN ({dist_list}))",
+            "financial_transaction": f"(SELECT * FROM financial_transaction WHERE case_master_id IN (SELECT case_master_id FROM case_master WHERE police_station_id IN (SELECT police_station_id FROM police_station WHERE district IN ({dist_list}))))",
+            "accused_master": f"(SELECT * FROM accused_master WHERE case_master_id IN (SELECT case_master_id FROM case_master WHERE police_station_id IN (SELECT police_station_id FROM police_station WHERE district IN ({dist_list}))))",
+            "victim_master": f"(SELECT * FROM victim_master WHERE case_master_id IN (SELECT case_master_id FROM case_master WHERE police_station_id IN (SELECT police_station_id FROM police_station WHERE district IN ({dist_list}))))",
+        }
+
+        scoped_sql = generated_sql
+        for table, subquery in replacements.items():
+            pattern = re.compile(rf'\b{table}\b', re.IGNORECASE)
+            scoped_sql = pattern.sub(subquery, scoped_sql)
+
+        # Use scoped_sql for execution
+        generated_sql = scoped_sql
+
         # ---- Step 3: Execute SQL ----
         try:
             result = await self._db_tool.execute(generated_sql, session)

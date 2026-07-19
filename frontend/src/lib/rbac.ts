@@ -28,14 +28,14 @@ export type RouteAccess = {
 const ALL_PERMISSIONS = Object.values(PERMISSIONS);
 
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
-  Investigator: [
+  INVESTIGATOR: [
     PERMISSIONS.SEARCH_CASES,
     PERMISSIONS.CRIMINAL_NETWORK,
     PERMISSIONS.CRIME_MAP,
     PERMISSIONS.PATTERN_ANALYSIS,
     PERMISSIONS.CHAT_ASSISTANT,
   ],
-  "Senior Investigator": [
+  SENIOR_INVESTIGATOR: [
     PERMISSIONS.SEARCH_CASES,
     PERMISSIONS.CRIMINAL_NETWORK,
     PERMISSIONS.CRIME_MAP,
@@ -45,13 +45,13 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     PERMISSIONS.GANG_DETECTION,
     PERMISSIONS.SENSITIVE_CASE_ACCESS,
   ],
-  Analyst: [
+  ANALYST: [
     PERMISSIONS.SEARCH_CASES,
     PERMISSIONS.CRIME_MAP,
     PERMISSIONS.PATTERN_ANALYSIS,
     PERMISSIONS.CHAT_ASSISTANT,
   ],
-  Supervisor: [
+  SUPERVISOR: [
     PERMISSIONS.SEARCH_CASES,
     PERMISSIONS.CRIMINAL_NETWORK,
     PERMISSIONS.CRIME_MAP,
@@ -63,14 +63,14 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     PERMISSIONS.VIEW_AUDIT_LOGS,
     PERMISSIONS.EXPORT_DATA,
   ],
-  Policymaker: [
+  POLICY_MAKER: [
     PERMISSIONS.SEARCH_CASES,
     PERMISSIONS.CRIME_MAP,
     PERMISSIONS.PATTERN_ANALYSIS,
     PERMISSIONS.CHAT_ASSISTANT,
     PERMISSIONS.EXPORT_DATA,
   ],
-  Admin: ALL_PERMISSIONS,
+  ADMINISTRATOR: ALL_PERMISSIONS,
 };
 
 export const ROUTE_ACCESS: RouteAccess[] = [
@@ -84,6 +84,7 @@ export const ROUTE_ACCESS: RouteAccess[] = [
   { path: "/sociological", moduleName: "Pattern Intelligence", permissions: [PERMISSIONS.PATTERN_ANALYSIS] },
   { path: "/alerts", moduleName: "Alerts", permissions: [PERMISSIONS.PATTERN_ANALYSIS] },
   { path: "/audit", moduleName: "Audit Dashboard", permissions: [PERMISSIONS.VIEW_AUDIT_LOGS] },
+  { path: "/supervisor", moduleName: "Supervisor Console", permissions: [PERMISSIONS.VIEW_AUDIT_LOGS] },
   { path: "/admin", moduleName: "User Administration", permissions: [PERMISSIONS.MANAGE_USERS] },
   { path: "/settings", moduleName: "Settings", public: true },
   { path: "/access-restricted", moduleName: "Access Restricted", public: true },

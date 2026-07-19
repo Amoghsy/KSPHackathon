@@ -25,7 +25,7 @@ function AdminLoginPage() {
   const [password, setPassword] = useState("");
 
   useEffect(() => {
-    if (user && user.role === "Admin") {
+    if (user && user.role === "ADMINISTRATOR") {
       navigate({ to: "/admin" });
     }
   }, [user, navigate]);
@@ -34,7 +34,7 @@ function AdminLoginPage() {
     e.preventDefault();
     clearError();
     try {
-      await login({ username, password, role: "Admin" });
+      await login({ username, password, role: "ADMINISTRATOR" });
       toast.success("Administrator session verified");
       navigate({ to: "/admin" });
     } catch {

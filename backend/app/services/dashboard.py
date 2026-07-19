@@ -5,14 +5,15 @@ from app.repositories.dashboard import DashboardRepository
 
 class DashboardService:
     def __init__(self, db: AsyncSession):
-        self.repository = DashboardRepository(db)
+        self.db = db
 
-    async def get_dashboard_summary(self) -> dict:
+    async def get_dashboard_summary(self, authorized_districts: list[str] | None = None) -> dict:
         """Fetch summary of key metrics for the dashboard."""
-        kpis = await self.repository.get_stats_kpis()
-        monthly_trend = await self.repository.get_monthly_trends()
-        district_counts = await self.repository.get_district_counts()
-        status_breakdown = await self.repository.get_status_breakdown()
+        repository = DashboardRepository(self.db, authorized_districts=authorized_districts)
+        kpis = await repository.get_stats_kpis()
+        monthly_trend = await repository.get_monthly_trends()
+        district_counts = await repository.get_district_counts()
+        status_breakdown = await repository.get_status_breakdown()
         
         return {
             "kpis": kpis,

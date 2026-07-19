@@ -19,6 +19,7 @@ from app.api.v1.endpoints import (
     financial,
     patterns,
     reports,
+    security,
 )
 
 api_router = APIRouter()
@@ -37,6 +38,7 @@ api_router.include_router(financial.router, prefix="/financial", tags=["financia
 api_router.include_router(patterns.router, prefix="/pattern", tags=["pattern"])
 api_router.include_router(audit.router, prefix="/audit", tags=["audit"])
 api_router.include_router(reports.router, prefix="/reports", tags=["reports"])
+api_router.include_router(security.router, prefix="/security", tags=["security"])
 
 
 

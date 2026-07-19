@@ -74,6 +74,17 @@ apiClient.interceptors.response.use(
       }
     }
 
+    // 403 and DISTRICT_NOT_AUTHORIZED — trigger access request modal globally
+    if (status === 403) {
+      const detail = error.response?.data?.detail;
+      if (detail && typeof detail === "object" && detail.code === "DISTRICT_NOT_AUTHORIZED") {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("district-not-authorized", { detail }));
+        }
+      }
+    }
+
+
     // 500 — log server errors
     if (status === 500) {
       console.error("[API] Server error at", url, error.response?.data);

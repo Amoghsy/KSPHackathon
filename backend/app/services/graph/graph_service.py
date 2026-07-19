@@ -28,6 +28,7 @@ class GraphService:
         police_station: str | None = None,
         time_period: str | None = None,
         focus_id: str | None = None,
+        authorized_districts: list[str] | None = None,
     ) -> dict:
         """
         Retrieves the criminal network graph and analytics.
@@ -44,15 +45,16 @@ class GraphService:
         # 0. Check if Level 1 Dashboard View (no focus ID, no active filters)
         is_level1 = not (district or crime_type or police_station or time_period or focus_id)
         if is_level1:
-            cached_stats = await self.cache.get("dashboard_stats", {})
-            if cached_stats:
-                return {
-                    "graph": {"nodes": [], "links": []},
-                    **cached_stats
-                }
+            if authorized_districts is None:
+                cached_stats = await self.cache.get("dashboard_stats", {})
+                if cached_stats:
+                    return {
+                        "graph": {"nodes": [], "links": []},
+                        **cached_stats
+                    }
 
-            # If not cached, let's load all cases to compute global stats
-            cases = await self.repository.get_filtered_cases()
+            # If not cached, let's load all cases to compute stats
+            cases = await self.repository.get_filtered_cases(authorized_districts=authorized_districts)
             case_ids = [c.case_master_id for c in cases]
             accused = await self.repository.get_accused_for_cases(case_ids)
             accused_ids = [a.accused_master_id for a in accused]
@@ -112,7 +114,8 @@ class GraphService:
                 "focus_reason": "Dashboard loaded. Choose investigation target.",
                 "center_node": None,
             }
-            await self.cache.set("dashboard_stats", {}, stats)
+            if authorized_districts is None:
+                await self.cache.set("dashboard_stats", {}, stats)
             return {
                 "graph": {"nodes": [], "links": []},
                 **stats
@@ -122,7 +125,7 @@ class GraphService:
         # Try to retrieve from Cache (resolve focus_kind first for cache key)
         cases_sample = []
         if focus_id:
-            cases_sample = await self.repository.get_cases_by_focus_id(focus_id)
+            cases_sample = await self.repository.get_cases_by_focus_id(focus_id, authorized_districts=authorized_districts)
         if cases_sample:
             # We build a temp graph to figure out focus_kind for caching
             temp_G = GraphBuilder.build_criminal_network(cases_sample[:1], [], [], [])
@@ -137,13 +140,14 @@ class GraphService:
                         break
             filters["focus_kind"] = focus_kind
 
-        cached_data = await self.cache.get("criminal_network", filters)
-        if cached_data:
-            return cached_data
+        if authorized_districts is None:
+            cached_data = await self.cache.get("criminal_network", filters)
+            if cached_data:
+                return cached_data
 
         # 1. Fetch live targeted data
         if focus_id:
-            cases = await self.repository.get_cases_by_focus_id(focus_id)
+            cases = await self.repository.get_cases_by_focus_id(focus_id, authorized_districts=authorized_districts)
             if district and district != "All":
                 cases = [c for c in cases if c.police_station and c.police_station.district == district]
             if police_station and police_station != "All":
@@ -156,6 +160,7 @@ class GraphService:
                 crime_type=crime_type,
                 police_station=police_station,
                 time_period=time_period,
+                authorized_districts=authorized_districts,
             )
 
         case_ids = [c.case_master_id for c in cases]
@@ -275,7 +280,8 @@ class GraphService:
         }
 
         # Write to Cache
-        await self.cache.set("criminal_network", filters, results)
+        if authorized_districts is None:
+            await self.cache.set("criminal_network", filters, results)
         return results
 
     def _trim_graph(self, G: nx.Graph, center_node: str | None, max_nodes: int = 40, max_edges: int = 75) -> nx.Graph:
@@ -317,12 +323,12 @@ class GraphService:
 
         return G_trimmed
 
-    async def get_node_expansion_data(self, node_id: str, kind: str) -> dict:
+    async def get_node_expansion_data(self, node_id: str, kind: str, authorized_districts: list[str] | None = None) -> dict:
         """
         Retrieves 1-degree neighbors and links for a specific node for lazy loading.
         """
         # Fetch relevant cases for this node
-        cases = await self.repository.get_cases_by_focus_id(node_id)
+        cases = await self.repository.get_cases_by_focus_id(node_id, authorized_districts=authorized_districts)
         case_ids = [c.case_master_id for c in cases]
         
         # Fetch accused, victims, transactions
@@ -369,6 +375,7 @@ class GraphService:
         crime_type: str | None = None,
         police_station: str | None = None,
         time_period: str | None = None,
+        authorized_districts: list[str] | None = None,
     ) -> dict:
         """
         Retrieves the financial network graph (accused, accounts, cases) and cycles.
@@ -382,9 +389,10 @@ class GraphService:
         }
 
         # Check Cache
-        cached_data = await self.cache.get("financial_network", filters)
-        if cached_data:
-            return cached_data
+        if authorized_districts is None:
+            cached_data = await self.cache.get("financial_network", filters)
+            if cached_data:
+                return cached_data
 
         # 1. Fetch filtered cases
         cases = await self.repository.get_filtered_cases(
@@ -392,6 +400,7 @@ class GraphService:
             crime_type=crime_type,
             police_station=police_station,
             time_period=time_period,
+            authorized_districts=authorized_districts,
         )
         case_ids = [c.case_master_id for c in cases]
 
@@ -418,6 +427,7 @@ class GraphService:
         }
 
         # Write to Cache
-        await self.cache.set("financial_network", filters, results)
+        if authorized_districts is None:
+            await self.cache.set("financial_network", filters, results)
 
         return results

@@ -63,7 +63,7 @@ function NetworkPage() {
   const { user, role } = rbac;
   const isSuperOrAdmin = role === "Supervisor" || role === "Admin" || role === "Analyst" || role === "Policymaker" || role === "Policy Maker";
   const userDistricts = user?.assignedDistricts ?? [];
-  
+
   const { data, isLoading } = useQuery({
     queryKey: ["network", filters],
     queryFn: () => getNetwork(filters),
@@ -727,11 +727,10 @@ function NetworkPage() {
                               <div className="flex justify-between">
                                 <span className="text-muted-foreground">Risk Score</span>
                                 <Badge
-                                  className={`text-[9px] font-bold ${
-                                    ro.risk_score > 70
+                                  className={`text-[9px] font-bold ${ro.risk_score > 70
                                       ? "bg-red-50 dark:bg-red-950 text-red-650 dark:text-red-400 border border-red-500/20"
                                       : "bg-muted text-foreground"
-                                  }`}
+                                    }`}
                                 >
                                   {ro.risk_score} / 100
                                 </Badge>

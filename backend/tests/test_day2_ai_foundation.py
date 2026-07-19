@@ -163,7 +163,7 @@ class TestFewShotExamples:
     def test_example_count(self):
         from app.services.nl2sql.examples import FEW_SHOT_EXAMPLES
 
-        assert len(FEW_SHOT_EXAMPLES) == 15
+        assert len(FEW_SHOT_EXAMPLES) == 17
 
     def test_examples_have_question_and_sql(self):
         from app.services.nl2sql.examples import FEW_SHOT_EXAMPLES

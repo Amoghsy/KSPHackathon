@@ -1,15 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+import csv
+import uuid
+import datetime
+from io import BytesIO, StringIO
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from io import BytesIO, StringIO
-import csv
 
 from app.db.session import get_db
 from app.core.security import get_current_user
-from app.core.permissions import require_permission
+from app.core.permissions import require_permission, verify_district_access
 from app.core.rbac import Permission
 from app.services.case import CaseService
-from app.services.graph.graph_service import GraphService
+from app.agents.audit_agent.audit_agent import AuditAgent
 
 router = APIRouter()
 
@@ -22,12 +24,31 @@ async def export_csv(
 ):
     """
     Export case listings as a CSV file.
+    Enforces district ABAC and logs a security audit event.
     """
-    check_perm = require_permission(Permission.EXPORT_DATA)
+    check_perm = require_permission(Permission.EXPORT_REPORTS)
     await check_perm(current_user)
 
+    # ABAC: Enforce district access containment
+    allowed_district = await verify_district_access(current_user, district, db)
+
+    # Log to Audit Log
+    audit = AuditAgent()
+    req_id = f"export-{uuid.uuid4()}"
+    await audit.log_action(
+        db,
+        user_id=current_user.get("id"),
+        username=current_user.get("username"),
+        role=current_user.get("role"),
+        api="/api/v1/reports/export/csv",
+        request_id=req_id,
+        action="EXPORT_REPORTS_CSV",
+        district_id=allowed_district,
+        summary=f"Exported case database as CSV for district {allowed_district or 'All'}"
+    )
+
     service = CaseService(db)
-    result = await service.list_cases_paginated(district=district, page=1, page_size=200)
+    result = await service.list_cases_paginated(district=allowed_district, page=1, page_size=200)
     items = result.get("items", [])
 
     f = StringIO()
@@ -64,14 +85,32 @@ async def export_pdf(
     current_user: dict = Depends(get_current_user),
 ):
     """
-    Generates a structured text/markdown report of the current investigation state
-    formatted as a stream.
+    Generates a structured text/markdown report of the current investigation state.
+    Enforces district ABAC and logs a security audit event.
     """
-    check_perm = require_permission(Permission.EXPORT_DATA)
+    check_perm = require_permission(Permission.EXPORT_REPORTS)
     await check_perm(current_user)
 
+    # ABAC: Enforce district access containment
+    allowed_district = await verify_district_access(current_user, district, db)
+
+    # Log to Audit Log
+    audit = AuditAgent()
+    req_id = f"export-{uuid.uuid4()}"
+    await audit.log_action(
+        db,
+        user_id=current_user.get("id"),
+        username=current_user.get("username"),
+        role=current_user.get("role"),
+        api="/api/v1/reports/export/pdf",
+        request_id=req_id,
+        action="EXPORT_REPORTS_PDF",
+        district_id=allowed_district,
+        summary=f"Exported case database briefing as text file for district {allowed_district or 'All'}"
+    )
+
     service = CaseService(db)
-    result = await service.list_cases_paginated(district=district, page=1, page_size=15)
+    result = await service.list_cases_paginated(district=allowed_district, page=1, page_size=15)
     items = result.get("items", [])
 
     report = []
@@ -81,7 +120,7 @@ async def export_pdf(
     report.append("=========================================================")
     report.append(f"Exported By: {current_user.get('username')}")
     report.append(f"System Role: {current_user.get('role')}")
-    report.append(f"Filter District: {district or 'All Districts'}")
+    report.append(f"Filter District: {allowed_district or 'All Districts'}")
     report.append("---------------------------------------------------------")
     report.append("\nRECENT REGISTERED CASES SUMMARY:\n")
 

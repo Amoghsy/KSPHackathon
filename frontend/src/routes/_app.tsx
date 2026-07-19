@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { DynamicSidebar } from "@/components/app/sidebar";
 import { Topbar } from "@/components/app/topbar";
+import { AccessRequestModal } from "@/components/app/AccessRequestModal";
 import { useAuthStore } from "@/stores/auth";
 import { usePrefs } from "@/stores/prefs";
 import { cn } from "@/lib/utils";
@@ -98,6 +99,7 @@ function AppShell() {
         <main className="flex-1 overflow-y-auto scrollbar-thin">
           <Outlet />
         </main>
+        <AccessRequestModal />
       </div>
     </div>
   );

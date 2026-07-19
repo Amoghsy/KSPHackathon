@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 
 export function Masked({ children, className }: { children: ReactNode; className?: string }) {
   const role = useAuthStore((s) => s.user?.role);
-  const allowed = role === "Supervisor";
+  const allowed = role === "SUPERVISOR";
   if (allowed) return <span className={className}>{children}</span>;
   return (
     <span

@@ -23,7 +23,7 @@ async def get_cases(
 ):
     """Retrieve cases list with query, status, district filters and pagination."""
     # ABAC: Enforce district access containment
-    allowed_district = verify_district_access(current_user, district)
+    allowed_district = await verify_district_access(current_user, district, db)
 
     service = CaseService(db)
     result = await service.list_cases_paginated(
@@ -63,7 +63,7 @@ async def get_case_by_id(
         raise HTTPException(status_code=404, detail=f"Case with ID {id} not found.")
 
     # ABAC: Enforce district access containment
-    verify_district_access(current_user, case_detail.get("district"))
+    await verify_district_access(current_user, case_detail.get("district"), db)
 
     # Sensitive Data Masking: Mask victim names and narratives if user lacks sensitive case access
     has_sensitive_access = check_permission(current_user["role"], Permission.SENSITIVE_CASE_ACCESS)
