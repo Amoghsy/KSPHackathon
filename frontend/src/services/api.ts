@@ -286,7 +286,10 @@ export async function getAlerts(): Promise<any[]> {
       title: `Anomaly Detected in Crime Volume`,
       area: a.time_period || "Statewide",
       ts: new Date().toISOString(),
-      detail: a.reason
+      detail: a.reason,
+      count: a.count,
+      z_score: a.z_score,
+      confidence: a.confidence,
     }));
   } catch (err) {
     console.error("Error fetching alerts (anomalies) from backend:", err);

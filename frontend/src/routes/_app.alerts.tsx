@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import {
@@ -24,9 +24,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { AlertTriangle, TrendingUp } from "lucide-react";
+import { AlertTriangle, TrendingUp, ShieldAlert, Activity, BarChart3, ExternalLink } from "lucide-react";
 
 export const Route = createFileRoute("/_app/alerts")({
   head: () => ({ meta: [{ title: "Alerts — Crime Intelligence Assistant" }] }),
@@ -253,8 +261,10 @@ function AdvancedMonthlyForecastCard() {
 }
 
 function AlertsPage() {
+  const navigate = useNavigate();
   const [sev, setSev] = useState<(typeof SEV)[number]>("All");
   const [crime, setCrime] = useState<ForecastCrime>("Robbery");
+  const [selectedAlert, setSelectedAlert] = useState<any | null>(null);
   const { data, isLoading } = useQuery({ queryKey: ["alerts"], queryFn: getAlerts });
   const { data: forecast } = useQuery({
     queryKey: ["forecast", crime],
@@ -404,8 +414,9 @@ function AlertsPage() {
           return (
             <li
               key={a.id}
+              onClick={() => setSelectedAlert(a)}
               className={cn(
-                "rounded-xl glass border-l-4 p-4 hover:shadow-sm transition-shadow",
+                "rounded-xl glass border-l-4 p-4 hover:shadow-md transition-all cursor-pointer group",
                 color,
               )}
             >
@@ -413,15 +424,23 @@ function AlertsPage() {
                 <Badge className={badge}>{a.severity}</Badge>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <h3 className="text-sm font-semibold">{a.title}</h3>
+                    <h3 className="text-sm font-semibold group-hover:text-primary transition-colors">{a.title}</h3>
                     <div className="text-xs text-muted-foreground shrink-0">
                       {format(new Date(a.ts), "d MMM yyyy · HH:mm")}
                     </div>
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5">{a.area}</div>
                   <p className="text-sm mt-2 text-foreground/90 leading-relaxed">{a.detail}</p>
-                  <button className="mt-2 text-xs font-medium text-primary hover:underline">
-                    View details →
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedAlert(a);
+                    }}
+                    className="mt-2 text-xs font-medium text-primary hover:underline flex items-center gap-1"
+                  >
+                    <span>View details</span>
+                    <ExternalLink className="h-3 w-3" />
                   </button>
                 </div>
               </div>
@@ -429,6 +448,116 @@ function AlertsPage() {
           );
         })}
       </ul>
+
+      {/* Alert Details Dialog */}
+      <Dialog open={!!selectedAlert} onOpenChange={(open) => !open && setSelectedAlert(null)}>
+        <DialogContent className="max-w-2xl bg-card border-border shadow-2xl">
+          {selectedAlert && (
+            <>
+              <DialogHeader className="space-y-2 border-b border-border pb-4">
+                <div className="flex items-center justify-between">
+                  <Badge
+                    className={cn(
+                      "px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider",
+                      selectedAlert.severity === "Critical"
+                        ? "bg-destructive text-destructive-foreground"
+                        : selectedAlert.severity === "Warning"
+                          ? "bg-warning text-warning-foreground"
+                          : "bg-info text-info-foreground"
+                    )}
+                  >
+                    {selectedAlert.severity} Alert
+                  </Badge>
+                  <span className="text-xs text-muted-foreground font-mono">
+                    {format(new Date(selectedAlert.ts), "dd MMM yyyy, HH:mm:ss")}
+                  </span>
+                </div>
+                <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                  <ShieldAlert className="h-5 w-5 text-primary shrink-0" />
+                  {selectedAlert.title}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground font-medium">
+                  Scope: <span className="text-foreground font-semibold">{selectedAlert.area}</span>
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="py-3 space-y-4">
+                {/* Statistical Metrics Grid */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="rounded-xl border border-border/80 bg-muted/40 p-3 text-center">
+                    <div className="flex items-center justify-center gap-1.5 text-muted-foreground text-[11px] font-medium mb-1">
+                      <BarChart3 className="h-3.5 w-3.5 text-primary" />
+                      <span>Volume Count</span>
+                    </div>
+                    <div className="text-base font-bold text-foreground font-mono">
+                      {selectedAlert.count ?? "N/A"}
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border/80 bg-muted/40 p-3 text-center">
+                    <div className="flex items-center justify-center gap-1.5 text-muted-foreground text-[11px] font-medium mb-1">
+                      <Activity className="h-3.5 w-3.5 text-warning" />
+                      <span>Z-Score Anomaly</span>
+                    </div>
+                    <div className="text-base font-bold text-foreground font-mono">
+                      {selectedAlert.z_score ? `+${selectedAlert.z_score}σ` : "N/A"}
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border/80 bg-muted/40 p-3 text-center">
+                    <div className="flex items-center justify-center gap-1.5 text-muted-foreground text-[11px] font-medium mb-1">
+                      <ShieldAlert className="h-3.5 w-3.5 text-success" />
+                      <span>Confidence Rating</span>
+                    </div>
+                    <div className="text-base font-bold text-foreground font-mono">
+                      {selectedAlert.confidence
+                        ? `${Math.round(selectedAlert.confidence * 100)}%`
+                        : "N/A"}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Analysis Breakdown */}
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-1.5">
+                  <div className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                    <span>AI Intelligence Diagnosis</span>
+                  </div>
+                  <p className="text-xs text-foreground/90 leading-relaxed font-normal">
+                    {selectedAlert.detail}
+                  </p>
+                </div>
+              </div>
+
+              <DialogFooter className="border-t border-border pt-4 sm:justify-between items-center gap-2">
+                <div className="text-[11px] text-muted-foreground">
+                  Reference ID: <span className="font-mono text-foreground">{selectedAlert.id}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedAlert(null)}
+                    className="text-xs h-8"
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setSelectedAlert(null);
+                      navigate({ to: "/_app/cases" });
+                    }}
+                    className="text-xs h-8 bg-primary text-primary-foreground hover:opacity-90 gap-1.5"
+                  >
+                    <span>Investigate in Cases</span>
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
