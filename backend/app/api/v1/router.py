@@ -22,6 +22,7 @@ from app.api.v1.endpoints import (
     security,
     risk,
     forecasting,
+    decision_support,
 )
 
 api_router = APIRouter()
@@ -43,6 +44,9 @@ api_router.include_router(reports.router, prefix="/reports", tags=["reports"])
 api_router.include_router(security.router, prefix="/security", tags=["security"])
 api_router.include_router(risk.router, prefix="/risk", tags=["risk"])
 api_router.include_router(forecasting.router, prefix="/forecasting", tags=["forecasting"])
+api_router.include_router(
+    decision_support.router, prefix="/decision-support", tags=["decision-support"]
+)
 
 
 

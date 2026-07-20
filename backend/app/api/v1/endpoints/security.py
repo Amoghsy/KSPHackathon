@@ -47,7 +47,7 @@ async def verify_supervisor_scope(supervisor: dict, district: str, db: AsyncSess
     role = normalize_role(supervisor.get("role"))
     if role == "SUPERVISOR":
         supervisor_districts = await get_user_authorized_districts(supervisor, db)
-        if district not in supervisor_districts:
+        if "__ALL__" not in supervisor_districts and district not in supervisor_districts:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Supervisor is not authorized to manage actions for district '{district}' outside of their supervision scope."

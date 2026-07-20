@@ -150,6 +150,7 @@ export async function getFinancialNetwork(params?: {
   crimeType?: string;
   policeStation?: string;
   timePeriod?: string;
+  focusId?: string;
 }): Promise<any> {
   const query: Record<string, unknown> = {};
   if (params) {
@@ -157,8 +158,30 @@ export async function getFinancialNetwork(params?: {
     if (params.crimeType) query.crime_type = params.crimeType;
     if (params.policeStation) query.police_station = params.policeStation;
     if (params.timePeriod) query.time_period = params.timePeriod;
+    if (params.focusId) query.focus_id = params.focusId;
   }
   return apiGet<any>(ENDPOINTS.FINANCIAL, query);
+}
+
+export async function getFinancialTopSuspects(params?: { district?: string }): Promise<any[]> {
+  const query: Record<string, unknown> = {};
+  if (params?.district) query.district = params.district;
+  return apiGet<any[]>(`${ENDPOINTS.FINANCIAL}top-suspects`, query);
+}
+
+export async function searchFinancialNetwork(params: {
+  q: string;
+  district?: string;
+  crimeType?: string;
+  policeStation?: string;
+  timePeriod?: string;
+}): Promise<any> {
+  const query: Record<string, unknown> = { q: params.q };
+  if (params.district) query.district = params.district;
+  if (params.crimeType) query.crime_type = params.crimeType;
+  if (params.policeStation) query.police_station = params.policeStation;
+  if (params.timePeriod) query.time_period = params.timePeriod;
+  return apiGet<any>(`${ENDPOINTS.FINANCIAL}search`, query);
 }
 
 

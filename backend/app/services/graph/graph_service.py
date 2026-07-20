@@ -375,6 +375,7 @@ class GraphService:
         crime_type: str | None = None,
         police_station: str | None = None,
         time_period: str | None = None,
+        focus_id: str | None = None,
         authorized_districts: list[str] | None = None,
     ) -> dict:
         """
@@ -386,6 +387,7 @@ class GraphService:
             "crime_type": crime_type,
             "police_station": police_station,
             "time_period": time_period,
+            "focus_id": focus_id,
         }
 
         # Check Cache
@@ -395,18 +397,29 @@ class GraphService:
                 return cached_data
 
         # 1. Fetch filtered cases
-        cases = await self.repository.get_filtered_cases(
-            district=district,
-            crime_type=crime_type,
-            police_station=police_station,
-            time_period=time_period,
-            authorized_districts=authorized_districts,
-        )
+        if focus_id:
+            cases = await self.repository.get_cases_by_focus_id(focus_id, authorized_districts=authorized_districts)
+            if district and district != "All":
+                cases = [c for c in cases if c.police_station and c.police_station.district == district]
+            if police_station and police_station != "All":
+                cases = [c for c in cases if c.police_station and c.police_station.name == police_station]
+            if crime_type and crime_type != "All":
+                cases = [c for c in cases if c.crime_type and c.crime_type.name == crime_type]
+        else:
+            cases = await self.repository.get_filtered_cases(
+                district=district,
+                crime_type=crime_type,
+                police_station=police_station,
+                time_period=time_period,
+                authorized_districts=authorized_districts,
+            )
         case_ids = [c.case_master_id for c in cases]
+        accused = await self.repository.get_accused_for_cases(case_ids)
+        accused_ids = [a.accused_master_id for a in accused]
 
         # Fetch connected transactions
         transactions = await self.repository.get_financial_transactions(
-            case_ids=case_ids
+            case_ids=case_ids, accused_ids=accused_ids
         )
 
         # 2. Build financial graph using NetworkX

@@ -81,6 +81,8 @@ async def get_user_authorized_districts(user: dict | None, db: AsyncSession) -> 
 
     # Deduplicate districts
     all_districts = list(set(perm_districts + temp_districts))
+    if any(d == _ALL_DISTRICTS_SENTINEL or d.lower() == "all" for d in all_districts):
+        return [_ALL_DISTRICTS_SENTINEL]
     return all_districts
 
 

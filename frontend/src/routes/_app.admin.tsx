@@ -133,7 +133,11 @@ function AdminPage() {
   const [revokingId, setRevokingId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (currentUser && currentUser.role !== "ADMINISTRATOR") {
+    if (!currentUser) {
+      navigate({ to: "/login" });
+      return;
+    }
+    if (currentUser.role !== "ADMINISTRATOR") {
       toast.error("Access denied", {
         description: "You do not have permission to view the Admin Console.",
       });
@@ -561,6 +565,7 @@ function AdminPage() {
                 <SelectValue placeholder="Select district…" />
               </SelectTrigger>
               <SelectContent className="max-h-64">
+                <SelectItem value="All" className="text-sm font-semibold text-primary">All Districts (State-wide)</SelectItem>
                 {KARNATAKA_DISTRICTS.map((d) => (
                   <SelectItem key={d} value={d} className="text-sm">{d}</SelectItem>
                 ))}

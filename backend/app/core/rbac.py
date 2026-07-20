@@ -36,6 +36,7 @@ ROLE_PERMISSIONS = {
         Permission.MANAGE_USERS,
         Permission.MANAGE_ROLES,
         Permission.SYSTEM_CONFIGURATION,
+        Permission.ASSIGN_DISTRICTS,
     },
     UserRole.SUPERVISOR: {
         Permission.DASHBOARD,

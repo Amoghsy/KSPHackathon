@@ -221,16 +221,46 @@ export async function getNetworkExpansion(nodeId: string, kind: string) {
 }
 
 // ─── Financial ───────────────────────────────────────────────────────────────
+import {
+  getFinancialTopSuspects as apiGetFinancialTopSuspects,
+  searchFinancialNetwork as apiSearchFinancialNetwork,
+} from "@/lib/api/services";
+
 export async function getFinancialNetwork(params?: {
+  district?: string;
+  crimeType?: string;
+  policeStation?: string;
+  timePeriod?: string;
+  focusId?: string;
+}) {
+  try {
+    return await apiGetFinancialNetwork(params);
+  } catch (err) {
+    console.error("Error fetching financial network from backend:", err);
+    return { nodes: [], links: [] };
+  }
+}
+
+export async function getFinancialTopSuspects(params?: { district?: string }) {
+  try {
+    return await apiGetFinancialTopSuspects(params);
+  } catch (err) {
+    console.error("Error fetching top financial suspects:", err);
+    return [];
+  }
+}
+
+export async function searchFinancialNetwork(params: {
+  q: string;
   district?: string;
   crimeType?: string;
   policeStation?: string;
   timePeriod?: string;
 }) {
   try {
-    return await apiGetFinancialNetwork(params);
+    return await apiSearchFinancialNetwork(params);
   } catch (err) {
-    console.error("Error fetching financial network from backend:", err);
+    console.error("Error searching financial network:", err);
     return { nodes: [], links: [] };
   }
 }
@@ -347,6 +377,52 @@ export async function auditCaseExport(params: {
   } catch (err) {
     console.error("Error logging case export audit:", err);
     return null;
+  }
+}
+
+// ─── Decision Support & Investigation Intelligence ──────────────────────────
+export async function getDecisionBrief(caseId: string | number): Promise<any | null> {
+  try {
+    return await apiGet<any>(`/decision-support/case/${caseId}/brief`);
+  } catch (err) {
+    console.error("Error fetching decision brief:", err);
+    return null;
+  }
+}
+
+export async function getSimilarCasesForCase(caseId: string | number): Promise<any[]> {
+  try {
+    return await apiGet<any[]>(`/decision-support/case/${caseId}/similar`) || [];
+  } catch (err) {
+    console.error("Error fetching similar cases:", err);
+    return [];
+  }
+}
+
+export async function getLeads(caseId: string | number): Promise<any[]> {
+  try {
+    return await apiGet<any[]>(`/decision-support/case/${caseId}/leads`) || [];
+  } catch (err) {
+    console.error("Error fetching investigative leads:", err);
+    return [];
+  }
+}
+
+export async function getEvidenceGaps(caseId: string | number): Promise<any[]> {
+  try {
+    return await apiGet<any[]>(`/decision-support/case/${caseId}/gaps`) || [];
+  } catch (err) {
+    console.error("Error fetching evidence gaps:", err);
+    return [];
+  }
+}
+
+export async function getCaseTimeline(caseId: string | number): Promise<any[]> {
+  try {
+    return await apiGet<any[]>(`/decision-support/case/${caseId}/timeline`) || [];
+  } catch (err) {
+    console.error("Error fetching case timeline:", err);
+    return [];
   }
 }
 

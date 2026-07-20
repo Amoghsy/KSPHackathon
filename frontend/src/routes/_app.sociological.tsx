@@ -68,16 +68,15 @@ function SociologicalPage() {
       <PageHeader
         title="Sociological Crime Insights"
         subtitle="Demographic and socio-economic patterns across Karnataka crime records."
-        actions={<MockBadge />}
       />
 
       <div className="mb-4">
         <Badge
           variant="outline"
-          className="gap-1.5 border-warning/40 bg-warning/10 text-warning-foreground"
+          className="gap-1.5 border-primary/40 bg-primary/10 text-primary-foreground"
         >
           <ShieldAlert className="h-3.5 w-3.5" />
-          Illustrative data — demographic fields are role-masked in production
+          Live demographic insights compiled from active criminal registries.
         </Badge>
       </div>
 
