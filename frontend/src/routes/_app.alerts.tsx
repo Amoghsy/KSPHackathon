@@ -545,7 +545,7 @@ function AlertsPage() {
                     size="sm"
                     onClick={() => {
                       setSelectedAlert(null);
-                      navigate({ to: "/_app/cases" });
+                      navigate({ to: "/cases" });
                     }}
                     className="text-xs h-8 bg-primary text-primary-foreground hover:opacity-90 gap-1.5"
                   >
