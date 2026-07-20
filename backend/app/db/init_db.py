@@ -36,8 +36,13 @@ async def seed_default_admin() -> None:
                 hashed_pw = get_password_hash("admin123")
                 new_admin = User(
                     username="admin",
+                    email="admin@ksp.gov.in",
+                    employee_id="KSP-10000",
+                    full_name="System Admin",
                     hashed_password=hashed_pw,
                     role=UserRole.ADMINISTRATOR.value,
+                    account_status="ACTIVE",
+                    must_change_password=False,
                 )
                 db.add(new_admin)
                 await db.commit()

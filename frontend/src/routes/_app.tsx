@@ -6,6 +6,7 @@ import { useAuthStore } from "@/stores/auth";
 import { usePrefs } from "@/stores/prefs";
 import { cn } from "@/lib/utils";
 import { canAccessRoute, findRouteAccess, requiredRoleLabel, ROLE_DEFAULT_LANDING } from "@/lib/rbac";
+import { SessionSyncProvider } from "@/components/providers/SessionSyncProvider";
 
 export const Route = createFileRoute("/_app")({
   ssr: false,
@@ -41,6 +42,7 @@ function AppShell() {
   const setMobileNavOpen = usePrefs((s) => s.setMobileNavOpen);
 
   return (
+    <SessionSyncProvider>
     <div className="relative flex h-screen w-full overflow-hidden">
       {/* Ambient aurora background */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
@@ -110,5 +112,6 @@ function AppShell() {
         <AccessRequestModal />
       </div>
     </div>
+    </SessionSyncProvider>
   );
 }

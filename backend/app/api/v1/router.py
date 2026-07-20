@@ -23,12 +23,14 @@ from app.api.v1.endpoints import (
     risk,
     forecasting,
     decision_support,
+    admin,
 )
 
 api_router = APIRouter()
 
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
+api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(cases.router, prefix="/cases", tags=["cases"])
 api_router.include_router(accused.router, prefix="/accused", tags=["accused"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])

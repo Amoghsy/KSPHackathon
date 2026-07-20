@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SetupPasswordRouteImport } from './routes/setup-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AdminLoginRouteImport } from './routes/admin-login'
 import { Route as AppRouteImport } from './routes/_app'
@@ -29,6 +30,11 @@ import { Route as AppCasesIndexRouteImport } from './routes/_app.cases.index'
 import { Route as AppOffendersIdRouteImport } from './routes/_app.offenders.$id'
 import { Route as AppCasesFirIdRouteImport } from './routes/_app.cases.$firId'
 
+const SetupPasswordRoute = SetupPasswordRouteImport.update({
+  id: '/setup-password',
+  path: '/setup-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -128,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/admin-login': typeof AdminLoginRoute
   '/login': typeof LoginRoute
+  '/setup-password': typeof SetupPasswordRoute
   '/access-restricted': typeof AppAccessRestrictedRoute
   '/admin': typeof AppAdminRoute
   '/alerts': typeof AppAlertsRoute
@@ -147,6 +154,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/admin-login': typeof AdminLoginRoute
   '/login': typeof LoginRoute
+  '/setup-password': typeof SetupPasswordRoute
   '/access-restricted': typeof AppAccessRestrictedRoute
   '/admin': typeof AppAdminRoute
   '/alerts': typeof AppAlertsRoute
@@ -169,6 +177,7 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/admin-login': typeof AdminLoginRoute
   '/login': typeof LoginRoute
+  '/setup-password': typeof SetupPasswordRoute
   '/_app/access-restricted': typeof AppAccessRestrictedRoute
   '/_app/admin': typeof AppAdminRoute
   '/_app/alerts': typeof AppAlertsRoute
@@ -192,6 +201,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin-login'
     | '/login'
+    | '/setup-password'
     | '/access-restricted'
     | '/admin'
     | '/alerts'
@@ -211,6 +221,7 @@ export interface FileRouteTypes {
   to:
     | '/admin-login'
     | '/login'
+    | '/setup-password'
     | '/access-restricted'
     | '/admin'
     | '/alerts'
@@ -232,6 +243,7 @@ export interface FileRouteTypes {
     | '/_app'
     | '/admin-login'
     | '/login'
+    | '/setup-password'
     | '/_app/access-restricted'
     | '/_app/admin'
     | '/_app/alerts'
@@ -254,10 +266,18 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AdminLoginRoute: typeof AdminLoginRoute
   LoginRoute: typeof LoginRoute
+  SetupPasswordRoute: typeof SetupPasswordRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/setup-password': {
+      id: '/setup-password'
+      path: '/setup-password'
+      fullPath: '/setup-password'
+      preLoaderRoute: typeof SetupPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -438,6 +458,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   AdminLoginRoute: AdminLoginRoute,
   LoginRoute: LoginRoute,
+  SetupPasswordRoute: SetupPasswordRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

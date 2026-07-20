@@ -9,6 +9,9 @@ from fastapi.security import OAuth2PasswordBearer
 from app.config import settings
 from app.core.rbac import UserRole, normalize_role
 
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.db.session import get_db
+
 # OAuth2 scheme config
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
@@ -82,10 +85,12 @@ def verify_access_token(token: str) -> dict[str, Any] | None:
 
 async def get_current_user(
     token: str | None = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     """
     Dependency injection helper to validate the JWT and return user details.
     Queries the database to fetch latest role and district assignments.
+    Also validates server-side session active status and inactivity timeout.
     """
     if not token:
         # Fallback dummy user for local development if no token is provided
@@ -94,6 +99,7 @@ async def get_current_user(
             "username": "insp_mysuru",
             "role": "INVESTIGATOR",
             "districts": "Mysuru",
+            "session_id": "dummy-session-id",
         }
 
     # Verify if token is blacklisted in Redis
@@ -104,7 +110,6 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-
     payload = verify_access_token(token)
     if not payload:
         raise HTTPException(
@@ -114,20 +119,23 @@ async def get_current_user(
         )
 
     username: str | None = payload.get("sub")
-    if not username:
+    session_id: str | None = payload.get("session_id")
+    if not username or not session_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token payload is missing subject claim",
+            detail="Token payload is missing subject or session ID claim",
         )
 
-    from app.db.session import SessionLocal
     from sqlalchemy import select
     from app.models.user import User
+    from app.models.session import UserSession
+    from app.services.session.session_service import SessionService
+    from app.services.audit.audit_service import log_security_event
 
-    async with SessionLocal() as db_session:
-        stmt = select(User).where(User.username == username)
-        result = await db_session.execute(stmt)
-        db_user = result.scalar_one_or_none()
+    # 1. Fetch user
+    stmt_user = select(User).where(User.username == username)
+    res_user = await db.execute(stmt_user)
+    db_user = res_user.scalar_one_or_none()
 
     if not db_user:
         raise HTTPException(
@@ -135,10 +143,70 @@ async def get_current_user(
             detail="User account not found in database",
         )
 
+    # 2. Check account status
+    if db_user.account_status != "ACTIVE":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account is disabled or pending activation",
+        )
+
+    # 3. Fetch device session
+    stmt_sess = select(UserSession).where(UserSession.id == session_id)
+    res_sess = await db.execute(stmt_sess)
+    session = res_sess.scalar_one_or_none()
+
+    if not session or not session.is_active or session.revoked_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session has been revoked or logged out",
+        )
+
+    now = datetime.datetime.now(datetime.timezone.utc)
+    if session.expires_at < now:
+        session.is_active = False
+        db.add(session)
+        await db.flush()
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session has expired",
+        )
+
+    # 4. Enforce 10-minute inactivity timeout
+    last_act = session.last_activity_at
+    if (now - last_act).total_seconds() > 10 * 60:
+        session.is_active = False
+        session.revoked_at = now
+        session.revoke_reason = "SESSION_TIMEOUT"
+        db.add(session)
+        await db.flush()
+        
+        # Log to audit history
+        await log_security_event(
+            db=db,
+            event_type="SESSION_TIMEOUT",
+            user_id=db_user.id,
+            username=db_user.username,
+            role=normalize_role(db_user.role),
+            ip_address=session.ip_address,
+            user_agent=session.user_agent,
+            reason="Inactivity timeout reached (10 minutes)"
+        )
+        
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="SESSION_INACTIVE",
+        )
+
+    # 5. Throttled activity update (if > 60s since last update)
+    session_service = SessionService(db)
+    await session_service.update_last_activity(session)
+
     return {
         "id": db_user.id,
         "username": db_user.username,
         "role": normalize_role(db_user.role),
         "districts": db_user.districts,
+        "session_id": session_id,
+        "token": token,
     }
 

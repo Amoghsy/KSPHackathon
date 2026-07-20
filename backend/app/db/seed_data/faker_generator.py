@@ -581,22 +581,27 @@ async def run_automated_validation(db: AsyncSession):
     hashed_pw = get_password_hash("password123")
 
     users_to_seed = [
-        ("insp_mysuru", "INVESTIGATOR", "Mysuru"),
-        ("insp_bengaluru", "INVESTIGATOR", "Bengaluru Urban"),
-        ("senior_sp", "SENIOR_INVESTIGATOR", "Mysuru,Bengaluru Urban"),
-        ("analyst_priya", "ANALYST", "Mysuru,Bengaluru Urban,Mangaluru"),
-        ("supervisor_ramesh", "SUPERVISOR", None),
-        ("policymaker_anitha", "POLICY_MAKER", None),
-        ("admin_system", "ADMINISTRATOR", None),
+        ("insp_mysuru", "INVESTIGATOR", "Mysuru", "insp.mysuru@ksp.gov.in", "KSP-10001", "Arjun Rao"),
+        ("insp_bengaluru", "INVESTIGATOR", "Bengaluru Urban", "insp.bengaluru@ksp.gov.in", "KSP-10002", "Karan Singh"),
+        ("senior_sp", "SENIOR_INVESTIGATOR", "Mysuru,Bengaluru Urban", "senior.sp@ksp.gov.in", "KSP-10003", "Ravi Patil"),
+        ("analyst_priya", "ANALYST", "Mysuru,Bengaluru Urban,Mangaluru", "analyst.priya@ksp.gov.in", "KSP-10004", "Priya Kulkarni"),
+        ("supervisor_ramesh", "SUPERVISOR", None, "supervisor.ramesh@ksp.gov.in", "KSP-10005", "Ramesh Iyer"),
+        ("policymaker_anitha", "POLICY_MAKER", None, "policymaker.anitha@ksp.gov.in", "KSP-10006", "Anitha Menon"),
+        ("admin_system", "ADMINISTRATOR", None, "admin.system@ksp.gov.in", "KSP-10007", "Admin System"),
     ]
 
     user_objs = {}
-    for username, role, legacy_districts in users_to_seed:
+    for username, role, legacy_districts, email, employee_id, full_name in users_to_seed:
         user = User(
             username=username,
+            email=email,
+            employee_id=employee_id,
+            full_name=full_name,
             hashed_password=hashed_pw,
             role=role,
-            districts=legacy_districts
+            districts=legacy_districts,
+            account_status="ACTIVE",
+            must_change_password=False,
         )
         db.add(user)
         user_objs[username] = user

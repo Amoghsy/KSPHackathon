@@ -148,10 +148,10 @@ export function Topbar() {
               {t("settings")}
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => {
+              onClick={async () => {
                 // Use canonical role check — ADMINISTRATOR goes to admin-login, all others to /login
                 const isAdmin = user?.role === "ADMINISTRATOR";
-                logout();
+                await logout();
                 navigate({ to: isAdmin ? "/admin-login" : "/login" });
               }}
               className="text-destructive focus:text-destructive"

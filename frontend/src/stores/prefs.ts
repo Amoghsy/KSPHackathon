@@ -20,7 +20,7 @@ export const usePrefs = create<PrefsState>()(
   persist(
     (set, get) => ({
       lang: "en",
-      theme: "light",
+      theme: "dark",
       sidebarCollapsed: false,
       mobileNavOpen: false,
       setLang: (lang) => set({ lang }),

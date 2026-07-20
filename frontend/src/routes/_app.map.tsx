@@ -86,13 +86,13 @@ function MapPage() {
 
   const districtOptions = useMemo(() => {
     if (!user) return [];
-    if (role === "ADMINISTRATOR" || role === "ANALYST" || role === "POLICY_MAKER") {
+    if (role === "ADMINISTRATOR" || role === "ANALYST" || role === "POLICY_MAKER" || role === "SUPERVISOR") {
       return districtsList;
     }
     return user.assignedDistricts ?? [];
   }, [user, role, districtsList]);
 
-  const canSelectAll = role === "ADMINISTRATOR" || role === "ANALYST" || role === "POLICY_MAKER";
+  const canSelectAll = role === "ADMINISTRATOR" || role === "ANALYST" || role === "POLICY_MAKER" || role === "SUPERVISOR";
 
   const [activeTab, setActiveTab] = useState<"data" | "layers">("data");
   const { zoomLevel, setZoomLevel, selectedDistrict, setSelectedDistrict, filters, layers } =
@@ -108,7 +108,7 @@ function MapPage() {
     }
   }, [canSelectAll, districtOptions, filters.selDistrict]);
 
-  // "Applied" filters — only updated when the user clicks "Load Statistics"
+  // "Applied" filters — only updated when the user clicks "Load Statistics" or changes district focus directly
   const [appliedFilters, setAppliedFilters] = useState(() =>
     buildFilters(
       !canSelectAll && districtOptions.length > 0 ? districtOptions[0] : filters.selDistrict,
@@ -118,6 +118,16 @@ function MapPage() {
       filters.status
     )
   );
+
+  // Sync map district selection directly with appliedFilters
+  const handleSelectDistrictFromMap = useCallback((district: string | null) => {
+    setSelectedDistrict(district);
+    filters.setSelDistrict(district || "All");
+    setAppliedFilters((prev) => ({
+      ...prev,
+      district: district || undefined,
+    }));
+  }, [setSelectedDistrict, filters]);
 
   // "Pending" filters — reflect what the user has currently selected in the sidebar
   const pendingFilters = useMemo(
@@ -282,6 +292,10 @@ function MapPage() {
                     filters.setSelDistrict(val);
                     if (val !== "All") setSelectedDistrict(val);
                     else setSelectedDistrict(null);
+                    setAppliedFilters((prev) => ({
+                      ...prev,
+                      district: val !== "All" ? val : undefined,
+                    }));
                   }}
                 >
                   <SelectTrigger className="bg-background border-input text-foreground text-xs h-8">
@@ -499,7 +513,7 @@ function MapPage() {
 
           <CrimeMap
             selected={selectedDistrict}
-            setSelected={setSelectedDistrict}
+            setSelected={handleSelectDistrictFromMap}
             zoomLevel={zoomLevel}
             setZoomLevel={setZoomLevel}
             data={mapData}

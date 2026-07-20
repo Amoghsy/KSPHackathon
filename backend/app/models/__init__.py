@@ -17,4 +17,6 @@ from app.models.victim import VictimMaster  # noqa: F401
 from app.models.investigation_history import InvestigationHistory  # noqa: F401
 from app.models.district_assignment import UserDistrictAssignment  # noqa: F401
 from app.models.access_request import DistrictAccessRequest, TemporaryDistrictPermission  # noqa: F401
+from app.models.session import UserSession  # noqa: F401
+
 

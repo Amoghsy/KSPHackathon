@@ -5,14 +5,45 @@
 export interface LoginRequest {
   username: string;
   password: string;
-  role?: string;
 }
 
+/** Step 1 response — contains OTP challenge, NOT a token */
+export interface LoginOTPResponse {
+  otp_required: boolean;
+  challenge_id: string;
+  expires_in: number;
+  message: string;
+}
+
+/** Step 2 response — full session response after OTP verification */
 export interface LoginResponse {
   access_token: string;
   token_type: string;
+  session_id: string;
   username: string;
   role: string;
+  refresh_token?: string;
+  user: {
+    id: string;
+    name: string;
+    username: string;
+    role: string;
+    badgeNo: string;
+    station: string;
+  };
+}
+
+/** Active device session */
+export interface DeviceSession {
+  session_id: string;
+  device_name: string;
+  browser: string;
+  os: string;
+  device_type: string;
+  ip_address: string;
+  created_at: string;
+  last_activity_at: string;
+  is_current: boolean;
 }
 
 // ─── Chat ───────────────────────────────────────────────────────────────────
@@ -156,13 +187,21 @@ export interface AccusedResponse {
 export interface UserResponse {
   id: number;
   username: string;
+  email: string;
   role: string;
+  full_name?: string;
+  employee_id?: string;
+  account_status: string;
 }
 
 export interface UserCreatePayload {
   username: string;
-  password: string;
+  email: string;
+  employee_id: string;
   role: string;
+  full_name?: string;
+  password?: string;
+  districts?: string;
 }
 
 // ─── District Assignments ────────────────────────────────────────────────────

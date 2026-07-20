@@ -27,6 +27,15 @@ class Settings(BaseSettings):
     # Cache
     redis_url: str = "redis://localhost:6379/0"
 
+    # SMTP Configuration
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = "noreply@ksp.gov.in"
+    smtp_from_name: str = "SCRB Intelligence Platform"
+    frontend_url: str = "http://localhost:8080"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

@@ -41,11 +41,14 @@ async def list_audit_logs(
             "ts": l.timestamp.isoformat() + "Z",
             "user": l.username or "system",
             "role": l.role or "System",
-            "action": l.api or "Query",
+            "action": l.action or l.api or "Query",
             "query": l.question or "",
             "rows": l.response_size or 0,
             "sql": l.generated_sql,
-            "duration": l.execution_time_ms
+            "duration": l.execution_time_ms,
+            "ip_address": l.ip_address,
+            "user_agent": l.user_agent,
+            "reason": l.reason,
         }
         for l in logs
     ]
