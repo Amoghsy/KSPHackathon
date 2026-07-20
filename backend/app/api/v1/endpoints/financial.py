@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy import select, func
+from sqlalchemy.orm import aliased
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -84,16 +85,19 @@ async def get_top_suspects(
     auth_districts = await get_user_authorized_districts(current_user, db)
     auth_districts_resolved = resolve_authorized_districts(auth_districts)
 
+    AllCasesAccused = aliased(AccusedMaster)
+
     stmt = (
         select(
             AccusedMaster.person_id,
             func.min(AccusedMaster.accused_name).label("accused_name"),
-            func.count(func.distinct(AccusedMaster.case_master_id)).label("case_count"),
+            func.count(func.distinct(AllCasesAccused.case_master_id)).label("case_count"),
             func.count(FinancialTransaction.financial_transaction_id).label("suspicious_tx_count"),
             func.sum(FinancialTransaction.amount).label("total_suspicious_amount")
         )
         .join(FinancialTransaction, AccusedMaster.accused_master_id == FinancialTransaction.accused_master_id)
-        .join(CaseMaster, AccusedMaster.case_master_id == CaseMaster.case_master_id)
+        .join(AllCasesAccused, AccusedMaster.person_id == AllCasesAccused.person_id)
+        .join(CaseMaster, AllCasesAccused.case_master_id == CaseMaster.case_master_id)
         .join(PoliceStation, CaseMaster.police_station_id == PoliceStation.police_station_id)
         .where(FinancialTransaction.is_suspicious == True)
         .where(AccusedMaster.person_id.isnot(None))

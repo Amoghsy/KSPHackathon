@@ -26,9 +26,10 @@ export function SessionSyncProvider({ children }: SessionSyncProviderProps) {
 
   // ── Inactivity logout handler ──────────────────────────────────────────────
   const handleInactivityLogout = useCallback(async () => {
+    const isAdmin = user?.role === "ADMINISTRATOR";
     await logout();
-    navigate({ to: "/login" });
-  }, [logout, navigate]);
+    navigate({ to: isAdmin ? "/admin-login" : "/login" });
+  }, [logout, navigate, user]);
 
   useInactivityLogout({
     timeoutMs: 10 * 60 * 1000, // 10 minutes
@@ -45,15 +46,16 @@ export function SessionSyncProvider({ children }: SessionSyncProviderProps) {
     try {
       bc = new BroadcastChannel("cia-auth");
       bc.onmessage = async (event: MessageEvent) => {
+        const isAdmin = user?.role === "ADMINISTRATOR";
         if (event.data?.type === "LOGOUT") {
           // Another tab signed out — reflect it here
           await logout();
-          navigate({ to: "/login" });
+          navigate({ to: isAdmin ? "/admin-login" : "/login" });
           toast.info("Signed out on another tab.");
         }
         if (event.data?.type === "SESSION_REVOKED") {
           await logout();
-          navigate({ to: "/login" });
+          navigate({ to: isAdmin ? "/admin-login" : "/login" });
           toast.error("Your session was terminated by an administrator.");
         }
       };
@@ -72,8 +74,9 @@ export function SessionSyncProvider({ children }: SessionSyncProviderProps) {
 
     const handleForceLogout = async (e: CustomEvent) => {
       const reason = e.detail?.reason as string | undefined;
+      const isAdmin = user?.role === "ADMINISTRATOR";
       await logout();
-      navigate({ to: "/login" });
+      navigate({ to: isAdmin ? "/admin-login" : "/login" });
 
       if (reason === "SESSION_INACTIVE") {
         toast.error("Signed out due to inactivity.", {

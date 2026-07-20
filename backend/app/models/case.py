@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from app.models.financial_transaction import FinancialTransaction
     from app.models.police_station import PoliceStation
     from app.models.victim import VictimMaster
+    from app.models.complainant import ComplainantDetails
 
 
 class CaseMaster(Base):
@@ -59,5 +60,8 @@ class CaseMaster(Base):
         back_populates="case", cascade="all, delete-orphan"
     )
     financial_transactions: Mapped[list["FinancialTransaction"]] = relationship(
+        back_populates="case", cascade="all, delete-orphan"
+    )
+    complainants: Mapped[list["ComplainantDetails"]] = relationship(
         back_populates="case", cascade="all, delete-orphan"
     )

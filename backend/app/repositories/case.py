@@ -5,6 +5,7 @@ from sqlalchemy.orm import selectinload
 from app.models.case import CaseMaster
 from app.models.police_station import PoliceStation
 from app.models.crime_type import CrimeType
+from app.models.complainant import ComplainantDetails
 
 
 class CaseRepository:
@@ -69,6 +70,7 @@ class CaseRepository:
                 selectinload(CaseMaster.police_station),
                 selectinload(CaseMaster.crime_type),
                 selectinload(CaseMaster.victims),
+                selectinload(CaseMaster.complainants),
             )
             .limit(limit)
             .offset(offset)
@@ -122,6 +124,9 @@ class CaseRepository:
                 selectinload(CaseMaster.crime_type),
                 selectinload(CaseMaster.accused),
                 selectinload(CaseMaster.victims),
+                selectinload(CaseMaster.complainants).selectinload(ComplainantDetails.occupation),
+                selectinload(CaseMaster.complainants).selectinload(ComplainantDetails.religion),
+                selectinload(CaseMaster.complainants).selectinload(ComplainantDetails.caste),
             )
         )
         result = await self.db.execute(stmt)

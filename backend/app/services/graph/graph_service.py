@@ -43,7 +43,13 @@ class GraphService:
         }
 
         # 0. Check if Level 1 Dashboard View (no focus ID, no active filters)
-        is_level1 = not (district or crime_type or police_station or time_period or focus_id)
+        is_level1 = not (
+            (district and district != "All")
+            or (crime_type and crime_type != "All")
+            or (police_station and police_station != "All")
+            or (time_period and time_period != "All")
+            or focus_id
+        )
         if is_level1:
             if authorized_districts is None:
                 cached_stats = await self.cache.get("dashboard_stats", {})

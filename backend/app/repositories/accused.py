@@ -21,11 +21,9 @@ class AccusedRepository:
         return list(result.scalars().all())
 
     async def get_unique_offenders(
-        self, q: str | None = None, limit: int = 15, offset: int = 0
+        self, q: str | None = None, limit: int = 15, offset: int = 0, authorized_districts: list[str] | None = None
     ) -> list[AccusedMaster]:
-        """Fetch distinct offender personas (grouped by person_id) matching search query."""
-        # Find distinct person_id by using a subquery or group_by
-        # In SQLite/PostgreSQL we can group by person_id and select the one with min accused_master_id
+        """Fetch distinct offender personas (grouped by person_id) matching search query and authorized districts."""
         subq = (
             select(
                 func.min(AccusedMaster.accused_master_id).label("min_id"),
@@ -35,6 +33,13 @@ class AccusedRepository:
         )
         if q:
             subq = subq.where(AccusedMaster.accused_name.ilike(f"%{q}%"))
+            
+        if authorized_districts is not None:
+            subq = (
+                subq.join(CaseMaster, AccusedMaster.case_master_id == CaseMaster.case_master_id)
+                .join(PoliceStation, CaseMaster.police_station_id == PoliceStation.police_station_id)
+                .where(PoliceStation.district.in_(authorized_districts))
+            )
             
         subq = subq.subquery()
         
@@ -53,11 +58,18 @@ class AccusedRepository:
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
-    async def get_unique_offenders_count(self, q: str | None = None) -> int:
-        """Count unique offender personas matching search query."""
+    async def get_unique_offenders_count(self, q: str | None = None, authorized_districts: list[str] | None = None) -> int:
+        """Count unique offender personas matching search query and authorized districts."""
         stmt = select(func.count(func.distinct(AccusedMaster.person_id)))
         if q:
             stmt = stmt.where(AccusedMaster.accused_name.ilike(f"%{q}%"))
+            
+        if authorized_districts is not None:
+            stmt = (
+                stmt.join(CaseMaster, AccusedMaster.case_master_id == CaseMaster.case_master_id)
+                .join(PoliceStation, CaseMaster.police_station_id == PoliceStation.police_station_id)
+                .where(PoliceStation.district.in_(authorized_districts))
+            )
             
         result = await self.db.execute(stmt)
         return result.scalar() or 0

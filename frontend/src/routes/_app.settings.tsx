@@ -75,7 +75,8 @@ function ActiveSessionsPanel() {
       if (isCurrent) {
         toast.success("Current session terminated.");
         await logout();
-        navigate({ to: "/login" });
+        const isAdmin = user?.role === "ADMINISTRATOR";
+        navigate({ to: isAdmin ? "/admin-login" : "/login" });
       } else {
         toast.success("Session terminated successfully.");
         setSessions((prev) => prev.filter((s) => s.session_id !== sessionId));
@@ -288,11 +289,10 @@ function SettingsPage() {
           </div>
         </section>
 
-        {/* Security Notice */}
-        <div className="rounded-lg border border-amber-400/20 bg-amber-500/5 p-4 flex gap-3">
-          <AlertTriangle className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
-          <div className="text-xs text-muted-foreground">
-            <span className="font-semibold text-amber-300">Security notice:</span>{" "}
+        <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-4 flex gap-3">
+          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+          <div className="text-xs text-amber-800 dark:text-amber-200">
+            <span className="font-semibold text-amber-900 dark:text-amber-400">Security notice:</span>{" "}
             Sessions automatically expire after 10 minutes of inactivity.
             All sign-in events and actions are logged and audited.
           </div>

@@ -13,6 +13,7 @@ from app.models.case import CaseMaster
 from app.models.accused import AccusedMaster
 from app.models.victim import VictimMaster
 from app.models.financial_transaction import FinancialTransaction
+from app.models.complainant import ComplainantDetails, CasteMaster, ReligionMaster, OccupationMaster
 from app.services.graph.graph_utils import normalize_name
 from app.models.user import User
 from app.models.district_assignment import UserDistrictAssignment
@@ -87,6 +88,10 @@ async def generate_realistic_network(db: AsyncSession):
     await db.execute(delete(FinancialTransaction))
     await db.execute(delete(VictimMaster))
     await db.execute(delete(AccusedMaster))
+    await db.execute(delete(ComplainantDetails))
+    await db.execute(delete(CasteMaster))
+    await db.execute(delete(ReligionMaster))
+    await db.execute(delete(OccupationMaster))
     await db.execute(delete(CaseMaster))
     await db.execute(delete(CrimeType))
     await db.execute(delete(PoliceStation))
@@ -118,6 +123,35 @@ async def generate_realistic_network(db: AsyncSession):
         await db.flush()
         crime_type_map[ct_name] = ct.crime_type_id
     print(f"Inserted {len(crime_type_map)} Crime Types")
+
+    # 2b. Insert Complainant Demographics Masters
+    caste_names = ["Scheduled Caste (SC)", "Scheduled Tribe (ST)", "OBC", "General"]
+    caste_objs = []
+    for c_name in caste_names:
+        cobj = CasteMaster(caste_master_name=c_name)
+        db.add(cobj)
+        caste_objs.append(cobj)
+    await db.flush()
+    caste_ids = [c.caste_master_id for c in caste_objs]
+
+    religion_names = ["Hindu", "Muslim", "Christian", "Sikh", "Jain"]
+    religion_objs = []
+    for r_name in religion_names:
+        robj = ReligionMaster(religion_name=r_name)
+        db.add(robj)
+        religion_objs.append(robj)
+    await db.flush()
+    religion_ids = [r.religion_id for r in religion_objs]
+
+    occupation_names = ["Farmer", "Government Employee", "Business Owner", "Unemployed", "Software Engineer", "Labourer"]
+    occupation_objs = []
+    for o_name in occupation_names:
+        oobj = OccupationMaster(occupation_name=o_name)
+        db.add(oobj)
+        occupation_objs.append(oobj)
+    await db.flush()
+    occupation_ids = [o.occupation_id for o in occupation_objs]
+    print(f"Inserted {len(caste_ids)} Caste, {len(religion_ids)} Religion, and {len(occupation_ids)} Occupation master records")
 
     # 3. Define Criminal Network Actors
     # 4 Gangs (5-8 accused each)
@@ -374,6 +408,21 @@ async def generate_realistic_network(db: AsyncSession):
                 )
                 db.add(vic2)
                 victims_inserted_count += 1
+
+        # Link Complainant
+        comp_gender = random.choice([1, 2])
+        comp_name = generate_indian_name(comp_gender)
+        comp_age = random.randint(21, 80)
+        comp_details = ComplainantDetails(
+            case_master_id=case.case_master_id,
+            complainant_name=comp_name,
+            age_year=comp_age,
+            gender_id=comp_gender,
+            occupation_id=random.choice(occupation_ids),
+            religion_id=random.choice(religion_ids),
+            caste_id=random.choice(caste_ids)
+        )
+        db.add(comp_details)
 
     await db.flush()
     print(f"Inserted {cases_inserted_count} Cases")
