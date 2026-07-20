@@ -131,8 +131,20 @@ class QueryAgent:
 
             scoped_sql = generated_sql
             for table, subquery in replacements.items():
-                pattern = re.compile(rf'\b{table}\b', re.IGNORECASE)
-                scoped_sql = pattern.sub(subquery, scoped_sql)
+                pattern = re.compile(
+                    rf'(?P<prefix>\bfrom\s+|\bjoin\s+|,\s*){table}(?:\s+(?:as\s+)?(?P<alias>(?!join|inner|left|right|cross|full|outer|on|where|order|group|limit|offset|union|intersect|except\b)[a-z_][a-z0-9_]*))?\b',
+                    re.IGNORECASE,
+                )
+
+                def replace_func(match):
+                    prefix = match.group("prefix")
+                    alias = match.group("alias")
+                    if alias:
+                        return f"{prefix}{subquery} AS {alias}"
+                    else:
+                        return f"{prefix}{subquery} AS {table}"
+
+                scoped_sql = pattern.sub(replace_func, scoped_sql)
 
             generated_sql = scoped_sql
         # else: unrestricted role — SQL runs against full dataset, no rewriting needed

@@ -96,6 +96,8 @@ class CaseService:
                 "status": map_status(c.case_status_id),
                 "gravity": map_gravity(c.gravity_offence_id),
                 "narrative": c.brief_facts or "",
+                "victimName": c.victims[0].victim_name if c.victims else None,
+                "complainant": "State of Karnataka",
             })
 
         return {

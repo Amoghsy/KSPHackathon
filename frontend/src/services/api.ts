@@ -1,7 +1,7 @@
 // src/services/api.ts — Real backend API calls only. Mock fallbacks removed for all
 // pages that have backend endpoints.
 
-import { apiGet } from "@/lib/api/axios";
+import { apiGet, apiPost } from "@/lib/api/axios";
 import {
   getDashboardData,
   listConversations,
@@ -81,6 +81,7 @@ export async function listFIRs(params?: {
   district?: string;
   page?: number;
   pageSize?: number;
+  bypass_masking?: boolean;
 }): Promise<{ items: any[]; total: number }> {
   const response = await listCases(params);
   if (!response || !response.items) {
@@ -334,4 +335,19 @@ export async function getForecast(crime: ForecastCrime) {
 
 export type ForecastCrime = "Robbery" | "Theft" | "Cybercrime" | "Assault";
 export { listConversations, getCasesMetadata };
+
+export async function auditCaseExport(params: {
+  q?: string;
+  status?: string;
+  district?: string;
+  format: "pdf" | "excel";
+}): Promise<any> {
+  try {
+    return await apiPost<any>("/cases/export/audit", params);
+  } catch (err) {
+    console.error("Error logging case export audit:", err);
+    return null;
+  }
+}
+
 

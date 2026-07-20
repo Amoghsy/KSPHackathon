@@ -70,6 +70,7 @@ export async function listCases(params?: {
   district?: string;
   page?: number;
   pageSize?: number;
+  bypass_masking?: boolean;
 }): Promise<any> {
   return apiGet<any>(ENDPOINTS.CASES, params as Record<string, unknown>);
 }

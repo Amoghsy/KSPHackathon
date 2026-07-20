@@ -17,7 +17,7 @@ import { ROLE_DEFAULT_LANDING } from "@/lib/rbac";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
-    meta: [{ title: "Sign In — Crime Intelligence Assistant" }],
+    meta: [{ title: " KSP Crime Intelligence Assistant" }],
   }),
   component: LoginPage,
 });
