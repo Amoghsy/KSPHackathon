@@ -109,6 +109,46 @@ class QueryAgent:
                 retryable=True,
             )
 
+        # ---- Deterministic ABAC Scope Enforcement (Query Rewriting) ----
+        from app.core.permissions import get_user_authorized_districts, resolve_authorized_districts
+        auth_districts_raw = await get_user_authorized_districts(current_user, session)
+        # resolve_authorized_districts returns None for unrestricted roles (SUPERVISOR, ANALYST, POLICY_MAKER)
+        # and a list for district-scoped roles (INVESTIGATOR, SENIOR_INVESTIGATOR)
+        auth_districts = resolve_authorized_districts(auth_districts_raw)
+
+        if auth_districts is not None:
+            # District-scoped role: rewrite the query to restrict to authorized districts only
+            import re
+            dist_list = ", ".join(f"'{d}'" for d in auth_districts) if auth_districts else "''"
+
+            replacements = {
+                "case_master": f"(SELECT * FROM case_master WHERE police_station_id IN (SELECT police_station_id FROM police_station WHERE district IN ({dist_list})))",
+                "police_station": f"(SELECT * FROM police_station WHERE district IN ({dist_list}))",
+                "financial_transaction": f"(SELECT * FROM financial_transaction WHERE case_master_id IN (SELECT case_master_id FROM case_master WHERE police_station_id IN (SELECT police_station_id FROM police_station WHERE district IN ({dist_list}))))",
+                "accused_master": f"(SELECT * FROM accused_master WHERE case_master_id IN (SELECT case_master_id FROM case_master WHERE police_station_id IN (SELECT police_station_id FROM police_station WHERE district IN ({dist_list}))))",
+                "victim_master": f"(SELECT * FROM victim_master WHERE case_master_id IN (SELECT case_master_id FROM case_master WHERE police_station_id IN (SELECT police_station_id FROM police_station WHERE district IN ({dist_list}))))",
+            }
+
+            scoped_sql = generated_sql
+            for table, subquery in replacements.items():
+                pattern = re.compile(
+                    rf'(?P<prefix>\bfrom\s+|\bjoin\s+|,\s*){table}(?:\s+(?:as\s+)?(?P<alias>(?!join|inner|left|right|cross|full|outer|on|where|order|group|limit|offset|union|intersect|except\b)[a-z_][a-z0-9_]*))?\b',
+                    re.IGNORECASE,
+                )
+
+                def replace_func(match):
+                    prefix = match.group("prefix")
+                    alias = match.group("alias")
+                    if alias:
+                        return f"{prefix}{subquery} AS {alias}"
+                    else:
+                        return f"{prefix}{subquery} AS {table}"
+
+                scoped_sql = pattern.sub(replace_func, scoped_sql)
+
+            generated_sql = scoped_sql
+        # else: unrestricted role — SQL runs against full dataset, no rewriting needed
+
         # ---- Step 3: Execute SQL ----
         try:
             result = await self._db_tool.execute(generated_sql, session)

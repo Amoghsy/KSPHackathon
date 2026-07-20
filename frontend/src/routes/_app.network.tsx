@@ -22,7 +22,8 @@ import {
   History,
   ShieldAlert,
   ChevronRight,
-  Play
+  User,
+  FileText
 } from "lucide-react";
 
 const ForceGraph2D = lazy(() => import("react-force-graph-2d"));
@@ -60,10 +61,16 @@ function NetworkPage() {
   const navigate = useNavigate({ from: Route.fullPath });
   const filters = Route.useSearch();
   const rbac = useRBAC();
-  const { user, role } = rbac;
-  const isSuperOrAdmin = role === "Supervisor" || role === "Admin" || role === "Analyst" || role === "Policymaker" || role === "Policy Maker";
+  const { user } = rbac;
+  // Roles that see aggregated/all-district data: Analyst, Policy Maker, Supervisor, Administrator
+  // (i.e., roles that do not have ABAC-scoped district assignments for investigative data)
+  const isSuperOrAdmin =
+    user?.role === "SUPERVISOR" ||
+    user?.role === "ANALYST" ||
+    user?.role === "POLICY_MAKER" ||
+    user?.role === "ADMINISTRATOR";
   const userDistricts = user?.assignedDistricts ?? [];
-  
+
   const { data, isLoading } = useQuery({
     queryKey: ["network", filters],
     queryFn: () => getNetwork(filters),
@@ -307,27 +314,30 @@ function NetworkPage() {
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-muted-foreground uppercase">Search Accused</label>
                   <div className="flex gap-2">
-                    <Input
-                      placeholder="Enter Accused name or ID…"
-                      value={searchAccused}
-                      onChange={(e) => setSearchAccused(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && searchAccused.trim()) {
-                          handleStartInvestigation(searchAccused.trim(), "accused");
-                        }
-                      }}
-                      className="bg-background/50 border-border text-xs h-8"
-                    />
+                    <div className="relative flex-1">
+                      <User className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        placeholder="Accused name or ID..."
+                        value={searchAccused}
+                        onChange={(e) => setSearchAccused(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && searchAccused.trim()) {
+                            handleStartInvestigation(searchAccused.trim(), "accused");
+                          }
+                        }}
+                        className="bg-background/50 border-border text-xs h-8 pl-8"
+                      />
+                    </div>
                     <Button
                       size="sm"
-                      className="bg-primary text-primary-foreground hover:opacity-90 h-8"
+                      className="bg-primary text-primary-foreground hover:opacity-90 h-8 px-4"
                       onClick={() => {
                         if (searchAccused.trim()) {
                           handleStartInvestigation(searchAccused.trim(), "accused");
                         }
                       }}
                     >
-                      <Play className="h-3 w-3" />
+                      Search
                     </Button>
                   </div>
                 </div>
@@ -336,27 +346,30 @@ function NetworkPage() {
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-muted-foreground uppercase">Search FIR / Case No</label>
                   <div className="flex gap-2">
-                    <Input
-                      placeholder="Enter FIR / Case ID…"
-                      value={searchCase}
-                      onChange={(e) => setSearchCase(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && searchCase.trim()) {
-                          handleStartInvestigation(searchCase.trim(), "case");
-                        }
-                      }}
-                      className="bg-background/50 border-border text-xs h-8"
-                    />
+                    <div className="relative flex-1">
+                      <FileText className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        placeholder="FIR / Case number..."
+                        value={searchCase}
+                        onChange={(e) => setSearchCase(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && searchCase.trim()) {
+                            handleStartInvestigation(searchCase.trim(), "case");
+                          }
+                        }}
+                        className="bg-background/50 border-border text-xs h-8 pl-8"
+                      />
+                    </div>
                     <Button
                       size="sm"
-                      className="bg-primary text-primary-foreground hover:opacity-90 h-8"
+                      className="bg-primary text-primary-foreground hover:opacity-90 h-8 px-4"
                       onClick={() => {
                         if (searchCase.trim()) {
                           handleStartInvestigation(searchCase.trim(), "case");
                         }
                       }}
                     >
-                      <Play className="h-3 w-3" />
+                      Search
                     </Button>
                   </div>
                 </div>
@@ -727,11 +740,10 @@ function NetworkPage() {
                               <div className="flex justify-between">
                                 <span className="text-muted-foreground">Risk Score</span>
                                 <Badge
-                                  className={`text-[9px] font-bold ${
-                                    ro.risk_score > 70
+                                  className={`text-[9px] font-bold ${ro.risk_score > 70
                                       ? "bg-red-50 dark:bg-red-950 text-red-650 dark:text-red-400 border border-red-500/20"
                                       : "bg-muted text-foreground"
-                                  }`}
+                                    }`}
                                 >
                                   {ro.risk_score} / 100
                                 </Badge>

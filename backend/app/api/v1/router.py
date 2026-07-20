@@ -19,12 +19,18 @@ from app.api.v1.endpoints import (
     financial,
     patterns,
     reports,
+    security,
+    risk,
+    forecasting,
+    decision_support,
+    admin,
 )
 
 api_router = APIRouter()
 
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
+api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(cases.router, prefix="/cases", tags=["cases"])
 api_router.include_router(accused.router, prefix="/accused", tags=["accused"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
@@ -37,6 +43,12 @@ api_router.include_router(financial.router, prefix="/financial", tags=["financia
 api_router.include_router(patterns.router, prefix="/pattern", tags=["pattern"])
 api_router.include_router(audit.router, prefix="/audit", tags=["audit"])
 api_router.include_router(reports.router, prefix="/reports", tags=["reports"])
+api_router.include_router(security.router, prefix="/security", tags=["security"])
+api_router.include_router(risk.router, prefix="/risk", tags=["risk"])
+api_router.include_router(forecasting.router, prefix="/forecasting", tags=["forecasting"])
+api_router.include_router(
+    decision_support.router, prefix="/decision-support", tags=["decision-support"]
+)
 
 
 

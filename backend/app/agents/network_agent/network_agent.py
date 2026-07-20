@@ -26,6 +26,7 @@ class NetworkAgent:
         police_station: str | None = None,
         time_period: str | None = None,
         focus_id: str | None = None,
+        authorized_districts: list[str] | None = None,
     ) -> dict:
         """
         Runs network intelligence pipeline.
@@ -38,6 +39,7 @@ class NetworkAgent:
             police_station=police_station,
             time_period=time_period,
             focus_id=focus_id,
+            authorized_districts=authorized_districts,
         )
 
         if data["node_count"] == 0:

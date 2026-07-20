@@ -29,6 +29,7 @@ class GraphRepository:
         crime_type: str | None = None,
         police_station: str | None = None,
         time_period: str | None = None,
+        authorized_districts: list[str] | None = None,
     ) -> list[CaseMaster]:
         """
         Retrieves CaseMaster records filtered by district, crime type, station, and date range.
@@ -40,10 +41,18 @@ class GraphRepository:
         )
 
         filters = []
+        has_joined_ps = False
 
         if district and district != "All":
             stmt = stmt.join(CaseMaster.police_station)
             filters.append(PoliceStation.district == district)
+            has_joined_ps = True
+
+        if authorized_districts is not None:
+            if not has_joined_ps:
+                stmt = stmt.join(CaseMaster.police_station)
+                has_joined_ps = True
+            filters.append(PoliceStation.district.in_(authorized_districts))
 
         if police_station and police_station != "All":
             # If not already joined
@@ -69,10 +78,20 @@ class GraphRepository:
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
-    async def get_cases_by_focus_id(self, focus_id: str) -> list[CaseMaster]:
+    async def get_cases_by_focus_id(self, focus_id: str, authorized_districts: list[str] | None = None) -> list[CaseMaster]:
         """
         Fetch cases related to a focus ID (Accused name/ID, Case number/ID, Location, etc.).
         """
+        cases = await self._get_cases_by_focus_id_raw(focus_id)
+        if authorized_districts is not None:
+            filtered = []
+            for c in cases:
+                if c.police_station and c.police_station.district in authorized_districts:
+                    filtered.append(c)
+            return filtered
+        return cases
+
+    async def _get_cases_by_focus_id_raw(self, focus_id: str) -> list[CaseMaster]:
         focus_clean = focus_id.strip()
         
         # 1. Check if Case ID (e.g. C12)

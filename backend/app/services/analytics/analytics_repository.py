@@ -11,24 +11,34 @@ from app.models.accused import AccusedMaster
 
 
 class AnalyticsRepository:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, authorized_districts: list[str] | None = None):
         self.db = db
+        self.authorized_districts = authorized_districts
 
     def _apply_filters(self, stmt, district: str | None = None, crime_type: str | None = None,
                        police_station: str | None = None, start_date: datetime.date | None = None,
                        end_date: datetime.date | None = None, gravity: str | None = None,
                        status: str | None = None):
-        """Helper to apply standard query filters to SQLAlchemy statements."""
+        """Helper to apply standard query filters to SQLAlchemy statements with ABAC enforcement."""
         conditions = []
+        has_joined_ps = False
+
         if district and district != "All":
             stmt = stmt.join(CaseMaster.police_station)
             conditions.append(PoliceStation.district == district)
+            has_joined_ps = True
         elif police_station and police_station != "All":
             stmt = stmt.join(CaseMaster.police_station)
             conditions.append(PoliceStation.name == police_station)
+            has_joined_ps = True
+
+        if self.authorized_districts is not None:
+            if not has_joined_ps:
+                stmt = stmt.join(CaseMaster.police_station)
+                has_joined_ps = True
+            conditions.append(PoliceStation.district.in_(self.authorized_districts))
 
         if crime_type and crime_type != "All":
-            # Avoid duplicate joins
             stmt = stmt.join(CaseMaster.crime_type)
             conditions.append(CrimeType.name == crime_type)
 
@@ -37,7 +47,6 @@ class AnalyticsRepository:
         if end_date:
             conditions.append(CaseMaster.crime_registered_date <= end_date)
 
-        # Gravity filter mapping
         gravity_map = {
             "Low": 1,
             "Medium": 2,
@@ -49,7 +58,6 @@ class AnalyticsRepository:
             if g_id:
                 conditions.append(CaseMaster.gravity_offence_id == g_id)
 
-        # Status filter mapping
         status_id_map = {
             "Under Investigation": 1,
             "Charge Sheeted": 2,
@@ -65,13 +73,11 @@ class AnalyticsRepository:
             stmt = stmt.where(and_(*conditions))
         return stmt
 
-
     async def get_monthly_trends(self, district: str | None = None, crime_type: str | None = None,
                                   police_station: str | None = None, start_date: datetime.date | None = None,
                                   end_date: datetime.date | None = None, gravity: str | None = None,
                                   status: str | None = None) -> list[dict]:
         """Fetch monthly case counts for time series trend."""
-        # Use date_trunc for PostgreSQL monthly aggregation
         month_trunc = func.date_trunc('month', CaseMaster.crime_registered_date)
         stmt = (
             select(month_trunc.label('month_date'), func.count(CaseMaster.case_master_id).label('count'))
@@ -85,7 +91,6 @@ class AnalyticsRepository:
         results = []
         for row in res.all():
             dt = row.month_date
-            # dt is a datetime object or date
             results.append({
                 "month": dt.strftime("%b %Y") if dt else "Unknown",
                 "count": row.count,
@@ -116,23 +121,27 @@ class AnalyticsRepository:
         ]
 
     async def get_district_counts(self, limit: int = 10) -> list[dict]:
-        """Fetch total case count per district."""
+        """Fetch total case count per district, filtered to authorized districts if restricted."""
         stmt = (
             select(PoliceStation.district, func.count(CaseMaster.case_master_id).label('count'))
             .select_from(CaseMaster)
             .join(CaseMaster.police_station)
             .group_by(PoliceStation.district)
             .order_by(func.count(CaseMaster.case_master_id).desc())
-            .limit(limit)
         )
+        if self.authorized_districts is not None:
+            stmt = stmt.where(PoliceStation.district.in_(self.authorized_districts))
+        else:
+            stmt = stmt.limit(limit)
+
         res = await self.db.execute(stmt)
         return [{"district": row.district or "Unknown", "cases": row.count} for row in res.all()]
 
     async def get_police_station_counts(self, district: str | None = None, crime_type: str | None = None,
-                                        police_station: str | None = None, start_date: datetime.date | None = None,
-                                        end_date: datetime.date | None = None, gravity: str | None = None,
-                                        status: str | None = None, limit: int = 10) -> list[dict]:
-        """Fetch top police stations by case count with avg lat/lng derived from case coordinates."""
+                                         police_station: str | None = None, start_date: datetime.date | None = None,
+                                         end_date: datetime.date | None = None, gravity: str | None = None,
+                                         status: str | None = None, limit: int = 10) -> list[dict]:
+        """Fetch top police stations by case count with avg lat/lng."""
         stmt = (
             select(
                 PoliceStation.name,
@@ -147,12 +156,14 @@ class AnalyticsRepository:
             .order_by(func.count(CaseMaster.case_master_id).desc())
         )
         
-        # Apply filters manually to avoid duplicate join issues
         conditions = []
         if district and district != "All":
             conditions.append(PoliceStation.district == district)
         elif police_station and police_station != "All":
             conditions.append(PoliceStation.name == police_station)
+
+        if self.authorized_districts is not None:
+            conditions.append(PoliceStation.district.in_(self.authorized_districts))
 
         if crime_type and crime_type != "All":
             stmt = stmt.join(CaseMaster.crime_type)
@@ -200,25 +211,39 @@ class AnalyticsRepository:
             .group_by(CrimeType.name)
             .order_by(func.count(CaseMaster.case_master_id).desc())
         )
+        
+        has_joined = False
         if district and district != "All":
             stmt = stmt.join(CaseMaster.police_station).where(PoliceStation.district == district)
+            has_joined = True
+
+        if self.authorized_districts is not None:
+            if not has_joined:
+                stmt = stmt.join(CaseMaster.police_station)
+            stmt = stmt.where(PoliceStation.district.in_(self.authorized_districts))
+
         stmt = stmt.limit(limit)
         res = await self.db.execute(stmt)
         return [{"crime_type": row.name, "cases": row.count} for row in res.all()]
 
     async def get_status_breakdown(self, district: str | None = None) -> list[dict]:
         """Fetch solved vs pending status counts."""
-        # 1: Under Investigation (Pending)
-        # 2: Charge Sheeted (Solved)
-        # 3: Closed (Solved)
-        # 4: Undetected (Pending)
         stmt = (
             select(CaseMaster.case_status_id, func.count(CaseMaster.case_master_id).label('count'))
             .select_from(CaseMaster)
             .group_by(CaseMaster.case_status_id)
         )
+        
+        has_joined = False
         if district and district != "All":
             stmt = stmt.join(CaseMaster.police_station).where(PoliceStation.district == district)
+            has_joined = True
+
+        if self.authorized_districts is not None:
+            if not has_joined:
+                stmt = stmt.join(CaseMaster.police_station)
+            stmt = stmt.where(PoliceStation.district.in_(self.authorized_districts))
+
         res = await self.db.execute(stmt)
         
         status_map = {
@@ -253,7 +278,6 @@ class AnalyticsRepository:
                                      end_date: datetime.date | None = None, gravity: str | None = None,
                                      status: str | None = None) -> list[dict]:
         """Fetch list of coordinates and metadata for spatial clustering."""
-        # Base query already joins crime_type and police_station
         stmt = (
             select(
                 CaseMaster.latitude,
@@ -269,28 +293,34 @@ class AnalyticsRepository:
             .where(CaseMaster.longitude.isnot(None))
         )
 
-        # Apply filters directly (skip joins — already joined above)
         conditions = []
         if district and district != "All":
             conditions.append(PoliceStation.district == district)
         if police_station and police_station != "All":
             conditions.append(PoliceStation.name == police_station)
+
+        if self.authorized_districts is not None:
+            conditions.append(PoliceStation.district.in_(self.authorized_districts))
+
         if crime_type and crime_type != "All":
             conditions.append(CrimeType.name == crime_type)
         if start_date:
             conditions.append(CaseMaster.crime_registered_date >= start_date)
         if end_date:
             conditions.append(CaseMaster.crime_registered_date <= end_date)
+        
         gravity_map = {"Low": 1, "Medium": 2, "High": 3, "Grievous": 4}
         if gravity and gravity != "All":
             g_id = gravity_map.get(gravity)
             if g_id:
                 conditions.append(CaseMaster.gravity_offence_id == g_id)
+        
         status_id_map = {"Under Investigation": 1, "Charge Sheeted": 2, "Closed": 3, "Undetected": 4}
         if status and status != "All":
             s_id = status_id_map.get(status)
             if s_id is not None:
                 conditions.append(CaseMaster.case_status_id == s_id)
+        
         if conditions:
             stmt = stmt.where(and_(*conditions))
 
@@ -308,7 +338,6 @@ class AnalyticsRepository:
 
     async def get_temporal_distribution(self, district: str | None = None, crime_type: str | None = None) -> dict:
         """Fetch hour-of-day, day-of-week, and weekend vs working day distributions."""
-        # Hour of day distribution
         hour_stmt = (
             select(extract('hour', CaseMaster.incident_from_date).label('hour'), func.count(CaseMaster.case_master_id).label('count'))
             .select_from(CaseMaster)
@@ -316,32 +345,47 @@ class AnalyticsRepository:
             .group_by(extract('hour', CaseMaster.incident_from_date))
             .order_by(extract('hour', CaseMaster.incident_from_date))
         )
+        
+        has_joined_hour = False
         if district and district != "All":
             hour_stmt = hour_stmt.join(CaseMaster.police_station).where(PoliceStation.district == district)
+            has_joined_hour = True
+        
+        if self.authorized_districts is not None:
+            if not has_joined_hour:
+                hour_stmt = hour_stmt.join(CaseMaster.police_station)
+            hour_stmt = hour_stmt.where(PoliceStation.district.in_(self.authorized_districts))
+
         if crime_type and crime_type != "All":
             hour_stmt = hour_stmt.join(CaseMaster.crime_type).where(CrimeType.name == crime_type)
             
         hour_res = await self.db.execute(hour_stmt)
         hour_counts = {int(row.hour): row.count for row in hour_res.all() if row.hour is not None}
         
-        # Day of week distribution (DOW: 0 is Sunday in postgres extract)
         dow_stmt = (
             select(extract('dow', CaseMaster.crime_registered_date).label('dow'), func.count(CaseMaster.case_master_id).label('count'))
             .select_from(CaseMaster)
             .group_by(extract('dow', CaseMaster.crime_registered_date))
             .order_by(extract('dow', CaseMaster.crime_registered_date))
         )
+        
+        has_joined_dow = False
         if district and district != "All":
             dow_stmt = dow_stmt.join(CaseMaster.police_station).where(PoliceStation.district == district)
+            has_joined_dow = True
+            
+        if self.authorized_districts is not None:
+            if not has_joined_dow:
+                dow_stmt = dow_stmt.join(CaseMaster.police_station)
+            dow_stmt = dow_stmt.where(PoliceStation.district.in_(self.authorized_districts))
+
         if crime_type and crime_type != "All":
             dow_stmt = dow_stmt.join(CaseMaster.crime_type).where(CrimeType.name == crime_type)
             
         dow_res = await self.db.execute(dow_stmt)
         dow_counts = {int(row.dow): row.count for row in dow_res.all() if row.dow is not None}
         
-        # Build response formats
         hours = [{"hour": h, "count": hour_counts.get(h, 0)} for h in range(24)]
-        
         dow_names = {0: "Sunday", 1: "Monday", 2: "Tuesday", 3: "Wednesday", 4: "Thursday", 5: "Friday", 6: "Saturday"}
         days = [{"day": dow_names[d], "count": dow_counts.get(d, 0)} for d in range(7)]
         
@@ -357,7 +401,6 @@ class AnalyticsRepository:
 
     async def get_accused_demographics(self, district: str | None = None) -> dict:
         """Fetch accused age and gender demographics."""
-        # Age bands
         age_case = case(
             (AccusedMaster.age_year < 18, "Under 18"),
             (and_(AccusedMaster.age_year >= 18, AccusedMaster.age_year <= 25), "18-25"),
@@ -373,13 +416,20 @@ class AnalyticsRepository:
             .select_from(AccusedMaster)
             .group_by(age_case)
         )
+        
+        has_joined = False
         if district and district != "All":
             age_stmt = age_stmt.join(AccusedMaster.case).join(CaseMaster.police_station).where(PoliceStation.district == district)
+            has_joined = True
+
+        if self.authorized_districts is not None:
+            if not has_joined:
+                age_stmt = age_stmt.join(AccusedMaster.case).join(CaseMaster.police_station)
+            age_stmt = age_stmt.where(PoliceStation.district.in_(self.authorized_districts))
             
         age_res = await self.db.execute(age_stmt)
         by_age = [{"band": row.age_band, "count": row.count} for row in age_res.all()]
         
-        # Gender
         gender_case = case(
             (AccusedMaster.gender_id == 1, "Male"),
             (AccusedMaster.gender_id == 2, "Female"),
@@ -390,9 +440,17 @@ class AnalyticsRepository:
             .select_from(AccusedMaster)
             .group_by(gender_case)
         )
+        
+        has_joined_gender = False
         if district and district != "All":
             gender_stmt = gender_stmt.join(AccusedMaster.case).join(CaseMaster.police_station).where(PoliceStation.district == district)
+            has_joined_gender = True
             
+        if self.authorized_districts is not None:
+            if not has_joined_gender:
+                gender_stmt = gender_stmt.join(AccusedMaster.case).join(CaseMaster.police_station)
+            gender_stmt = gender_stmt.where(PoliceStation.district.in_(self.authorized_districts))
+
         gender_res = await self.db.execute(gender_stmt)
         by_gender = [{"gender": row.gender, "count": row.count} for row in gender_res.all()]
         
@@ -405,10 +463,13 @@ class AnalyticsRepository:
         """Fetch counts for dashboard KPIs."""
         cases_stmt = select(func.count(CaseMaster.case_master_id)).select_from(CaseMaster)
         accused_stmt = select(func.count(AccusedMaster.accused_master_id)).select_from(AccusedMaster)
-        
         open_stmt = select(func.count(CaseMaster.case_master_id)).select_from(CaseMaster).where(CaseMaster.case_status_id == 1)
         closed_stmt = select(func.count(CaseMaster.case_master_id)).select_from(CaseMaster).where(CaseMaster.case_status_id == 3)
         cs_stmt = select(func.count(CaseMaster.case_master_id)).select_from(CaseMaster).where(CaseMaster.case_status_id == 2)
+        dist_stmt = select(func.count(func.distinct(PoliceStation.district))).select_from(PoliceStation)
+        
+        has_joined_cases = False
+        has_joined_accused = False
         
         if district and district != "All":
             cases_stmt = cases_stmt.join(CaseMaster.police_station).where(PoliceStation.district == district)
@@ -416,15 +477,30 @@ class AnalyticsRepository:
             open_stmt = open_stmt.join(CaseMaster.police_station).where(PoliceStation.district == district)
             closed_stmt = closed_stmt.join(CaseMaster.police_station).where(PoliceStation.district == district)
             cs_stmt = cs_stmt.join(CaseMaster.police_station).where(PoliceStation.district == district)
+            has_joined_cases = True
+            has_joined_accused = True
+
+        if self.authorized_districts is not None:
+            if not has_joined_cases:
+                cases_stmt = cases_stmt.join(CaseMaster.police_station)
+                open_stmt = open_stmt.join(CaseMaster.police_station)
+                closed_stmt = closed_stmt.join(CaseMaster.police_station)
+                cs_stmt = cs_stmt.join(CaseMaster.police_station)
+            if not has_joined_accused:
+                accused_stmt = accused_stmt.join(AccusedMaster.case).join(CaseMaster.police_station)
             
+            cases_stmt = cases_stmt.where(PoliceStation.district.in_(self.authorized_districts))
+            accused_stmt = accused_stmt.where(PoliceStation.district.in_(self.authorized_districts))
+            open_stmt = open_stmt.where(PoliceStation.district.in_(self.authorized_districts))
+            closed_stmt = closed_stmt.where(PoliceStation.district.in_(self.authorized_districts))
+            cs_stmt = cs_stmt.where(PoliceStation.district.in_(self.authorized_districts))
+            dist_stmt = dist_stmt.where(PoliceStation.district.in_(self.authorized_districts))
+
         cases_res = await self.db.execute(cases_stmt)
         accused_res = await self.db.execute(accused_stmt)
         open_res = await self.db.execute(open_stmt)
         closed_res = await self.db.execute(closed_stmt)
         cs_res = await self.db.execute(cs_stmt)
-        
-        # Districts active count
-        dist_stmt = select(func.count(func.distinct(PoliceStation.district))).select_from(PoliceStation)
         dist_res = await self.db.execute(dist_stmt)
         
         return {

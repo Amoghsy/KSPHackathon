@@ -1,11 +1,13 @@
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth";
+import { hasPermission, PERMISSIONS } from "@/lib/rbac";
 import { Lock } from "lucide-react";
 import type { ReactNode } from "react";
 
 export function Masked({ children, className }: { children: ReactNode; className?: string }) {
-  const role = useAuthStore((s) => s.user?.role);
-  const allowed = role === "Supervisor";
+  const user = useAuthStore((s) => s.user);
+  // Sensitive data visible to roles with SENSITIVE_CASE_ACCESS (Supervisor, Senior Investigator)
+  const allowed = hasPermission(user, PERMISSIONS.SENSITIVE_CASE_ACCESS);
   if (allowed) return <span className={className}>{children}</span>;
   return (
     <span
@@ -13,7 +15,7 @@ export function Masked({ children, className }: { children: ReactNode; className
         "inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 select-none blur-[3px] hover:blur-0 transition-all",
         className,
       )}
-      title="Restricted — Supervisor access required"
+      title="Restricted — Senior Investigator or Supervisor access required"
     >
       <Lock className="h-3 w-3 opacity-60" />
       {children}

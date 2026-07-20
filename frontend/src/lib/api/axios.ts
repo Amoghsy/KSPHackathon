@@ -61,18 +61,32 @@ apiClient.interceptors.response.use(
       console.error(`[API] ✗ ${status ?? "NETWORK"} ${url}`, error.message);
     }
 
-    // 401 — clear stored auth and redirect to login
+    // 401 — emit custom event for SessionSyncProvider to handle cleanly
     if (status === 401) {
-      try {
-        localStorage.removeItem("cia-auth");
-      } catch (e) {
-        console.warn("Storage cleanup failed:", e);
-      }
-      // Only redirect if we're in a browser context
-      if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
-        window.location.href = "/login";
+      const detail = (error.response?.data as Record<string, unknown>)?.detail as string | undefined;
+      const isLoginRoute = url.includes("/auth/login") || url.includes("/auth/verify-otp") || url.includes("/auth/resend-otp");
+      
+      if (!isLoginRoute && typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
+        // Determine reason for UI messaging
+        let reason = "SESSION_EXPIRED";
+        if (detail === "SESSION_INACTIVE") reason = "SESSION_INACTIVE";
+        else if (detail?.includes("revoked") || detail?.includes("terminated")) reason = "SESSION_REVOKED";
+
+        // Dispatch event for SessionSyncProvider to handle
+        window.dispatchEvent(new CustomEvent("auth:force-logout", { detail: { reason } }));
       }
     }
+
+    // 403 and DISTRICT_NOT_AUTHORIZED — trigger access request modal globally
+    if (status === 403) {
+      const detail = (error.response?.data as Record<string, unknown>)?.detail as Record<string, unknown> | undefined;
+      if (detail && typeof detail === "object" && detail["code"] === "DISTRICT_NOT_AUTHORIZED") {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("district-not-authorized", { detail }));
+        }
+      }
+    }
+
 
     // 500 — log server errors
     if (status === 500) {

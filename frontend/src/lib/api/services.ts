@@ -15,6 +15,7 @@ import type {
   AccusedResponse,
   UserResponse,
   UserCreatePayload,
+  DistrictAssignmentRecord,
 } from "./types";
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
@@ -69,6 +70,7 @@ export async function listCases(params?: {
   district?: string;
   page?: number;
   pageSize?: number;
+  bypass_masking?: boolean;
 }): Promise<any> {
   return apiGet<any>(ENDPOINTS.CASES, params as Record<string, unknown>);
 }
@@ -148,6 +150,7 @@ export async function getFinancialNetwork(params?: {
   crimeType?: string;
   policeStation?: string;
   timePeriod?: string;
+  focusId?: string;
 }): Promise<any> {
   const query: Record<string, unknown> = {};
   if (params) {
@@ -155,8 +158,30 @@ export async function getFinancialNetwork(params?: {
     if (params.crimeType) query.crime_type = params.crimeType;
     if (params.policeStation) query.police_station = params.policeStation;
     if (params.timePeriod) query.time_period = params.timePeriod;
+    if (params.focusId) query.focus_id = params.focusId;
   }
   return apiGet<any>(ENDPOINTS.FINANCIAL, query);
+}
+
+export async function getFinancialTopSuspects(params?: { district?: string }): Promise<any[]> {
+  const query: Record<string, unknown> = {};
+  if (params?.district) query.district = params.district;
+  return apiGet<any[]>(`${ENDPOINTS.FINANCIAL}top-suspects`, query);
+}
+
+export async function searchFinancialNetwork(params: {
+  q: string;
+  district?: string;
+  crimeType?: string;
+  policeStation?: string;
+  timePeriod?: string;
+}): Promise<any> {
+  const query: Record<string, unknown> = { q: params.q };
+  if (params.district) query.district = params.district;
+  if (params.crimeType) query.crime_type = params.crimeType;
+  if (params.policeStation) query.police_station = params.policeStation;
+  if (params.timePeriod) query.time_period = params.timePeriod;
+  return apiGet<any>(`${ENDPOINTS.FINANCIAL}search`, query);
 }
 
 
@@ -178,5 +203,20 @@ export async function addInvestigationHistory(body: { name: string; entity_type:
   return apiPost<any>(`/audit/history?name=${encodeURIComponent(body.name)}&entity_type=${encodeURIComponent(body.entity_type)}&entity_id=${encodeURIComponent(body.entity_id)}`);
 }
 
+// ─── Supervisor District Assignments (Admin only) ─────────────────────────────
 
+/** List all active assignments for investigators/supervisors */
+export async function listSupervisorAssignments(): Promise<DistrictAssignmentRecord[]> {
+  return apiGet<DistrictAssignmentRecord[]>("/security/district-assignments/investigators");
+}
+
+/** Assign a supervisor to a district permanently */
+export async function assignSupervisorDistrict(user_id: number, district: string): Promise<any> {
+  return apiPost<any>("/security/district-assignments", { user_id, district });
+}
+
+/** Deactivate / revoke a permanent district assignment by assignment ID */
+export async function revokeSupervisorAssignment(assignmentId: number): Promise<any> {
+  return apiDelete<any>(`/security/district-assignments/${assignmentId}`);
+}
 

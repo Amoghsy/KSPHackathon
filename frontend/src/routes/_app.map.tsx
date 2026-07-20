@@ -86,13 +86,13 @@ function MapPage() {
 
   const districtOptions = useMemo(() => {
     if (!user) return [];
-    if (role === "Admin" || role === "Analyst" || role === "Policymaker" || role === "Policy Maker") {
+    if (role === "ADMINISTRATOR" || role === "ANALYST" || role === "POLICY_MAKER" || role === "SUPERVISOR") {
       return districtsList;
     }
     return user.assignedDistricts ?? [];
   }, [user, role, districtsList]);
 
-  const canSelectAll = role === "Admin" || role === "Analyst" || role === "Policymaker" || role === "Policy Maker";
+  const canSelectAll = role === "ADMINISTRATOR" || role === "ANALYST" || role === "POLICY_MAKER" || role === "SUPERVISOR";
 
   const [activeTab, setActiveTab] = useState<"data" | "layers">("data");
   const { zoomLevel, setZoomLevel, selectedDistrict, setSelectedDistrict, filters, layers } =
@@ -108,7 +108,7 @@ function MapPage() {
     }
   }, [canSelectAll, districtOptions, filters.selDistrict]);
 
-  // "Applied" filters — only updated when the user clicks "Load Statistics"
+  // "Applied" filters — only updated when the user clicks "Load Statistics" or changes district focus directly
   const [appliedFilters, setAppliedFilters] = useState(() =>
     buildFilters(
       !canSelectAll && districtOptions.length > 0 ? districtOptions[0] : filters.selDistrict,
@@ -118,6 +118,16 @@ function MapPage() {
       filters.status
     )
   );
+
+  // Sync map district selection directly with appliedFilters
+  const handleSelectDistrictFromMap = useCallback((district: string | null) => {
+    setSelectedDistrict(district);
+    filters.setSelDistrict(district || "All");
+    setAppliedFilters((prev) => ({
+      ...prev,
+      district: district || undefined,
+    }));
+  }, [setSelectedDistrict, filters]);
 
   // "Pending" filters — reflect what the user has currently selected in the sidebar
   const pendingFilters = useMemo(
@@ -282,6 +292,10 @@ function MapPage() {
                     filters.setSelDistrict(val);
                     if (val !== "All") setSelectedDistrict(val);
                     else setSelectedDistrict(null);
+                    setAppliedFilters((prev) => ({
+                      ...prev,
+                      district: val !== "All" ? val : undefined,
+                    }));
                   }}
                 >
                   <SelectTrigger className="bg-background border-input text-foreground text-xs h-8">
@@ -379,7 +393,7 @@ function MapPage() {
                   <span>Active Map Telemetry</span>
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-y-1.5 text-muted-foreground/75 bg-muted/30 p-2 rounded-lg border border-border/30">
                   <span className="font-medium">Crime Type:</span>
                   <span className="font-semibold text-foreground text-right truncate">
@@ -392,8 +406,8 @@ function MapPage() {
                       ? appliedFilters.date_range === "3650"
                         ? "All Time"
                         : appliedFilters.date_range === "1825"
-                        ? "5 Years"
-                        : `${appliedFilters.date_range} Days`
+                          ? "5 Years"
+                          : `${appliedFilters.date_range} Days`
                       : "—"}
                   </span>
 
@@ -450,17 +464,17 @@ function MapPage() {
                   <Label htmlFor="heatmap" className="text-xs font-semibold cursor-pointer text-foreground">Heatmap Layer</Label>
                   <Switch id="heatmap" checked={layers.showHeatmap} onCheckedChange={layers.setShowHeatmap} />
                 </div>
-                
+
                 <div className="flex items-center justify-between gap-4 bg-muted/20 p-2.5 rounded-lg border border-border/20 hover:bg-muted/30 transition-colors">
                   <Label htmlFor="bubbles" className="text-xs font-semibold cursor-pointer text-foreground">Crime Bubbles</Label>
                   <Switch id="bubbles" checked={layers.showBubbles} onCheckedChange={layers.setShowBubbles} />
                 </div>
-                
+
                 <div className="flex items-center justify-between gap-4 bg-muted/20 p-2.5 rounded-lg border border-border/20 hover:bg-muted/30 transition-colors">
                   <Label htmlFor="stations" className="text-xs font-semibold cursor-pointer text-foreground">Police Stations</Label>
                   <Switch id="stations" checked={layers.showStations} onCheckedChange={layers.setShowStations} />
                 </div>
-                
+
                 <div className="flex items-center justify-between gap-4 bg-muted/20 p-2.5 rounded-lg border border-border/20 hover:bg-muted/30 transition-colors">
                   <Label htmlFor="hotspots" className="text-xs font-semibold cursor-pointer text-foreground">DBSCAN Hotspots</Label>
                   <Switch id="hotspots" checked={layers.showHotspots} onCheckedChange={layers.setShowHotspots} />
@@ -499,7 +513,7 @@ function MapPage() {
 
           <CrimeMap
             selected={selectedDistrict}
-            setSelected={setSelectedDistrict}
+            setSelected={handleSelectDistrictFromMap}
             zoomLevel={zoomLevel}
             setZoomLevel={setZoomLevel}
             data={mapData}

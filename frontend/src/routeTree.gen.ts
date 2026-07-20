@@ -9,10 +9,12 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SetupPasswordRouteImport } from './routes/setup-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AdminLoginRouteImport } from './routes/admin-login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
+import { Route as AppSupervisorRouteImport } from './routes/_app.supervisor'
 import { Route as AppSociologicalRouteImport } from './routes/_app.sociological'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppNetworkRouteImport } from './routes/_app.network'
@@ -28,6 +30,11 @@ import { Route as AppCasesIndexRouteImport } from './routes/_app.cases.index'
 import { Route as AppOffendersIdRouteImport } from './routes/_app.offenders.$id'
 import { Route as AppCasesFirIdRouteImport } from './routes/_app.cases.$firId'
 
+const SetupPasswordRoute = SetupPasswordRouteImport.update({
+  id: '/setup-password',
+  path: '/setup-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -45,6 +52,11 @@ const AppRoute = AppRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSupervisorRoute = AppSupervisorRouteImport.update({
+  id: '/supervisor',
+  path: '/supervisor',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSociologicalRoute = AppSociologicalRouteImport.update({
@@ -122,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/admin-login': typeof AdminLoginRoute
   '/login': typeof LoginRoute
+  '/setup-password': typeof SetupPasswordRoute
   '/access-restricted': typeof AppAccessRestrictedRoute
   '/admin': typeof AppAdminRoute
   '/alerts': typeof AppAlertsRoute
@@ -132,6 +145,7 @@ export interface FileRoutesByFullPath {
   '/network': typeof AppNetworkRoute
   '/settings': typeof AppSettingsRoute
   '/sociological': typeof AppSociologicalRoute
+  '/supervisor': typeof AppSupervisorRoute
   '/cases/$firId': typeof AppCasesFirIdRoute
   '/offenders/$id': typeof AppOffendersIdRoute
   '/cases/': typeof AppCasesIndexRoute
@@ -140,6 +154,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/admin-login': typeof AdminLoginRoute
   '/login': typeof LoginRoute
+  '/setup-password': typeof SetupPasswordRoute
   '/access-restricted': typeof AppAccessRestrictedRoute
   '/admin': typeof AppAdminRoute
   '/alerts': typeof AppAlertsRoute
@@ -150,6 +165,7 @@ export interface FileRoutesByTo {
   '/network': typeof AppNetworkRoute
   '/settings': typeof AppSettingsRoute
   '/sociological': typeof AppSociologicalRoute
+  '/supervisor': typeof AppSupervisorRoute
   '/': typeof AppIndexRoute
   '/cases/$firId': typeof AppCasesFirIdRoute
   '/offenders/$id': typeof AppOffendersIdRoute
@@ -161,6 +177,7 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/admin-login': typeof AdminLoginRoute
   '/login': typeof LoginRoute
+  '/setup-password': typeof SetupPasswordRoute
   '/_app/access-restricted': typeof AppAccessRestrictedRoute
   '/_app/admin': typeof AppAdminRoute
   '/_app/alerts': typeof AppAlertsRoute
@@ -171,6 +188,7 @@ export interface FileRoutesById {
   '/_app/network': typeof AppNetworkRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/sociological': typeof AppSociologicalRoute
+  '/_app/supervisor': typeof AppSupervisorRoute
   '/_app/': typeof AppIndexRoute
   '/_app/cases/$firId': typeof AppCasesFirIdRoute
   '/_app/offenders/$id': typeof AppOffendersIdRoute
@@ -183,6 +201,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin-login'
     | '/login'
+    | '/setup-password'
     | '/access-restricted'
     | '/admin'
     | '/alerts'
@@ -193,6 +212,7 @@ export interface FileRouteTypes {
     | '/network'
     | '/settings'
     | '/sociological'
+    | '/supervisor'
     | '/cases/$firId'
     | '/offenders/$id'
     | '/cases/'
@@ -201,6 +221,7 @@ export interface FileRouteTypes {
   to:
     | '/admin-login'
     | '/login'
+    | '/setup-password'
     | '/access-restricted'
     | '/admin'
     | '/alerts'
@@ -211,6 +232,7 @@ export interface FileRouteTypes {
     | '/network'
     | '/settings'
     | '/sociological'
+    | '/supervisor'
     | '/'
     | '/cases/$firId'
     | '/offenders/$id'
@@ -221,6 +243,7 @@ export interface FileRouteTypes {
     | '/_app'
     | '/admin-login'
     | '/login'
+    | '/setup-password'
     | '/_app/access-restricted'
     | '/_app/admin'
     | '/_app/alerts'
@@ -231,6 +254,7 @@ export interface FileRouteTypes {
     | '/_app/network'
     | '/_app/settings'
     | '/_app/sociological'
+    | '/_app/supervisor'
     | '/_app/'
     | '/_app/cases/$firId'
     | '/_app/offenders/$id'
@@ -242,10 +266,18 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AdminLoginRoute: typeof AdminLoginRoute
   LoginRoute: typeof LoginRoute
+  SetupPasswordRoute: typeof SetupPasswordRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/setup-password': {
+      id: '/setup-password'
+      path: '/setup-password'
+      fullPath: '/setup-password'
+      preLoaderRoute: typeof SetupPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -272,6 +304,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/supervisor': {
+      id: '/_app/supervisor'
+      path: '/supervisor'
+      fullPath: '/supervisor'
+      preLoaderRoute: typeof AppSupervisorRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/sociological': {
@@ -386,6 +425,7 @@ interface AppRouteChildren {
   AppNetworkRoute: typeof AppNetworkRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppSociologicalRoute: typeof AppSociologicalRoute
+  AppSupervisorRoute: typeof AppSupervisorRoute
   AppIndexRoute: typeof AppIndexRoute
   AppCasesFirIdRoute: typeof AppCasesFirIdRoute
   AppOffendersIdRoute: typeof AppOffendersIdRoute
@@ -404,6 +444,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppNetworkRoute: AppNetworkRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppSociologicalRoute: AppSociologicalRoute,
+  AppSupervisorRoute: AppSupervisorRoute,
   AppIndexRoute: AppIndexRoute,
   AppCasesFirIdRoute: AppCasesFirIdRoute,
   AppOffendersIdRoute: AppOffendersIdRoute,
@@ -417,6 +458,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   AdminLoginRoute: AdminLoginRoute,
   LoginRoute: LoginRoute,
+  SetupPasswordRoute: SetupPasswordRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

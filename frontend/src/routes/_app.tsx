@@ -1,10 +1,12 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { DynamicSidebar } from "@/components/app/sidebar";
 import { Topbar } from "@/components/app/topbar";
+import { AccessRequestModal } from "@/components/app/AccessRequestModal";
 import { useAuthStore } from "@/stores/auth";
 import { usePrefs } from "@/stores/prefs";
 import { cn } from "@/lib/utils";
-import { canAccessRoute, findRouteAccess, requiredRoleLabel } from "@/lib/rbac";
+import { canAccessRoute, findRouteAccess, requiredRoleLabel, ROLE_DEFAULT_LANDING } from "@/lib/rbac";
+import { SessionSyncProvider } from "@/components/providers/SessionSyncProvider";
 
 export const Route = createFileRoute("/_app")({
   ssr: false,
@@ -12,8 +14,16 @@ export const Route = createFileRoute("/_app")({
     if (typeof window === "undefined") return;
     const user = useAuthStore.getState().user;
     if (!user) throw redirect({ to: "/login" });
+
     const routeAccess = findRouteAccess(location.pathname);
     if (routeAccess && !canAccessRoute(user, routeAccess)) {
+      // Redirect to role-appropriate landing page rather than generic /access-restricted
+      // when the user is at the root. This handles ADMINISTRATOR hitting "/" (Chat).
+      const landing = ROLE_DEFAULT_LANDING[user.role] ?? "/access-restricted";
+      const isRootOrDefault = location.pathname === "/" || location.pathname === "/dashboard";
+      if (isRootOrDefault && landing !== location.pathname) {
+        throw redirect({ to: landing as string });
+      }
       throw redirect({
         to: "/access-restricted",
         search: {
@@ -32,6 +42,7 @@ function AppShell() {
   const setMobileNavOpen = usePrefs((s) => s.setMobileNavOpen);
 
   return (
+    <SessionSyncProvider>
     <div className="relative flex h-screen w-full overflow-hidden">
       {/* Ambient aurora background */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
@@ -98,7 +109,9 @@ function AppShell() {
         <main className="flex-1 overflow-y-auto scrollbar-thin">
           <Outlet />
         </main>
+        <AccessRequestModal />
       </div>
     </div>
+    </SessionSyncProvider>
   );
 }

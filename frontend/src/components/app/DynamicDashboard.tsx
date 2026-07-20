@@ -15,7 +15,6 @@ import {
   CartesianGrid,
 } from "recharts";
 import { PageHeader, StatCard } from "@/components/app/primitives";
-import { MockBadge } from "@/components/app/mock-badge";
 import { getDashboard, getAlerts } from "@/services/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -66,10 +65,24 @@ const CHART_COLORS = [
   "var(--color-chart-5)",
 ];
 
+// Normalize uppercase role strings (e.g. "SUPERVISOR") to the title-case keys in ROLE_DASHBOARDS
+function normalizeRoleKey(role: string | undefined): string {
+  if (!role) return "Investigator";
+  const map: Record<string, string> = {
+    INVESTIGATOR: "Investigator",
+    SENIOR_INVESTIGATOR: "Senior Investigator",
+    ANALYST: "Analyst",
+    SUPERVISOR: "Supervisor",
+    POLICY_MAKER: "Policymaker",
+    ADMINISTRATOR: "Admin",
+  };
+  return map[role.toUpperCase()] ?? "Investigator";
+}
+
 export function DynamicDashboard() {
   const rbac = useRBAC();
-  const currentRole = rbac.role ?? "Investigator";
-  const config = ROLE_DASHBOARDS[currentRole] || ROLE_DASHBOARDS.Investigator;
+  const currentRole = normalizeRoleKey(rbac.role);
+  const config = ROLE_DASHBOARDS[currentRole] ?? ROLE_DASHBOARDS.Investigator;
 
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard", currentRole],
@@ -93,7 +106,6 @@ export function DynamicDashboard() {
       <PageHeader
         title={config.title}
         subtitle={`${config.subtitle} - logged in as ${rbac.user?.name || "Officer"}`}
-        actions={<MockBadge />}
       />
 
       {/* Role Workspace Cards */}

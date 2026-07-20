@@ -68,6 +68,7 @@ class CaseRepository:
             stmt.options(
                 selectinload(CaseMaster.police_station),
                 selectinload(CaseMaster.crime_type),
+                selectinload(CaseMaster.victims),
             )
             .limit(limit)
             .offset(offset)

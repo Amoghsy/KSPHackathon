@@ -10,7 +10,7 @@ class AuditLog(Base):
     __tablename__ = "audit_log"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    question: Mapped[str] = mapped_column(Text, nullable=False)
+    question: Mapped[str | None] = mapped_column(Text, nullable=True)
     generated_sql: Mapped[str | None] = mapped_column(Text, nullable=True)
     execution_time_ms: Mapped[float | None] = mapped_column(Float, nullable=True)
     timestamp: Mapped[datetime.datetime] = mapped_column(
@@ -25,4 +25,13 @@ class AuditLog(Base):
     ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
     status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     request_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    
+    # New security audit columns
+    action: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    target_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    supervisor_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    district_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    case_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(String(255), nullable=True)
 

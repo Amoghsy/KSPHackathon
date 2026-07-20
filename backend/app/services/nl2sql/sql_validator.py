@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 import sqlparse
 from sqlparse.sql import Identifier, IdentifierList, Parenthesis, Where
 from sqlparse.tokens import DDL, DML, Keyword
-from app.core.rbac import check_permission, Permission
+from app.core.rbac import check_permission, Permission, normalize_role
 
 logger = logging.getLogger(__name__)
 
@@ -297,11 +297,11 @@ class SQLValidator:
 
         # 7. User-level RBAC & Permission validation (if user context is provided)
         if current_user:
-            role = current_user.get("role")
+            role = normalize_role(current_user.get("role"))
             
             # Users table: Admin only
             if "users" in referenced_tables:
-                if role not in ("Admin", "Administrator"):
+                if role != "ADMINISTRATOR":
                     errors.append(f"Permission denied. Role '{role}' is not allowed to access user accounts.")
                     
             # Financial transactions: Requires FINANCIAL_CRIME permission
@@ -320,7 +320,7 @@ class SQLValidator:
                     if "victim_name" in referenced_columns or "*" in referenced_columns:
                         errors.append("You do not have permission to access victim identities.")
                 # Investigator/Analyst/Policymaker can have individual restrictions:
-                if role in ("Policy Maker", "Policymaker", "Analyst"):
+                if role in ("POLICY_MAKER", "ANALYST"):
                     if "victim_name" in referenced_columns or "complainant" in referenced_columns or "accused_name" in referenced_columns:
                         errors.append("You do not have permission to access personal identifiable information (PII) such as complainant, accused or victim names.")
                     if "source_account" in referenced_columns or "destination_account" in referenced_columns:

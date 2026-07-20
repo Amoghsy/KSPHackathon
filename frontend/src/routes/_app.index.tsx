@@ -1514,11 +1514,6 @@ function ChatPage() {
               </Button>
             </div>
 
-            {/* Footer notes */}
-            <div className="flex flex-wrap items-center justify-between gap-1 mt-2">
-              <div className="text-[11px] text-muted-foreground">{t("explainabilityNote")}</div>
-              <div className="text-[11px] text-muted-foreground/70 italic">{t("translationNote")}</div>
-            </div>
           </div>
         </div>
 

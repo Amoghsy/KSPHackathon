@@ -16,11 +16,13 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from app.db.session import SessionLocal
 from app.db.seed_data.faker_generator import generate_realistic_network
+from app.db.seed_data.financial_seed import seed_financial_crime_records
 
 
 async def seed_data():
     async with SessionLocal() as db:
         await generate_realistic_network(db)
+        await seed_financial_crime_records(db)
 
 
 if __name__ == "__main__":
