@@ -1,6 +1,6 @@
 # Web framework
 fastapi==0.115.5
-uvicorn[standard]==0.32.1
+uvicorn==0.32.1
 
 # Database
 sqlalchemy==2.0.36
@@ -22,13 +22,13 @@ bcrypt==4.2.0
 pyjwt==2.10.1
 python-multipart==0.0.19
 
-# AI Foundation (Day 2)
+# AI Foundation
 google-genai>=1.0.0
 sqlparse==0.5.3
 gTTS==2.5.1
 
-# Network Intelligence (Day 5)
+# Network Intelligence
 networkx>=3.0
 numpy>=1.20
 
-
+email-validator==2.2.0
