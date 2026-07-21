@@ -603,9 +603,6 @@ function NetworkPage() {
                   graphData={renderedGraphData}
                   width={dims.w}
                   height={dims.h}
-                  nodeColor={(n: any) => n.color || DEFAULT_COLORS[n.kind]}
-                  nodeVal={(n: any) => Math.sqrt(n.val || 5)}
-                  nodeRelSize={3.0}
                   minZoom={0.15}
                   maxZoom={10}
                   linkColor={() => "rgba(148,163,184,0.15)"}
@@ -616,9 +613,51 @@ function NetworkPage() {
                     graphRef.current?.centerAt(n.x, n.y, 300);
                   }}
                   cooldownTicks={120}
+                  nodeCanvasObject={(node: any, ctx, globalScale) => {
+                    const label = node.label || node.id;
+                    const val = node.val || 5;
+                    const r = Math.sqrt(val) * 2.5;
+                    
+                    // Highlight selected node
+                    if (selected && selected.id === node.id) {
+                      ctx.beginPath();
+                      ctx.arc(node.x, node.y, r + 4, 0, 2 * Math.PI, false);
+                      ctx.fillStyle = "rgba(59, 130, 246, 0.45)";
+                      ctx.fill();
+                    }
+
+                    // Main node circle
+                    ctx.beginPath();
+                    ctx.arc(node.x, node.y, r, 0, 2 * Math.PI, false);
+                    ctx.fillStyle = node.color || DEFAULT_COLORS[node.kind] || '#6B7280';
+                    ctx.fill();
+
+                    // Node border
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 1.2 / globalScale;
+                    ctx.stroke();
+
+                    // Text labels
+                    const fontSize = Math.max(3.5, 9 / globalScale);
+                    ctx.font = `600 ${fontSize}px sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'top';
+
+                    const isDark = document.documentElement.classList.contains('dark');
+                    ctx.fillStyle = isDark ? '#f1f5f9' : '#0f172a';
+                    
+                    // Draw text label slightly below the node
+                    ctx.fillText(label, node.x, node.y + r + 2);
+                  }}
+                  nodePointerAreaPaint={(node: any, color, ctx) => {
+                    const val = node.val || 5;
+                    const r = Math.sqrt(val) * 2.5 + 8; // Extra padding for easy clicks
+                    ctx.beginPath();
+                    ctx.arc(node.x, node.y, r, 0, 2 * Math.PI, false);
+                    ctx.fillStyle = color;
+                    ctx.fill();
+                  }}
                 />
-
-
               </Suspense>
             )}
 

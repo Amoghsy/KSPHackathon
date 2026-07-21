@@ -38,9 +38,10 @@ export const Route = createFileRoute("/_app/financial")({
 
 const COLORS: Record<string, string> = {
   accused: "#1F3864",
-  account: "#0EA5A4",
-  case: "#6B7280",
-  location: "#D4A017",
+  "community leader": "#F97316",
+  account: "#8B5CF6",
+  case: "#64748B",
+  location: "#475569",
 };
 
 const SUSPICIOUS_COLOR = "#DC2626";
@@ -354,8 +355,8 @@ function FinancialPage() {
                     graphData={graphData}
                     width={dims.w}
                     height={dims.h}
-                    nodeColor={(n: any) => COLORS[n.kind] ?? "#888"}
-                    nodeRelSize={5}
+                    minZoom={0.15}
+                    maxZoom={10}
                     linkColor={(l: any) => (l.suspicious ? SUSPICIOUS_COLOR : NORMAL_LINK)}
                     linkWidth={(l: any) => (l.suspicious ? 2 : 1)}
                     linkDirectionalArrowLength={(l: any) => (l.suspicious ? 4 : 0)}
@@ -372,6 +373,50 @@ function FinancialPage() {
                       setSelectedNode(null);
                     }}
                     cooldownTicks={120}
+                    nodeCanvasObject={(node: any, ctx, globalScale) => {
+                      const label = node.label || node.id;
+                      const val = node.val || 8;
+                      const r = Math.sqrt(val) * 2.5;
+
+                      // Highlight selected node
+                      if (selectedNode && selectedNode.id === node.id) {
+                        ctx.beginPath();
+                        ctx.arc(node.x, node.y, r + 4, 0, 2 * Math.PI, false);
+                        ctx.fillStyle = "rgba(59, 130, 246, 0.45)";
+                        ctx.fill();
+                      }
+
+                      // Main node circle
+                      ctx.beginPath();
+                      ctx.arc(node.x, node.y, r, 0, 2 * Math.PI, false);
+                      ctx.fillStyle = node.color || COLORS[node.kind] || '#888';
+                      ctx.fill();
+
+                      // Node border
+                      ctx.strokeStyle = '#ffffff';
+                      ctx.lineWidth = 1.2 / globalScale;
+                      ctx.stroke();
+
+                      // Text labels
+                      const fontSize = Math.max(3.5, 9 / globalScale);
+                      ctx.font = `600 ${fontSize}px sans-serif`;
+                      ctx.textAlign = 'center';
+                      ctx.textBaseline = 'top';
+
+                      const isDark = document.documentElement.classList.contains('dark');
+                      ctx.fillStyle = isDark ? '#f1f5f9' : '#0f172a';
+                      
+                      // Draw text label slightly below the node
+                      ctx.fillText(label, node.x, node.y + r + 2);
+                    }}
+                    nodePointerAreaPaint={(node: any, color, ctx) => {
+                      const val = node.val || 8;
+                      const r = Math.sqrt(val) * 2.5 + 8; // Extra padding for easy clicks
+                      ctx.beginPath();
+                      ctx.arc(node.x, node.y, r, 0, 2 * Math.PI, false);
+                      ctx.fillStyle = color;
+                      ctx.fill();
+                    }}
                   />
                 </Suspense>
               )}
@@ -390,7 +435,7 @@ function FinancialPage() {
                         Circular Flows ({graphData.patterns.circular_flows.length})
                       </div>
                       {graphData.patterns.circular_flows.map((c: any, i: number) => (
-                        <div key={i} className="text-[9px] bg-destructive/10 border border-destructive/20 text-destructive-foreground rounded p-1.5 leading-relaxed font-mono">
+                        <div key={i} className="text-[9px] bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 rounded p-1.5 leading-relaxed font-semibold font-mono">
                           {c.flow}
                         </div>
                       ))}
@@ -403,7 +448,7 @@ function FinancialPage() {
                         Shared Accounts ({graphData.patterns.shared_accounts.length})
                       </div>
                       {graphData.patterns.shared_accounts.map((s: any, i: number) => (
-                        <div key={i} className="text-[9px] bg-warning/10 border border-warning/20 rounded p-1.5 leading-normal">
+                        <div key={i} className="text-[9px] bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 rounded p-1.5 leading-normal">
                           <strong>{s.label}</strong> shared by:
                           <div className="text-[8px] text-muted-foreground mt-0.5">
                             {s.owners.join(", ")}

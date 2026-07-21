@@ -323,6 +323,7 @@ function ChatPage() {
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<any>(null);
   const initialInputRef = useRef("");
+  const accumulatedInputRef = useRef("");
 
   const [voicePanelOpen, setVoicePanelOpen] = useState(false);
   const {
@@ -350,6 +351,323 @@ function ChatPage() {
 
   const SR = useMemo(() => getSpeechRecognition(), []);
   const speechSupported = !!SR;
+
+  const stopListening = useCallback(() => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+    try {
+      (recognitionRef.current as any)?.stop();
+    } catch (e) {
+      console.warn("Speech recognition stop failed:", e);
+    }
+    setListening(false);
+  }, []);
+
+  const handleSpeak = useCallback(
+    (text: string, msgId?: string) => {
+      speak(text);
+      if (msgId) setSpeakingMsgId(msgId);
+    },
+    [speak],
+  );
+
+  const send = useCallback(
+    async (text: string) => {
+      const q = text.trim();
+      if (!q || loading) return;
+      setChatError(null);
+
+      const asksForSensitiveData = /\b(victim address|victim phone|phone number|bank account|account number|address)\b/i.test(q);
+      if (asksForSensitiveData && !hasPermission(user, PERMISSIONS.SENSITIVE_CASE_ACCESS)) {
+        const denied: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          text: "You do not have permission to access victim addresses, phone numbers, or financial account details. I can still help with permitted case summaries, trends, maps, and pattern analysis for your role.",
+          ts: new Date().toISOString(),
+        };
+        setMessages((m) => [
+          ...m,
+          { id: crypto.randomUUID(), role: "user", text: q, ts: new Date().toISOString() },
+          denied,
+        ]);
+        setInput("");
+        return;
+      }
+
+      if (listening) {
+        stopListening();
+      }
+
+      const userMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "user",
+        text: q,
+        ts: new Date().toISOString(),
+      };
+      setMessages((m) => [...m, userMsg]);
+      setInput("");
+      setLoading(true);
+
+      try {
+        const reply = await askAssistant(q, conversationId, language);
+        const replyWithId = reply as ChatMessage & { conversationId?: string };
+        if (replyWithId.conversationId && !conversationId) {
+          setConversationId(replyWithId.conversationId);
+          queryClient.invalidateQueries({ queryKey: queryKeys.conversations() });
+        }
+        setMessages((m) => [...m, { ...reply, id: reply.id }]);
+        if (autoSpeak) {
+          handleSpeak(reply.text, reply.id);
+        }
+      } catch (err: unknown) {
+        const message =
+          (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
+          (err as { message?: string })?.message ??
+          "The assistant encountered an error. Please try again.";
+        setChatError(message);
+        toast.error("Chat failed", { description: message });
+      } finally {
+        setLoading(false);
+        setTimeout(() => inputRef.current?.focus(), 50);
+      }
+    },
+    [loading, conversationId, queryClient, autoSpeak, handleSpeak, language, listening, stopListening, user],
+  );
+
+  const startListening = useCallback(() => {
+    if (!SR) return;
+
+    // Abort any existing instance first to prevent concurrent instances conflict
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.abort();
+      } catch (e) {
+        console.warn("Failed to abort existing speech recognition:", e);
+      }
+    }
+
+    initialInputRef.current = input;
+    accumulatedInputRef.current = "";
+
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+    }
+
+    const resetSilenceTimer = () => {
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+      }
+      silenceTimerRef.current = setTimeout(() => {
+        stopListening();
+        toast.info("Voice input stopped", {
+          description: "Listening timed out due to inactivity.",
+        });
+      }, 8000);
+    };
+
+    const SRClass = SR as new () => any;
+    const rec = new SRClass();
+    rec.lang = recognitionLanguage;
+    rec.interimResults = true;
+    rec.continuous = false;
+
+    rec.onresult = (ev: any) => {
+      resetSilenceTimer();
+      let finalTranscript = "";
+      let interimTranscript = "";
+
+      for (let i = 0; i < ev.results.length; ++i) {
+        if (ev.results[i].isFinal) {
+          finalTranscript += ev.results[i][0].transcript;
+        } else {
+          interimTranscript += ev.results[i][0].transcript;
+        }
+      }
+
+      const fullTranscript = (finalTranscript + interimTranscript).trim();
+      const base = initialInputRef.current ? initialInputRef.current.trim() : "";
+      const textToSubmit = base ? base + " " + fullTranscript : fullTranscript;
+      setInput(textToSubmit);
+      accumulatedInputRef.current = textToSubmit;
+    };
+
+    rec.onerror = (ev: any) => {
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+      const err = ev.error;
+      if (err === "not-allowed") {
+        toast.error("Microphone access denied", {
+          description: "Please allow microphone access in your browser settings to use voice input.",
+        });
+      } else if (err === "no-speech") {
+        toast.warning("No speech detected", {
+          description: "Speak clearly into your microphone.",
+        });
+      } else if (err === "aborted") {
+        // Normal stop/abort — do not show error toast
+        console.log("Speech recognition aborted normally.");
+      } else {
+        toast.error("Voice input error", {
+          description: err ?? "Unknown error occurred",
+        });
+      }
+      setListening(false);
+    };
+
+    rec.onend = () => {
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+      setListening(false);
+
+      // Auto-send if there is accumulated content
+      const text = accumulatedInputRef.current?.trim();
+      if (text) {
+        accumulatedInputRef.current = "";
+        send(text);
+      }
+    };
+
+    recognitionRef.current = rec;
+    setListening(true);
+    resetSilenceTimer();
+
+    try {
+      rec.start();
+    } catch {
+      setListening(false);
+    }
+  }, [SR, recognitionLanguage, stopListening, input, send]);
+
+  function startNewConversation() {
+    setConversationId(null);
+    setMessages([]);
+    setChatError(null);
+    setContextEntity(null);
+    inputRef.current?.focus();
+  }
+
+  function exportPdf() {
+    // Check if iframe already exists, if so remove it
+    const existingFrame = document.getElementById("print-iframe");
+    if (existingFrame) {
+      existingFrame.remove();
+    }
+
+    // Create a new invisible iframe
+    const iframe = document.createElement("iframe");
+    iframe.id = "print-iframe";
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "none";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (!doc) {
+      toast.error("Could not export PDF");
+      return;
+    }
+
+    const title = `Chat Session${conversationId ? ` — ${conversationId.slice(0, 8)}` : ""}`;
+    const formattedDate = format(new Date(), "d MMM yyyy HH:mm");
+
+    const messagesHtml = messages
+      .map((m) => {
+        const who = m.role === "user" ? "User" : `Assistant${m.agent ? " · " + m.agent : ""}`;
+        const color = m.role === "user" ? "#1e3a8a" : "#15803d";
+        
+        return `
+          <div style="margin-bottom: 20px; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px; page-break-inside: avoid;">
+            <div style="font-size: 11px; font-weight: bold; color: ${color}; margin-bottom: 5px; font-family: 'Inter', sans-serif;">
+              ${who} &middot; ${format(new Date(m.ts), "d MMM HH:mm")}
+            </div>
+            <div style="font-size: 13px; color: #0f172a; line-height: 1.6; white-space: pre-wrap; font-family: 'Inter', 'Noto Sans Kannada', sans-serif;">
+              ${m.text}
+            </div>
+            ${
+              m.sql
+                ? `
+              <div style="margin-top: 10px; background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0; font-family: 'Courier New', Courier, monospace; font-size: 11px; color: #334155; page-break-inside: avoid;">
+                <div style="font-weight: bold; color: #64748b; margin-bottom: 4px;">SQL:</div>
+                <div style="white-space: pre-wrap; word-break: break-all;">${m.sql}</div>
+                ${m.rows !== undefined ? `<div style="margin-top: 4px; color: #94a3b8;">(${m.rows} rows)</div>` : ""}
+              </div>
+            `
+                : ""
+            }
+          </div>
+        `;
+      })
+      .join("");
+
+    doc.write(`
+      <html>
+        <head>
+          <title>${title}</title>
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+Kannada:wght@400;600;700&display=swap" rel="stylesheet">
+          <style>
+            body {
+              font-family: 'Inter', 'Noto Sans Kannada', sans-serif;
+              padding: 20px;
+              color: #0f172a;
+              margin: 0;
+            }
+            .header {
+              border-bottom: 2px solid #e2e8f0;
+              padding-bottom: 15px;
+              margin-bottom: 25px;
+            }
+            h1 {
+              font-size: 20px;
+              margin: 0 0 5px 0;
+              color: #1e293b;
+            }
+            .meta {
+              font-size: 11px;
+              color: #64748b;
+            }
+            @media print {
+              body {
+                padding: 0;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>${title}</h1>
+            <div class="meta">Exported on ${formattedDate}</div>
+          </div>
+          <div class="content">
+            ${messagesHtml}
+          </div>
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    // Wait for content and Noto Sans Kannada font to load in the frame before printing
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      // Remove the temporary iframe after printing is done/dismissed
+      setTimeout(() => {
+        iframe.remove();
+      }, 5000);
+    }, 1000);
+
+    toast.success("PDF export initiated");
+  }
 
   const SUGGESTIONS = [t("s1"), t("s2"), t("s3"), t("s4"), t("s5")];
 
@@ -445,274 +763,7 @@ function ChatPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [speechSupported, listening, isPlaying, isPaused]);
 
-  const stopListening = useCallback(() => {
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = null;
-    }
-    try {
-      (recognitionRef.current as any)?.stop();
-    } catch (e) {
-      console.warn("Speech recognition stop failed:", e);
-    }
-    setListening(false);
-  }, []);
 
-  const startListening = useCallback(() => {
-    if (!SR) return;
-
-    initialInputRef.current = input;
-
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
-    }
-
-    const resetSilenceTimer = () => {
-      if (silenceTimerRef.current) {
-        clearTimeout(silenceTimerRef.current);
-      }
-      silenceTimerRef.current = setTimeout(() => {
-        stopListening();
-        toast.info("Voice input stopped", {
-          description: "Listening timed out due to inactivity.",
-        });
-      }, 8000);
-    };
-
-    const SRClass = SR as new () => any;
-    const rec = new SRClass();
-    rec.lang = recognitionLanguage;
-    rec.interimResults = true;
-    rec.continuous = false;
-
-    rec.onresult = (ev: any) => {
-      resetSilenceTimer();
-      let finalTranscript = "";
-      let interimTranscript = "";
-
-      for (let i = 0; i < ev.results.length; ++i) {
-        if (ev.results[i].isFinal) {
-          finalTranscript += ev.results[i][0].transcript;
-        } else {
-          interimTranscript += ev.results[i][0].transcript;
-        }
-      }
-
-      const fullTranscript = (finalTranscript + interimTranscript).trim();
-      const base = initialInputRef.current ? initialInputRef.current.trim() : "";
-      setInput(base ? base + " " + fullTranscript : fullTranscript);
-    };
-
-    rec.onerror = (ev: any) => {
-      if (silenceTimerRef.current) {
-        clearTimeout(silenceTimerRef.current);
-        silenceTimerRef.current = null;
-      }
-      const err = ev.error;
-      if (err === "not-allowed") {
-        toast.error("Microphone access denied", {
-          description: "Please allow microphone access in your browser settings to use voice input.",
-        });
-      } else if (err === "no-speech") {
-        toast.warning("No speech detected", {
-          description: "Speak clearly into your microphone.",
-        });
-      } else {
-        toast.error("Voice input error", {
-          description: err ?? "Unknown error occurred",
-        });
-      }
-      setListening(false);
-    };
-
-    rec.onend = () => {
-      if (silenceTimerRef.current) {
-        clearTimeout(silenceTimerRef.current);
-        silenceTimerRef.current = null;
-      }
-      setListening(false);
-    };
-
-    recognitionRef.current = rec;
-    setListening(true);
-    resetSilenceTimer();
-
-    try {
-      rec.start();
-    } catch {
-      setListening(false);
-    }
-  }, [SR, recognitionLanguage, stopListening, input]);
-
-  useEffect(() => {
-    return () => {
-      if (silenceTimerRef.current) {
-        clearTimeout(silenceTimerRef.current);
-      }
-    };
-  }, []);
-
-  const handleSpeak = useCallback(
-    (text: string, msgId?: string) => {
-      speak(text);
-      if (msgId) setSpeakingMsgId(msgId);
-    },
-    [speak],
-  );
-
-  // Clear speakingMsgId when playback ends
-  useEffect(() => {
-    if (!isPlaying && !isPaused) {
-      setSpeakingMsgId(null);
-    }
-  }, [isPlaying, isPaused]);
-
-  const send = useCallback(
-    async (text: string) => {
-      const q = text.trim();
-      if (!q || loading) return;
-      setChatError(null);
-
-      const asksForSensitiveData = /\b(victim address|victim phone|phone number|bank account|account number|address)\b/i.test(q);
-      if (asksForSensitiveData && !hasPermission(user, PERMISSIONS.SENSITIVE_CASE_ACCESS)) {
-        const denied: ChatMessage = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          text: "You do not have permission to access victim addresses, phone numbers, or financial account details. I can still help with permitted case summaries, trends, maps, and pattern analysis for your role.",
-          ts: new Date().toISOString(),
-        };
-        setMessages((m) => [
-          ...m,
-          { id: crypto.randomUUID(), role: "user", text: q, ts: new Date().toISOString() },
-          denied,
-        ]);
-        setInput("");
-        return;
-      }
-
-      if (listening) {
-        stopListening();
-      }
-
-      const userMsg: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "user",
-        text: q,
-        ts: new Date().toISOString(),
-      };
-      setMessages((m) => [...m, userMsg]);
-      setInput("");
-      setLoading(true);
-
-      try {
-        const reply = await askAssistant(q, conversationId, language);
-        const replyWithId = reply as ChatMessage & { conversationId?: string };
-        if (replyWithId.conversationId && !conversationId) {
-          setConversationId(replyWithId.conversationId);
-          queryClient.invalidateQueries({ queryKey: queryKeys.conversations() });
-        }
-        setMessages((m) => [...m, { ...reply, id: reply.id }]);
-        if (autoSpeak) {
-          handleSpeak(reply.text, reply.id);
-        }
-      } catch (err: unknown) {
-        const message =
-          (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
-          (err as { message?: string })?.message ??
-          "The assistant encountered an error. Please try again.";
-        setChatError(message);
-        toast.error("Chat failed", { description: message });
-      } finally {
-        setLoading(false);
-        setTimeout(() => inputRef.current?.focus(), 50);
-      }
-    },
-    [loading, conversationId, queryClient, autoSpeak, handleSpeak, language, listening, stopListening, user],
-  );
-
-  function startNewConversation() {
-    setConversationId(null);
-    setMessages([]);
-    setChatError(null);
-    setContextEntity(null);
-    inputRef.current?.focus();
-  }
-
-  function exportPdf() {
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
-    const marginX = 40;
-    let y = 50;
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const usable = pageWidth - marginX * 2;
-
-    const addLine = (
-      text: string,
-      opts?: { size?: number; bold?: boolean; color?: [number, number, number] },
-    ) => {
-      const size = opts?.size ?? 10;
-      doc.setFont("helvetica", opts?.bold ? "bold" : "normal");
-      doc.setFontSize(size);
-      const [r, g, b] = opts?.color ?? [30, 30, 30];
-      doc.setTextColor(r, g, b);
-      const lines = doc.splitTextToSize(text, usable);
-      for (const line of lines) {
-        if (y > pageHeight - 50) {
-          doc.addPage();
-          y = 50;
-        }
-        doc.text(line, marginX, y);
-        y += size + 3;
-      }
-    };
-
-    addLine(`Chat Session${conversationId ? ` — ${conversationId.slice(0, 8)}` : ""}`, {
-      size: 16,
-      bold: true,
-    });
-    addLine(`Exported ${format(new Date(), "d MMM yyyy · HH:mm")}`, {
-      size: 9,
-      color: [110, 110, 110],
-    });
-    y += 8;
-    doc.setDrawColor(200);
-    doc.line(marginX, y, pageWidth - marginX, y);
-    y += 14;
-
-    for (const m of messages) {
-      const who = m.role === "user" ? "User" : `Assistant${m.agent ? " · " + m.agent : ""}`;
-      addLine(`${who}  ·  ${format(new Date(m.ts), "d MMM · HH:mm")}`, {
-        size: 9,
-        bold: true,
-        color: m.role === "user" ? [40, 60, 120] : [70, 90, 60],
-      });
-      addLine(m.text, { size: 11 });
-      if (m.sql) {
-        y += 4;
-        addLine("SQL:", { size: 9, bold: true, color: [90, 90, 90] });
-        doc.setFont("courier", "normal");
-        doc.setFontSize(9);
-        doc.setTextColor(60, 60, 60);
-        const sqlLines = doc.splitTextToSize(m.sql, usable);
-        for (const line of sqlLines) {
-          if (y > pageHeight - 50) {
-            doc.addPage();
-            y = 50;
-          }
-          doc.text(line, marginX, y);
-          y += 11;
-        }
-        if (m.rows !== undefined) {
-          addLine(`(${m.rows} row${m.rows === 1 ? "" : "s"})`, { size: 9, color: [130, 130, 130] });
-        }
-      }
-      y += 10;
-    }
-
-    const filename = `chat-${format(new Date(), "yyyyMMdd-HHmm")}.pdf`;
-    doc.save(filename);
-    toast.success("PDF downloaded", { description: filename });
-  }
 
   // Detected language label derived from TTS detection
   const detectedLangLabel = ttsLanguage === "kn-IN" ? "Kannada (kn)" : "English (en)";
@@ -1274,15 +1325,26 @@ function ChatPage() {
                             <div className="text-[10px] text-primary font-medium">Speaking introduction…</div>
                           )}
                         </div>
-                        {/* Replay intro button */}
-                        <button
-                          onClick={() => speak(introText)}
-                          className="ml-auto h-6 w-6 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                          aria-label="Replay introduction"
-                          title="Replay introduction"
-                        >
-                          <RotateCcw className="h-3 w-3" />
-                        </button>
+                        {/* Stop / Replay intro button */}
+                        {isPlaying || isPaused ? (
+                          <button
+                            onClick={() => stop()}
+                            className="ml-auto h-6 w-6 rounded-full flex items-center justify-center text-primary hover:text-destructive hover:bg-destructive/10 transition-colors"
+                            aria-label="Stop introduction speech"
+                            title="Stop speaking"
+                          >
+                            <VolumeX className="h-3 w-3" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => speak(introText)}
+                            className="ml-auto h-6 w-6 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                            aria-label="Replay introduction"
+                            title="Replay introduction"
+                          >
+                            <RotateCcw className="h-3 w-3" />
+                          </button>
+                        )}
                       </div>
                       <p className="text-foreground/90 whitespace-pre-wrap">{introText}</p>
                     </div>

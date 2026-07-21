@@ -85,7 +85,7 @@ async def get_case_by_id(
     # ABAC: Enforce district access containment
     await verify_district_access(current_user, case_detail.get("district"), db)
 
-    # Sensitive Data Masking: Mask victim names and narratives if user lacks sensitive case access
+    # Sensitive Data Masking: Mask victim names, narratives, complainant, and demographics if user lacks sensitive case access
     has_sensitive_access = check_permission(current_user["role"], Permission.SENSITIVE_CASE_ACCESS)
     if not has_sensitive_access:
         if "victims" in case_detail:
@@ -93,6 +93,14 @@ async def get_case_by_id(
                 v["name"] = mask_name(v["name"])
         if "narrative" in case_detail:
             case_detail["narrative"] = mask_brief_facts(case_detail["narrative"])
+        if "complainant" in case_detail:
+            case_detail["complainant"] = mask_name(case_detail["complainant"])
+        if "complainantCaste" in case_detail:
+            case_detail["complainantCaste"] = mask_name(case_detail["complainantCaste"])
+        if "complainantReligion" in case_detail:
+            case_detail["complainantReligion"] = mask_name(case_detail["complainantReligion"])
+        if "complainantOccupation" in case_detail:
+            case_detail["complainantOccupation"] = mask_name(case_detail["complainantOccupation"])
 
     return case_detail
 

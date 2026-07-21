@@ -23,14 +23,14 @@ class AccusedService:
         ]
 
     async def list_offenders_paginated(
-        self, q: str | None = None, page: int = 1, page_size: int = 15
+        self, q: str | None = None, page: int = 1, page_size: int = 15, authorized_districts: list[str] | None = None
     ) -> dict:
         """Fetch distinct repeat offenders with pagination, modus operandi, and risk scores."""
         offset = (page - 1) * page_size
         unique_offenders = await self.repository.get_unique_offenders(
-            q=q, limit=page_size, offset=offset
+            q=q, limit=page_size, offset=offset, authorized_districts=authorized_districts
         )
-        total = await self.repository.get_unique_offenders_count(q=q)
+        total = await self.repository.get_unique_offenders_count(q=q, authorized_districts=authorized_districts)
 
         items = []
         for a in unique_offenders:

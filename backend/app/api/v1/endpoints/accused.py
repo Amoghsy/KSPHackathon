@@ -32,30 +32,21 @@ async def get_accused_list(
             detail="Policy Makers are not authorized to view raw accused profiles."
         )
 
-    service = AccusedService(db)
-    result = await service.list_offenders_paginated(q=q, page=page, page_size=pageSize)
+    from app.core.permissions import get_user_authorized_districts, resolve_authorized_districts
+    auth_districts_raw = await get_user_authorized_districts(current_user, db)
+    authorized_districts = resolve_authorized_districts(auth_districts_raw)
 
-    # ABAC: filter out offenders whose last known district the user is not allowed to see
-    # And mask names if lacking sensitive access
+    service = AccusedService(db)
+    result = await service.list_offenders_paginated(
+        q=q, page=page, page_size=pageSize, authorized_districts=authorized_districts
+    )
+
+    # Apply sensitive name masking if lacking permission
     has_sensitive_access = check_permission(current_user["role"], Permission.SENSITIVE_CASE_ACCESS)
-    
-    filtered_items = []
     for item in result.get("items", []):
-        try:
-            # If verify_district_access raises HTTPException, it means they are not allowed to view this district
-            await verify_district_access(current_user, item.get("lastKnown"), db)
+        if not has_sensitive_access:
+            item["name"] = mask_name(item["name"])
             
-            # Apply masking if necessary
-            if not has_sensitive_access:
-                item["name"] = mask_name(item["name"])
-            
-            filtered_items.append(item)
-        except HTTPException:
-            # Skip items not in authorized district
-            continue
-            
-    result["items"] = filtered_items
-    result["total"] = len(filtered_items)
     return result
 
 

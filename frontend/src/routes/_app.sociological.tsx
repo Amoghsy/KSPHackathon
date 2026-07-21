@@ -16,7 +16,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { PageHeader } from "@/components/app/primitives";
-import { MockBadge } from "@/components/app/mock-badge";
 import { getSociologicalInsights } from "@/services/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";

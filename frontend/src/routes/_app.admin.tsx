@@ -890,20 +890,20 @@ function AdminPage() {
       {/* ── Active Sessions Manager Modal ────────────────────────────── */}
       {selectedUserForSessions && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="glass-strong rounded-2xl w-full max-w-2xl overflow-hidden border border-white/10 shadow-2xl flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
+          <div className="bg-background rounded-2xl w-full max-w-2xl overflow-hidden border border-border shadow-2xl flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="p-5 border-b border-white/15 flex items-center justify-between">
+            <div className="p-5 border-b border-border flex items-center justify-between bg-muted/20">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-sky-500/15">
-                  <Activity className="h-5 w-5 text-sky-400" />
+                  <Activity className="h-5 w-5 text-sky-500" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base text-white">
+                  <h3 className="font-bold text-base text-foreground">
                     Manage Sessions — {selectedUserForSessions.username}
                   </h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {selectedUserForSessions.email} · Account Status:{" "}
-                    <span className={selectedUserForSessions.account_status === "ACTIVE" ? "text-success font-medium" : "text-destructive font-medium"}>
+                    <span className={selectedUserForSessions.account_status === "ACTIVE" ? "text-emerald-500 font-semibold" : "text-destructive font-semibold"}>
                       {selectedUserForSessions.account_status || "ACTIVE"}
                     </span>
                   </p>
@@ -912,7 +912,7 @@ function AdminPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-white"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
                 onClick={() => setSelectedUserForSessions(null)}
               >
                 <X className="h-4 w-4" />
@@ -921,9 +921,9 @@ function AdminPage() {
 
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto flex-1 space-y-4">
-              <div className="flex justify-between items-center bg-white/5 rounded-xl p-4 gap-4">
+              <div className="flex justify-between items-center bg-muted/40 rounded-xl p-4 gap-4 border border-border/40">
                 <div>
-                  <span className="text-sm font-semibold text-white block">Forced Sign-out (All Devices)</span>
+                  <span className="text-sm font-semibold text-foreground block">Forced Sign-out (All Devices)</span>
                   <span className="text-xs text-muted-foreground">
                     Instantly terminate all active sessions for this user.
                   </span>
@@ -939,71 +939,78 @@ function AdminPage() {
               </div>
 
               <div className="space-y-2">
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                   Active Connections ({userSessions.length})
                 </h4>
 
                 {loadingUserSessions && userSessions.length === 0 ? (
                   <div className="flex justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-sky-400" />
+                    <Loader2 className="h-6 w-6 animate-spin text-sky-500" />
                   </div>
                 ) : userSessions.length === 0 ? (
-                  <div className="text-center py-8 text-sm text-muted-foreground border border-dashed border-white/10 rounded-xl">
+                  <div className="text-center py-8 text-sm text-muted-foreground border border-dashed border-border rounded-xl">
                     No active sessions found for this user.
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {userSessions.map((s) => (
-                      <div
-                        key={s.session_id}
-                        className="flex items-center gap-3 rounded-lg bg-white/5 p-3.5 border border-white/5 hover:border-white/10 transition-colors"
-                      >
-                        <div className="flex-shrink-0 h-9 w-9 rounded-lg bg-white/5 flex items-center justify-center">
-                          {s.device_type === "Mobile" ? (
-                            <Smartphone className="h-4.5 w-4.5 text-muted-foreground" />
-                          ) : s.device_type === "Tablet" ? (
-                            <Tablet className="h-4.5 w-4.5 text-muted-foreground" />
-                          ) : (
-                            <Monitor className="h-4.5 w-4.5 text-muted-foreground" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-white">
-                              {s.os} · {s.browser}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3 mt-1 flex-wrap text-[11px] text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Wifi className="h-3 w-3" />
-                              {s.ip_address}
-                            </span>
-                            <span>•</span>
-                            <span>Active {new Date(s.last_activity_at).toLocaleString()}</span>
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          disabled={revokingUserSessionId === s.session_id}
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          onClick={() => handleRevokeUserSession(selectedUserForSessions.id, s.session_id)}
+                    {userSessions.map((s) => {
+                      const lastActive = s.last_activity_at ? new Date(s.last_activity_at) : null;
+                      const formattedDate = lastActive && !isNaN(lastActive.getTime())
+                        ? lastActive.toLocaleString()
+                        : "Recently";
+
+                      return (
+                        <div
+                          key={s.session_id}
+                          className="flex items-center gap-3 rounded-xl bg-card p-3.5 border border-border/80 hover:border-primary/20 transition-all shadow-sm"
                         >
-                          {revokingUserSessionId === s.session_id ? (
-                            <Loader2 className="h-4.5 w-4.5 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    ))}
+                          <div className="flex-shrink-0 h-9 w-9 rounded-lg bg-muted flex items-center justify-center border border-border/40">
+                            {s.device_type === "Mobile" ? (
+                              <Smartphone className="h-4.5 w-4.5 text-muted-foreground" />
+                            ) : s.device_type === "Tablet" ? (
+                              <Tablet className="h-4.5 w-4.5 text-muted-foreground" />
+                            ) : (
+                              <Monitor className="h-4.5 w-4.5 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-semibold text-foreground">
+                                {s.os} · {s.browser}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3 mt-1 flex-wrap text-[11px] text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Wifi className="h-3 w-3" />
+                                {s.ip_address}
+                              </span>
+                              <span>•</span>
+                              <span>Active {formattedDate}</span>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            disabled={revokingUserSessionId === s.session_id}
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => handleRevokeUserSession(selectedUserForSessions.id, s.session_id)}
+                          >
+                            {revokingUserSessionId === s.session_id ? (
+                              <Loader2 className="h-4.5 w-4.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 border-t border-white/15 bg-white/5 flex justify-end">
+            <div className="p-4 border-t border-border bg-muted/20 flex justify-end">
               <Button onClick={() => setSelectedUserForSessions(null)}>Close</Button>
             </div>
           </div>

@@ -110,11 +110,23 @@ function CaseDetailPage() {
                   />
                 }
               />
+              <Row label="Age" value={fir.complainantAge || "Unknown"} />
+              <Row label="Gender" value={fir.complainantGender || "Unknown"} />
               <Row
-                label="Category"
+                label="Occupation"
                 value={
                   <MaskField
-                    value="General Category"
+                    value={fir.complainantOccupation || "Unknown"}
+                    permission={PERMISSIONS.SENSITIVE_CASE_ACCESS}
+                    kind="name"
+                  />
+                }
+              />
+              <Row
+                label="Caste"
+                value={
+                  <MaskField
+                    value={fir.complainantCaste || "Unknown"}
                     permission={PERMISSIONS.SENSITIVE_CASE_ACCESS}
                     kind="name"
                   />
@@ -124,7 +136,7 @@ function CaseDetailPage() {
                 label="Religion/Belief"
                 value={
                   <MaskField
-                    value="Category A"
+                    value={fir.complainantReligion || "Unknown"}
                     permission={PERMISSIONS.SENSITIVE_CASE_ACCESS}
                     kind="name"
                   />
@@ -147,20 +159,7 @@ function CaseDetailPage() {
                   />
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">Age: {a.age}</div>
-                <div className="text-xs mt-2 text-muted-foreground/80">
-                  Category:{" "}
-                  <MaskField
-                    value="General"
-                    permission={PERMISSIONS.SENSITIVE_CASE_ACCESS}
-                    kind="name"
-                  />{" "}
-                  · Religion:{" "}
-                  <MaskField
-                    value="Category A"
-                    permission={PERMISSIONS.SENSITIVE_CASE_ACCESS}
-                    kind="name"
-                  />
-                </div>
+                <div className="text-sm text-muted-foreground">Gender: {a.gender || "Unknown"}</div>
               </Card>
             ))}
           </div>

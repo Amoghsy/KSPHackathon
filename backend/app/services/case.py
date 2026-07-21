@@ -97,7 +97,7 @@ class CaseService:
                 "gravity": map_gravity(c.gravity_offence_id),
                 "narrative": c.brief_facts or "",
                 "victimName": c.victims[0].victim_name if c.victims else None,
-                "complainant": "State of Karnataka",
+                "complainant": c.complainants[0].complainant_name if c.complainants else "State of Karnataka",
             })
 
         return {
@@ -131,6 +131,15 @@ class CaseService:
                 "gender": "Male" if v.gender_id == 1 else "Female",
             })
 
+        # Complainant Details from database
+        comp_obj = c.complainants[0] if c.complainants else None
+        complainant_name = comp_obj.complainant_name if comp_obj else "State of Karnataka"
+        complainant_caste = comp_obj.caste.caste_master_name if comp_obj and comp_obj.caste else "General Category"
+        complainant_religion = comp_obj.religion.religion_name if comp_obj and comp_obj.religion else "Category A"
+        complainant_occupation = comp_obj.occupation.occupation_name if comp_obj and comp_obj.occupation else "Service"
+        complainant_age = comp_obj.age_year if comp_obj else 35
+        complainant_gender = "Male" if comp_obj and comp_obj.gender_id == 1 else "Female" if comp_obj and comp_obj.gender_id == 2 else "Transgender"
+
         return {
             "id": str(c.case_master_id),
             "crimeNo": c.crime_no,
@@ -139,7 +148,12 @@ class CaseService:
             "station": c.police_station.name if c.police_station else "Unknown PS",
             "district": c.police_station.district if c.police_station else "Unknown District",
             "crimeHead": c.crime_type.name if c.crime_type else "General Crime",
-            "complainant": "State of Karnataka",
+            "complainant": complainant_name,
+            "complainantCaste": complainant_caste,
+            "complainantReligion": complainant_religion,
+            "complainantOccupation": complainant_occupation,
+            "complainantAge": complainant_age,
+            "complainantGender": complainant_gender,
             "status": map_status(c.case_status_id),
             "gravity": map_gravity(c.gravity_offence_id),
             "narrative": c.brief_facts or "",

@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { PageHeader } from "@/components/app/primitives";
-import { MockBadge } from "@/components/app/mock-badge";
 import { getAudit } from "@/services/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +28,6 @@ function AuditPage() {
       <PageHeader
         title="Audit Log"
         subtitle="Read-only record of every query executed against the crime database."
-        actions={<MockBadge />}
       />
 
       <div className="rounded-xl glass overflow-hidden">

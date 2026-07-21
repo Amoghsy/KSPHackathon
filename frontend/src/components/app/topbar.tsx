@@ -1,4 +1,4 @@
-import { Bell, Search, Sun, Moon, LogOut, Menu } from "lucide-react";
+import { Search, Sun, Moon, LogOut, Menu } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuthStore } from "@/stores/auth";
 import { usePrefs } from "@/stores/prefs";
@@ -104,12 +104,6 @@ export function Topbar() {
           {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
         </button>
 
-        <button className="relative h-9 w-9 rounded-md hover:bg-accent flex items-center justify-center transition-colors">
-          <Bell className="h-4 w-4" />
-          <span className="absolute top-1 right-1 h-4 min-w-4 rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground flex items-center justify-center px-1 ring-2 ring-card">
-            3
-          </span>
-        </button>
 
         <div className="hidden md:block h-6 w-px bg-border/70 mx-0.5" />
 
