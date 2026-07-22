@@ -5,7 +5,23 @@ Development:
     uvicorn app.main:app --reload
 
 Production / Zoho Catalyst AppSail:
-    python app_start.py
+    python3 -u app_start.py
+
+Database initialization is intentionally NOT performed during application
+startup.
+
+Run migrations and seeding separately:
+
+    python -m alembic upgrade head
+    python scripts/seed_db.py
+
+Operational endpoints:
+
+    /health
+        Lightweight application liveness check.
+
+    /health/ready
+        Readiness check that verifies PostgreSQL connectivity.
 """
 
 from __future__ import annotations
@@ -18,12 +34,15 @@ from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 
-# ---------------------------------------------------------------------------
-# Windows Event Loop Compatibility
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# WINDOWS EVENT LOOP COMPATIBILITY
+# ===========================================================================
+#
 # Psycopg 3 async connections on Windows work with SelectorEventLoop.
-# This block only runs on Windows and has no effect on Linux/AppSail.
-# ---------------------------------------------------------------------------
+#
+# This only affects local Windows development.
+# Zoho Catalyst AppSail runs on Linux, so this block has no effect there.
+# ===========================================================================
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(
@@ -37,12 +56,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 
 
-# ---------------------------------------------------------------------------
-# Structured Logging Configuration
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# LOGGING
+# ===========================================================================
 
 LOGGING_CONFIG: dict = {
     "version": 1,
+
     "disable_existing_loggers": False,
 
     "formatters": {
@@ -53,6 +73,7 @@ LOGGING_CONFIG: dict = {
                 "%(name)s | "
                 "%(message)s"
             ),
+
             "datefmt": "%Y-%m-%dT%H:%M:%S",
         },
     },
@@ -60,7 +81,9 @@ LOGGING_CONFIG: dict = {
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
+
             "stream": "ext://sys.stdout",
+
             "formatter": "standard",
         },
     },
@@ -71,19 +94,27 @@ LOGGING_CONFIG: dict = {
             if settings.app_env == "local"
             else "INFO"
         ),
-        "handlers": ["console"],
+
+        "handlers": [
+            "console",
+        ],
     },
 }
 
 
-logging.config.dictConfig(LOGGING_CONFIG)
+logging.config.dictConfig(
+    LOGGING_CONFIG
+)
 
-logger = logging.getLogger(__name__)
+
+logger = logging.getLogger(
+    __name__
+)
 
 
-# ---------------------------------------------------------------------------
-# Application Lifespan
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# APPLICATION LIFESPAN
+# ===========================================================================
 
 @asynccontextmanager
 async def lifespan(
@@ -92,20 +123,37 @@ async def lifespan(
     """
     FastAPI application lifecycle handler.
 
-    Startup:
-        - Logs application startup.
-        - Attempts to verify the current database connection.
-        - Attempts to seed the default administrator.
+    IMPORTANT FOR ZOHO CATALYST APPSAIL:
 
-    Important for Catalyst Phase 1:
-        Database initialization failure must NOT prevent FastAPI from
-        starting.
+    Startup must remain lightweight.
 
-        This allows the AppSail deployment itself to be verified using
-        /health even before PostgreSQL is migrated to Catalyst Data Store.
+    We intentionally DO NOT perform:
 
-    Shutdown:
-        - Logs application shutdown.
+        - PostgreSQL connection verification
+        - Alembic migrations
+        - Database table creation
+        - Database seeding
+        - Redis connection
+        - Gemini initialization
+        - SMTP initialization
+        - External API calls
+
+    before yielding control to FastAPI.
+
+    This ensures AppSail can start the application immediately and
+    successfully perform its liveness checks.
+
+    Database initialization is handled separately:
+
+        python -m alembic upgrade head
+
+    Demo/initial data is seeded separately:
+
+        python scripts/seed_db.py
+
+    PostgreSQL availability can be checked through:
+
+        GET /health/ready
     """
 
     logger.info(
@@ -114,43 +162,18 @@ async def lifespan(
         settings.app_env,
     )
 
+    logger.info(
+        "FastAPI startup initialized. "
+        "External dependency checks are not blocking startup."
+    )
+
     # -----------------------------------------------------------------------
-    # Existing PostgreSQL initialization
+    # IMPORTANT:
     #
-    # Phase 1 still uses the existing database infrastructure.
+    # Application becomes live here.
     #
-    # A DB failure is logged but does not terminate FastAPI so that the
-    # AppSail process can still start and respond to /health.
-    # -----------------------------------------------------------------------
-
-    try:
-        from app.db.init_db import (
-            seed_default_admin,
-            verify_db_connection,
-        )
-
-        await verify_db_connection()
-
-        logger.info(
-            "Database connection verified successfully."
-        )
-
-        await seed_default_admin()
-
-        logger.info(
-            "Default administrator verification completed."
-        )
-
-    except Exception as exc:  # noqa: BLE001
-
-        logger.warning(
-            "Database initialization/seeding failed at startup. "
-            "Application will continue running. Error: %s",
-            exc,
-        )
-
-    # -----------------------------------------------------------------------
-    # Application is now live
+    # Nothing that depends on PostgreSQL, Redis, Gemini, SMTP, etc.
+    # should run before this yield.
     # -----------------------------------------------------------------------
 
     yield
@@ -165,9 +188,9 @@ async def lifespan(
     )
 
 
-# ---------------------------------------------------------------------------
-# FastAPI Application
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# FASTAPI APPLICATION
+# ===========================================================================
 
 app = FastAPI(
 
@@ -188,19 +211,24 @@ app = FastAPI(
 )
 
 
-# ---------------------------------------------------------------------------
-# CORS Middleware
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# CORS MIDDLEWARE
+# ===========================================================================
 #
-# Phase 1:
-# Keep the existing local frontend origins.
+# Current local frontend origins are preserved.
 #
-# Later Catalyst frontend deployment phase:
-# Move these origins into environment-driven configuration and add the
-# production Catalyst frontend URL.
+# When the frontend is deployed, add the production frontend origin here
+# or move this configuration to an environment variable.
 #
-# Do NOT change this to allow_origins=['*'] because credentials are enabled.
-# ---------------------------------------------------------------------------
+# Do NOT use:
+#
+#     allow_origins=["*"]
+#
+# while:
+#
+#     allow_credentials=True
+#
+# ===========================================================================
 
 app.add_middleware(
 
@@ -213,15 +241,19 @@ app.add_middleware(
 
     allow_credentials=True,
 
-    allow_methods=["*"],
+    allow_methods=[
+        "*",
+    ],
 
-    allow_headers=["*"],
+    allow_headers=[
+        "*",
+    ],
 )
 
 
-# ---------------------------------------------------------------------------
-# Application Security Middleware
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# APPLICATION SECURITY MIDDLEWARE
+# ===========================================================================
 
 from app.core.middleware import (  # noqa: E402
     RateLimitingMiddleware,
@@ -233,19 +265,15 @@ app.add_middleware(
     SecurityHeadersMiddleware
 )
 
+
 app.add_middleware(
     RateLimitingMiddleware
 )
 
 
 # ===========================================================================
-# HEALTH ENDPOINTS
+# HEALTH ENDPOINT
 # ===========================================================================
-
-
-# ---------------------------------------------------------------------------
-# Liveness Check
-# ---------------------------------------------------------------------------
 
 @app.get(
     "/health",
@@ -258,45 +286,53 @@ async def health() -> dict:
 
     This endpoint intentionally DOES NOT contact:
 
-    - PostgreSQL
-    - Redis
-    - Gemini
-    - SMTP
-    - External APIs
-    - Catalyst Data Store
-    - Catalyst Cache
+        - PostgreSQL
+        - Redis
+        - Gemini
+        - SMTP
+        - External APIs
+        - Catalyst services
 
-    Its only purpose is to verify that:
+    It only verifies:
 
+        AppSail
+            ↓
         Python
             ↓
         Uvicorn
             ↓
         FastAPI
 
-    are running correctly.
+    are running successfully.
 
-    This endpoint is suitable for the initial Zoho Catalyst AppSail
-    deployment health/smoke test.
+    This endpoint should remain lightweight.
     """
 
     return {
 
         "status": "ok",
 
-        "service": "scrb-intelligence-backend",
+        "service": (
+            "scrb-intelligence-backend"
+        ),
 
-        "app": settings.app_name,
+        "app": (
+            settings.app_name
+        ),
 
-        "environment": settings.app_env,
+        "environment": (
+            settings.app_env
+        ),
 
-        "version": "0.1.0",
+        "version": (
+            "0.1.0"
+        ),
     }
 
 
-# ---------------------------------------------------------------------------
-# Readiness Check
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# READINESS ENDPOINT
+# ===========================================================================
 
 @app.get(
     "/health/ready",
@@ -307,29 +343,29 @@ async def readiness() -> dict:
     """
     Application readiness endpoint.
 
-    Unlike /health, this endpoint verifies critical dependencies.
+    Unlike /health, this endpoint checks critical external dependencies.
 
-    Phase 1:
-        - PostgreSQL
+    Current dependency:
 
-    Future Catalyst phases:
-        - Catalyst Data Store
-        - Catalyst Cache
-        - Other required infrastructure
+        PostgreSQL
 
-    Returns:
+    Expected responses:
 
         HTTP 200
-            Application dependency is available.
+            PostgreSQL is reachable.
 
         HTTP 503
-            Required dependency is unavailable.
+            PostgreSQL is unavailable.
 
-    A readiness failure does NOT mean the FastAPI/AppSail process itself
+    A readiness failure does NOT mean that FastAPI or AppSail itself
     has failed.
     """
 
-    from app.db.init_db import verify_db_connection
+    # Import lazily so database modules are not required during
+    # application startup.
+    from app.db.init_db import (
+        verify_db_connection,
+    )
 
     try:
 
@@ -337,35 +373,49 @@ async def readiness() -> dict:
 
         return {
 
-            "status": "ready",
+            "status": (
+                "ready"
+            ),
 
-            "service": "scrb-intelligence-backend",
+            "service": (
+                "scrb-intelligence-backend"
+            ),
 
-            "app": settings.app_name,
+            "app": (
+                settings.app_name
+            ),
 
-            "environment": settings.app_env,
+            "environment": (
+                settings.app_env
+            ),
 
-            "version": "0.1.0",
+            "version": (
+                "0.1.0"
+            ),
 
             "dependencies": {
 
                 "database": {
-                    "status": "connected",
-                    "provider": "postgresql",
-                },
 
+                    "status": (
+                        "connected"
+                    ),
+
+                    "provider": (
+                        "postgresql"
+                    ),
+                },
             },
         }
 
     except Exception as exc:  # noqa: BLE001
 
-        # Log the actual exception internally.
+        # Log the real exception internally.
         #
-        # Do NOT return raw database connection errors to clients because
-        # they may contain hostnames, usernames, ports, or other
-        # infrastructure details.
+        # Do not expose raw database errors to clients because they may
+        # contain hostnames, ports, usernames, or infrastructure details.
 
-        logger.error(
+        logger.exception(
             "Application readiness check failed: %s",
             exc,
         )
@@ -376,25 +426,34 @@ async def readiness() -> dict:
 
             detail={
 
-                "status": "not_ready",
+                "status": (
+                    "not_ready"
+                ),
 
-                "service": "scrb-intelligence-backend",
+                "service": (
+                    "scrb-intelligence-backend"
+                ),
 
                 "dependencies": {
 
                     "database": {
-                        "status": "unavailable",
-                        "provider": "postgresql",
-                    },
 
+                        "status": (
+                            "unavailable"
+                        ),
+
+                        "provider": (
+                            "postgresql"
+                        ),
+                    },
                 },
             },
-        )
+        ) from exc
 
 
-# ---------------------------------------------------------------------------
-# Root Endpoint
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# ROOT ENDPOINT
+# ===========================================================================
 
 @app.get(
     "/",
@@ -403,7 +462,7 @@ async def readiness() -> dict:
 )
 async def read_root() -> dict:
     """
-    Return basic application information and useful operational endpoints.
+    Return basic application information and operational endpoint paths.
     """
 
     return {
@@ -412,25 +471,43 @@ async def read_root() -> dict:
             f"Welcome to {settings.app_name}"
         ),
 
-        "service": "scrb-intelligence-backend",
+        "service": (
+            "scrb-intelligence-backend"
+        ),
 
-        "version": "0.1.0",
+        "version": (
+            "0.1.0"
+        ),
 
-        "api_version": "v1",
+        "api_version": (
+            "v1"
+        ),
 
-        "environment": settings.app_env,
+        "environment": (
+            settings.app_env
+        ),
 
         "endpoints": {
 
-            "docs": "/docs",
+            "docs": (
+                "/docs"
+            ),
 
-            "redoc": "/redoc",
+            "redoc": (
+                "/redoc"
+            ),
 
-            "health": "/health",
+            "health": (
+                "/health"
+            ),
 
-            "readiness": "/health/ready",
+            "readiness": (
+                "/health/ready"
+            ),
 
-            "api": "/api/v1",
+            "api": (
+                "/api/v1"
+            ),
         },
     }
 
@@ -439,27 +516,44 @@ async def read_root() -> dict:
 # API V1 ROUTER
 # ===========================================================================
 #
-# Existing application APIs remain registered under:
+# Existing application APIs remain available under:
 #
 #     /api/v1/*
 #
-# No existing endpoint behavior is modified by the Catalyst Phase 1 changes.
+# Examples:
+#
+#     /api/v1/auth/login
+#     /api/v1/cases/
+#     /api/v1/dashboard/
+#     /api/v1/chat/
+#     /api/v1/network/
+#
 # ===========================================================================
 
 from app.api.v1.router import api_router  # noqa: E402
 
 
 app.include_router(
+
     api_router,
+
     prefix="/api/v1",
 )
 
 
-# ---------------------------------------------------------------------------
-# Startup Diagnostic
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# IMPORT-TIME DIAGNOSTIC
+# ===========================================================================
+
+logger.info(
+    "FastAPI application imported successfully."
+)
+
 
 logger.info(
     "Routes registered: %s",
-    [route.path for route in app.routes],
+    [
+        route.path
+        for route in app.routes
+    ],
 )
