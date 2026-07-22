@@ -29,6 +29,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import logging.config
+import os
 import sys
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
@@ -237,6 +238,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://localhost:8080",
+        *([o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()] if os.getenv("ALLOWED_ORIGINS") else []),
     ],
 
     allow_credentials=True,

@@ -48,7 +48,16 @@ async def get_user_by_username(username: str, db: AsyncSession) -> dict:
     u = result.scalar_one_or_none()
     if not u:
         raise ValueError(f"Seeded user {username} not found.")
-    return {"id": u.id, "username": u.username, "role": u.role, "districts": u.districts}
+    from app.models.district_assignment import UserDistrictAssignment
+    stmt_dists = select(UserDistrictAssignment.district).where(
+        UserDistrictAssignment.user_id == u.id,
+        UserDistrictAssignment.is_active == True
+    )
+    res_dists = await db.execute(stmt_dists)
+    assigned_dists = [r[0] for r in res_dists.fetchall()]
+    districts_str = ",".join(assigned_dists) if assigned_dists else None
+
+    return {"id": u.id, "username": u.username, "role": u.role, "districts": districts_str}
 
 
 # ---------------------------------------------------------------------------

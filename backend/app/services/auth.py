@@ -57,12 +57,22 @@ class AuthService:
 
         # Cache session in Redis
         try:
+            from sqlalchemy import select
+            from app.models.district_assignment import UserDistrictAssignment
+            stmt_dists = select(UserDistrictAssignment.district).where(
+                UserDistrictAssignment.user_id == db_user.id,
+                UserDistrictAssignment.is_active == True
+            )
+            res_dists = await db.execute(stmt_dists)
+            assigned_dists = [r[0] for r in res_dists.fetchall()]
+            districts_str = ",".join(assigned_dists) if assigned_dists else None
+
             client = get_redis_client()
             user_info = {
                 "id": db_user.id,
                 "username": db_user.username,
                 "role": normalized_role,
-                "districts": db_user.districts,
+                "districts": districts_str,
             }
             await client.setex(f"session:{db_user.username}", 24 * 3600, json.dumps(user_info))
         except Exception:

@@ -106,12 +106,25 @@ async def create_user(
         full_name=user_in.full_name,
         hashed_password=hashed,
         role=normalize_role(user_in.role) or user_in.role,
-        districts=user_in.districts,
         account_status=account_status,
         must_change_password=must_change_password,
     )
 
     created = await user_repo.create_user(db_user)
+    await db.flush()
+
+    if user_in.districts:
+        from app.models.district_assignment import UserDistrictAssignment
+        for d_name in user_in.districts.split(","):
+            d_name = d_name.strip()
+            if d_name:
+                assignment = UserDistrictAssignment(
+                    user_id=created.id,
+                    district=d_name,
+                    is_active=True,
+                    assigned_by=admin_user.get("id") if admin_user else None,
+                )
+                db.add(assignment)
     await db.commit()
 
     # 3. Store activation token in Redis and send setup email

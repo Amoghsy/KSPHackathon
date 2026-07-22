@@ -75,7 +75,7 @@ def generate_indian_name(gender_id=1):
     last = random.choice(INDIAN_LAST_NAMES)
     return f"{first} {last}"
 
-async def generate_realistic_network(db: AsyncSession):
+async def _run_core_crime_seeding(db: AsyncSession):
     # Set seed for reproducibility
     random.seed(42)
 
@@ -624,6 +624,32 @@ async def run_automated_validation(db: AsyncSession):
         cases_in_dist = [c for c in cases if c.police_station and c.police_station.district == dist]
         assert len(cases_in_dist) > 0, f"No cases found in district {dist}"
     print("[OK] District filters return data for all 10 districts.")
+    await db.commit()
+    return (cases, accused, victims, transactions, repeat_offenders, communities, patterns)
+
+
+async def generate_realistic_network(db: AsyncSession):
+    # Check if core crime data already exists
+    res_cases = await db.execute(select(CaseMaster).limit(1))
+    has_cases = res_cases.scalar() is not None
+
+    if not has_cases:
+        print("Database is empty of cases. Running core crime seeding...")
+        cases, accused, victims, transactions, repeat_offenders, communities, patterns = await _run_core_crime_seeding(db)
+    else:
+        print("Database already contains core crime data. Skipping cleanup and crime data seeding...")
+        # Load existing core data for stats printing
+        res_c = await db.execute(select(CaseMaster))
+        cases = list(res_c.scalars().all())
+        res_a = await db.execute(select(AccusedMaster))
+        accused = list(res_a.scalars().all())
+        res_v = await db.execute(select(VictimMaster))
+        victims = list(res_v.scalars().all())
+        res_t = await db.execute(select(FinancialTransaction))
+        transactions = list(res_t.scalars().all())
+        repeat_offenders = []
+        communities = []
+        patterns = {"circular_flows": [], "shared_accounts": []}
 
     # 8. Seed users, assignments, and access request scenarios
     print("Seeding deterministic users and ABAC district scopes...")
@@ -641,44 +667,127 @@ async def run_automated_validation(db: AsyncSession):
 
     user_objs = {}
     for username, role, legacy_districts, email, employee_id, full_name in users_to_seed:
-        user = User(
-            username=username,
-            email=email,
-            employee_id=employee_id,
-            full_name=full_name,
-            hashed_password=hashed_pw,
-            role=role,
-            districts=legacy_districts,
-            account_status="ACTIVE",
-            must_change_password=False,
-        )
-        db.add(user)
+        # Check if user already exists by username or employee_id
+        res_u = await db.execute(select(User).where((User.username == username) | (User.employee_id == employee_id)))
+        user = res_u.scalar_one_or_none()
+        if not user:
+            user = User(
+                username=username,
+                email=email,
+                employee_id=employee_id,
+                full_name=full_name,
+                hashed_password=hashed_pw,
+                role=role,
+                account_status="ACTIVE",
+                must_change_password=False,
+            )
+            db.add(user)
+            await db.flush()
+        else:
+            # Update user details to match expected seed values
+            user.role = role
+            user.email = email
+            user.employee_id = employee_id
+            user.full_name = full_name
+            await db.flush()
         user_objs[username] = user
-    await db.flush()
 
-    assignments = [
-        # Ramesh supervises Bengaluru Urban, Mysuru, Tumakuru
-        UserDistrictAssignment(user_id=user_objs["supervisor_ramesh"].id, district="Bengaluru Urban", assigned_by=user_objs["admin_system"].id, is_active=True),
-        UserDistrictAssignment(user_id=user_objs["supervisor_ramesh"].id, district="Mysuru", assigned_by=user_objs["admin_system"].id, is_active=True),
-        UserDistrictAssignment(user_id=user_objs["supervisor_ramesh"].id, district="Tumakuru", assigned_by=user_objs["admin_system"].id, is_active=True),
-        # permanent assignments for investigators/analysts
-        UserDistrictAssignment(user_id=user_objs["insp_mysuru"].id, district="Mysuru", assigned_by=user_objs["supervisor_ramesh"].id, is_active=True),
-        UserDistrictAssignment(user_id=user_objs["insp_bengaluru"].id, district="Bengaluru Urban", assigned_by=user_objs["supervisor_ramesh"].id, is_active=True),
-        UserDistrictAssignment(user_id=user_objs["senior_sp"].id, district="Mysuru", assigned_by=user_objs["supervisor_ramesh"].id, is_active=True),
-        UserDistrictAssignment(user_id=user_objs["senior_sp"].id, district="Bengaluru Urban", assigned_by=user_objs["supervisor_ramesh"].id, is_active=True),
-        UserDistrictAssignment(user_id=user_objs["analyst_priya"].id, district="Mysuru", assigned_by=user_objs["supervisor_ramesh"].id, is_active=True),
-        UserDistrictAssignment(user_id=user_objs["analyst_priya"].id, district="Bengaluru Urban", assigned_by=user_objs["supervisor_ramesh"].id, is_active=True),
-        UserDistrictAssignment(user_id=user_objs["analyst_priya"].id, district="Hubballi-Dharwad", assigned_by=user_objs["supervisor_ramesh"].id, is_active=True),
-    ]
-    for asn in assignments:
-        db.add(asn)
-    await db.flush()
+    # Helper function for idempotent district assignments
+    async def get_or_create_assignment(u_id, dist, assigned_by_id):
+        res_asn = await db.execute(
+            select(UserDistrictAssignment).where(
+                UserDistrictAssignment.user_id == u_id,
+                UserDistrictAssignment.district == dist,
+                UserDistrictAssignment.is_active == True
+            )
+        )
+        asn = res_asn.scalar_one_or_none()
+        if not asn:
+            asn = UserDistrictAssignment(
+                user_id=u_id,
+                district=dist,
+                assigned_by=assigned_by_id,
+                is_active=True
+            )
+            db.add(asn)
+            await db.flush()
+        return asn
+
+    # Seeding permanent district assignments
+    # Ramesh supervises Bengaluru Urban, Mysuru, Tumakuru
+    await get_or_create_assignment(user_objs["supervisor_ramesh"].id, "Bengaluru Urban", user_objs["admin_system"].id)
+    await get_or_create_assignment(user_objs["supervisor_ramesh"].id, "Mysuru", user_objs["admin_system"].id)
+    await get_or_create_assignment(user_objs["supervisor_ramesh"].id, "Tumakuru", user_objs["admin_system"].id)
+    
+    # permanent assignments for investigators/analysts
+    await get_or_create_assignment(user_objs["insp_mysuru"].id, "Mysuru", user_objs["supervisor_ramesh"].id)
+    await get_or_create_assignment(user_objs["insp_bengaluru"].id, "Bengaluru Urban", user_objs["supervisor_ramesh"].id)
+    await get_or_create_assignment(user_objs["senior_sp"].id, "Mysuru", user_objs["supervisor_ramesh"].id)
+    await get_or_create_assignment(user_objs["senior_sp"].id, "Bengaluru Urban", user_objs["supervisor_ramesh"].id)
+    await get_or_create_assignment(user_objs["analyst_priya"].id, "Mysuru", user_objs["supervisor_ramesh"].id)
+    await get_or_create_assignment(user_objs["analyst_priya"].id, "Bengaluru Urban", user_objs["supervisor_ramesh"].id)
+    await get_or_create_assignment(user_objs["analyst_priya"].id, "Mangaluru", user_objs["supervisor_ramesh"].id)
 
     # Seed different access request scenarios
     now = datetime.datetime.utcnow()
 
+    # Helper for idempotent access requests
+    async def get_or_create_access_request(requester_id, requested_district, reason, duration_hours, status, requested_at, reviewed_by=None, reviewed_at=None, review_comment=None):
+        res_req = await db.execute(
+            select(DistrictAccessRequest).where(
+                DistrictAccessRequest.requester_id == requester_id,
+                DistrictAccessRequest.requested_district == requested_district,
+                DistrictAccessRequest.status == status,
+                DistrictAccessRequest.reason == reason
+            )
+        )
+        req = res_req.scalar_one_or_none()
+        if not req:
+            req = DistrictAccessRequest(
+                requester_id=requester_id,
+                requested_district=requested_district,
+                reason=reason,
+                duration_hours=duration_hours,
+                status=status,
+                requested_at=requested_at,
+                reviewed_by=reviewed_by,
+                reviewed_at=reviewed_at,
+                review_comment=review_comment
+            )
+            db.add(req)
+            await db.flush()
+        return req
+
+    # Helper for idempotent temporary permissions
+    async def get_or_create_temp_permission(user_id, district, access_request_id, approved_by, approved_at, expires_at, is_revoked, revoked_at=None, revoked_by=None, revocation_reason=None):
+        res_perm = await db.execute(
+            select(TemporaryDistrictPermission).where(
+                TemporaryDistrictPermission.user_id == user_id,
+                TemporaryDistrictPermission.district == district,
+                TemporaryDistrictPermission.access_request_id == access_request_id,
+                TemporaryDistrictPermission.is_revoked == is_revoked
+            )
+        )
+        perm = res_perm.scalar_one_or_none()
+        if not perm:
+            perm = TemporaryDistrictPermission(
+                user_id=user_id,
+                district=district,
+                access_request_id=access_request_id,
+                approved_by=approved_by,
+                approved_at=approved_at,
+                expires_at=expires_at,
+                is_revoked=is_revoked,
+                revoked_at=revoked_at,
+                revoked_by=revoked_by,
+                revocation_reason=revocation_reason
+            )
+            db.add(perm)
+            await db.flush()
+        return perm
+
     # Scenario 1: PENDING request
-    req_pending = DistrictAccessRequest(
+    req_pending = await get_or_create_access_request(
         requester_id=user_objs["insp_mysuru"].id,
         requested_district="Bengaluru Urban",
         reason="Tracking Bengaluru accomplices of gang",
@@ -686,10 +795,9 @@ async def run_automated_validation(db: AsyncSession):
         status="PENDING",
         requested_at=now - datetime.timedelta(hours=2)
     )
-    db.add(req_pending)
 
     # Scenario 2: APPROVED & ACTIVE request
-    req_approved = DistrictAccessRequest(
+    req_approved = await get_or_create_access_request(
         requester_id=user_objs["insp_mysuru"].id,
         requested_district="Bengaluru Urban",
         reason="Need access to Whitefield case records",
@@ -700,10 +808,7 @@ async def run_automated_validation(db: AsyncSession):
         reviewed_at=now - datetime.timedelta(hours=23),
         review_comment="Approved for 48 hours."
     )
-    db.add(req_approved)
-    await db.flush()
-
-    perm_active = TemporaryDistrictPermission(
+    await get_or_create_temp_permission(
         user_id=user_objs["insp_mysuru"].id,
         district="Bengaluru Urban",
         access_request_id=req_approved.id,
@@ -712,10 +817,9 @@ async def run_automated_validation(db: AsyncSession):
         expires_at=now + datetime.timedelta(hours=25),
         is_revoked=False
     )
-    db.add(perm_active)
 
     # Scenario 3: EXPIRED request
-    req_expired = DistrictAccessRequest(
+    req_expired = await get_or_create_access_request(
         requester_id=user_objs["insp_mysuru"].id,
         requested_district="Bengaluru Urban",
         reason="Follow up on previous investigation",
@@ -726,10 +830,7 @@ async def run_automated_validation(db: AsyncSession):
         reviewed_at=now - datetime.timedelta(days=2) + datetime.timedelta(minutes=10),
         review_comment="Approved for 12 hours."
     )
-    db.add(req_expired)
-    await db.flush()
-
-    perm_expired = TemporaryDistrictPermission(
+    await get_or_create_temp_permission(
         user_id=user_objs["insp_mysuru"].id,
         district="Bengaluru Urban",
         access_request_id=req_expired.id,
@@ -738,10 +839,9 @@ async def run_automated_validation(db: AsyncSession):
         expires_at=now - datetime.timedelta(days=1, hours=12),
         is_revoked=False
     )
-    db.add(perm_expired)
 
     # Scenario 4: REVOKED request
-    req_revoked = DistrictAccessRequest(
+    req_revoked = await get_or_create_access_request(
         requester_id=user_objs["insp_mysuru"].id,
         requested_district="Bengaluru Urban",
         reason="Access Koramangala station logs",
@@ -751,10 +851,7 @@ async def run_automated_validation(db: AsyncSession):
         reviewed_by=user_objs["supervisor_ramesh"].id,
         reviewed_at=now - datetime.timedelta(hours=4)
     )
-    db.add(req_revoked)
-    await db.flush()
-
-    perm_revoked = TemporaryDistrictPermission(
+    await get_or_create_temp_permission(
         user_id=user_objs["insp_mysuru"].id,
         district="Bengaluru Urban",
         access_request_id=req_revoked.id,
@@ -766,10 +863,9 @@ async def run_automated_validation(db: AsyncSession):
         revoked_by=user_objs["supervisor_ramesh"].id,
         revocation_reason="Investigation concluded early"
     )
-    db.add(perm_revoked)
 
     # Scenario 5: REJECTED request
-    req_rejected = DistrictAccessRequest(
+    await get_or_create_access_request(
         requester_id=user_objs["insp_mysuru"].id,
         requested_district="Belagavi",
         reason="Check Belagavi gang connections",
@@ -780,8 +876,12 @@ async def run_automated_validation(db: AsyncSession):
         reviewed_at=now - datetime.timedelta(hours=9),
         review_comment="Insufficient justification."
     )
-    db.add(req_rejected)
+
     await db.commit()
+
+    # Load stats counts
+    res_all_asns = await db.execute(select(UserDistrictAssignment))
+    assignments = list(res_all_asns.scalars().all())
 
     # 9. Final Statistics Print
     print("---------------------------------------------------------")

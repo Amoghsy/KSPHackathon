@@ -44,9 +44,32 @@ class GraphAnalyzer:
         try:
             pr = nx.pagerank(G, alpha=0.85)
         except Exception as exc:
-            logger.warning("PageRank convergence failed, falling back: %s", exc)
+            logger.warning("PageRank convergence failed (e.g. missing scipy), using Python power iteration: %s", exc)
+            # Pure-python PageRank power iteration fallback to avoid requiring SciPy package
             n_count = G.number_of_nodes()
-            pr = {n: 1.0 / n_count for n in G.nodes}
+            if n_count == 0:
+                pr = {}
+            else:
+                # Initialize uniform ranks
+                pr = dict.fromkeys(G, 1.0 / n_count)
+                p = dict.fromkeys(G, 1.0 / n_count)
+                max_iter = 100
+                tol = 1.0e-6
+                for _ in range(max_iter):
+                    xlast = pr
+                    pr = dict.fromkeys(xlast, 0.0)
+                    # Handle dangling nodes (nodes with out-degree 0 in directed, or degree 0 in undirected)
+                    dangling_sum = sum(xlast[node] for node in xlast if G.degree(node) == 0)
+                    for node in xlast:
+                        deg = G.degree(node)
+                        if deg > 0:
+                            for neighbor in G[node]:
+                                pr[neighbor] += 0.85 * xlast[node] / deg
+                        pr[node] += (1.0 - 0.85) * p[node] + 0.85 * dangling_sum / n_count
+                    # Check convergence
+                    err = sum(abs(pr[node] - xlast[node]) for node in pr)
+                    if err < tol:
+                        break
 
         return {
             "degree": deg,

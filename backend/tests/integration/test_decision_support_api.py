@@ -35,7 +35,15 @@ async def get_user_from_db(username: str) -> dict | None:
         res = await session.execute(stmt)
         u = res.scalar_one_or_none()
         if u:
-            return {"id": u.id, "username": u.username, "role": u.role, "districts": u.districts}
+            from app.models.district_assignment import UserDistrictAssignment
+            stmt_dists = select(UserDistrictAssignment.district).where(
+                UserDistrictAssignment.user_id == u.id,
+                UserDistrictAssignment.is_active == True
+            )
+            res_dists = await session.execute(stmt_dists)
+            assigned_dists = [r[0] for r in res_dists.fetchall()]
+            districts_str = ",".join(assigned_dists) if assigned_dists else None
+            return {"id": u.id, "username": u.username, "role": u.role, "districts": districts_str}
         return None
 
 def test_decision_support_endpoints_investigator(client):
