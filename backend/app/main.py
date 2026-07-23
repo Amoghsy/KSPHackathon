@@ -211,46 +211,35 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-
 # ===========================================================================
 # CORS MIDDLEWARE
 # ===========================================================================
-#
-# Current local frontend origins are preserved.
-#
-# When the frontend is deployed, add the production frontend origin here
-# or move this configuration to an environment variable.
-#
-# Do NOT use:
-#
-#     allow_origins=["*"]
-#
-# while:
-#
-#     allow_credentials=True
-#
-# ===========================================================================
+
+default_origins = [
+    "http://localhost:5173",
+    "http://localhost:8080",
+    "https://xentrixksp2026-alxgmvvp.onslate.in"
+]
+
+env_origins = [
+    origin.strip().rstrip("/")
+    for origin in os.getenv("ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+
+allowed_origins = list(dict.fromkeys(default_origins + env_origins))
+
+logger.info(
+    "CORS allowed origins: %s",
+    allowed_origins,
+)
 
 app.add_middleware(
-
     CORSMiddleware,
-
-    allow_origins=[
-        "http://localhost:5173",
-        "https://xentrixksp2026-alxgmvvp.onslate.in",
-        "http://localhost:8080",
-        *([o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()] if os.getenv("ALLOWED_ORIGINS") else []),
-    ],
-
+    allow_origins=allowed_origins,
     allow_credentials=True,
-
-    allow_methods=[
-        "*",
-    ],
-
-    allow_headers=[
-        "*",
-    ],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
