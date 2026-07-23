@@ -218,9 +218,7 @@ app = FastAPI(
 default_origins = [
     "http://localhost:5173",
     "http://localhost:8080",
-    "https://xentrixksp2026-alxgmvvp.onslate.in"
-]
-
+    ]
 env_origins = [
     origin.strip().rstrip("/")
     for origin in os.getenv("ALLOWED_ORIGINS", "").split(",")
