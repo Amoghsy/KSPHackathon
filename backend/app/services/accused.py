@@ -26,16 +26,42 @@ class AccusedService:
         self, q: str | None = None, page: int = 1, page_size: int = 15, authorized_districts: list[str] | None = None
     ) -> dict:
         """Fetch distinct repeat offenders with pagination, modus operandi, and risk scores."""
+        import time
+        import logging
+
+        logger = logging.getLogger(__name__)
+        start_time = time.time()
+
         offset = (page - 1) * page_size
+        
+        t0 = time.time()
         unique_offenders = await self.repository.get_unique_offenders(
             q=q, limit=page_size, offset=offset, authorized_districts=authorized_districts
         )
         total = await self.repository.get_unique_offenders_count(q=q, authorized_districts=authorized_districts)
+        base_query_time = time.time() - t0
 
+        t1 = time.time()
+        # Batch-fetch all instances for these offenders to prevent N+1 queries
+        person_ids = [a.person_id for a in unique_offenders if a.person_id]
+        all_instances = await self.repository.get_all_instances_by_person_ids(person_ids)
+
+        # Group instances in memory by person_id
+        from collections import defaultdict
+        instances_by_person = defaultdict(list)
+        for inst in all_instances:
+            if inst.person_id:
+                instances_by_person[inst.person_id].append(inst)
+        related_query_time = time.time() - t1
+
+        t2 = time.time()
         items = []
         for a in unique_offenders:
-            # Fetch all cases for this offender to calculate counts and Mo
-            instances = await self.repository.get_all_instances_by_person_id(a.person_id)
+            instances = instances_by_person.get(a.person_id, [])
+            if not instances:
+                # Fallback to single query if person_id is missing or batch select returned empty
+                instances = await self.repository.get_all_instances_by_person_id(a.person_id) if a.person_id else [a]
+                
             cases = [inst.case for inst in instances if inst.case]
             
             linked_cases_count = len(cases)
@@ -72,6 +98,16 @@ class AccusedService:
                     {"label": "Case Severity", "value": int(risk_score * 0.8)}
                 ]
             })
+        construction_time = time.time() - t2
+        total_time = time.time() - start_time
+
+        logger.info(
+            f"[DIAGNOSTICS] list_offenders_paginated: "
+            f"base_query_time={base_query_time:.4f}s, "
+            f"related_query_time={related_query_time:.4f}s, "
+            f"construction_time={construction_time:.4f}s, "
+            f"total_time={total_time:.4f}s"
+        )
 
         return {
             "items": items,

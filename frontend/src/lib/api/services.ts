@@ -188,7 +188,7 @@ export async function searchFinancialNetwork(params: {
 // ─── Audit & History ──────────────────────────────────────────────────────────
 
 export async function getAuditLogs(): Promise<any[]> {
-  return apiGet<any[]>("/audit");
+  return apiGet<any[]>("/audit/");
 }
 
 export async function getAdminStats(): Promise<any> {

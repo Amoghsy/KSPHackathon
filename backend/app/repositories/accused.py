@@ -88,6 +88,22 @@ class AccusedRepository:
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
+    async def get_all_instances_by_person_ids(self, person_ids: list[str]) -> list[AccusedMaster]:
+        """Fetch all accused database records sharing the same person_ids in a single batch (historical offenses)."""
+        if not person_ids:
+            return []
+        stmt = (
+            select(AccusedMaster)
+            .where(AccusedMaster.person_id.in_(person_ids))
+            .options(
+                selectinload(AccusedMaster.case).selectinload(CaseMaster.police_station),
+                selectinload(AccusedMaster.case).selectinload(CaseMaster.crime_type),
+                selectinload(AccusedMaster.case).selectinload(CaseMaster.accused),
+            )
+        )
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
     async def get_by_master_id(self, accused_master_id: int) -> AccusedMaster | None:
         """Fetch a specific accused entry by its primary key ID."""
         stmt = select(AccusedMaster).where(AccusedMaster.accused_master_id == accused_master_id)
