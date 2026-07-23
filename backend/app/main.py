@@ -237,6 +237,7 @@ app.add_middleware(
 
     allow_origins=[
         "http://localhost:5173",
+        "https://xentrixksp2026-alxgmvvp.onslate.in",
         "http://localhost:8080",
         *([o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()] if os.getenv("ALLOWED_ORIGINS") else []),
     ],

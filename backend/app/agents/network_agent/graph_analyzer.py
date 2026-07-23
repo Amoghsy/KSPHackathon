@@ -61,10 +61,10 @@ class GraphAnalyzer:
                     # Handle dangling nodes (nodes with out-degree 0 in directed, or degree 0 in undirected)
                     dangling_sum = sum(xlast[node] for node in xlast if G.degree(node) == 0)
                     for node in xlast:
-                        deg = G.degree(node)
-                        if deg > 0:
+                        node_deg = G.degree(node)
+                        if node_deg > 0:
                             for neighbor in G[node]:
-                                pr[neighbor] += 0.85 * xlast[node] / deg
+                                pr[neighbor] += 0.85 * xlast[node] / node_deg
                         pr[node] += (1.0 - 0.85) * p[node] + 0.85 * dangling_sum / n_count
                     # Check convergence
                     err = sum(abs(pr[node] - xlast[node]) for node in pr)
@@ -147,6 +147,20 @@ class GraphAnalyzer:
         Detects repeat offenders using multi-FIR, multi-district, multi-station,
         and transaction history criteria.
         """
+        if G is None or not hasattr(G, "nodes") or G.number_of_nodes() == 0:
+            logger.warning("detect_repeat_offenders received None, empty or invalid graph")
+            return []
+
+        if degree_centralities is None:
+            logger.warning("detect_repeat_offenders received None for degree_centralities")
+            degree_centralities = {}
+        elif not isinstance(degree_centralities, dict):
+            logger.warning(
+                "detect_repeat_offenders received malformed degree_centralities (type: %s)",
+                type(degree_centralities)
+            )
+            degree_centralities = {}
+
         offenders = []
         accused_nodes = [
             n for n, data in G.nodes(data=True) if data.get("kind") == "accused"
@@ -218,6 +232,14 @@ class GraphAnalyzer:
                 )
                 risk_score = min(100.0, float(risk_score))
 
+                # Handle potentially malformed values in degree_centralities
+                raw_deg = degree_centralities.get(u, 0.0)
+                try:
+                    network_deg = round(float(raw_deg), 4)
+                except (TypeError, ValueError) as exc:
+                    logger.warning("Malformed degree centrality value for node %s: %s (%s)", u, raw_deg, exc)
+                    network_deg = 0.0
+
                 offenders.append(
                     {
                         "id": u,
@@ -225,7 +247,7 @@ class GraphAnalyzer:
                         "crime_count": crime_count,
                         "cases": case_labels,
                         "risk_score": risk_score,
-                        "network_degree": round(degree_centralities.get(u, 0.0), 4),
+                        "network_degree": network_deg,
                         "known_associates": associates,
                     }
                 )
