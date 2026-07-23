@@ -107,12 +107,15 @@ async def test_query_agent_pipeline_success(mock_genai, db_session: AsyncSession
         )
 
         # Verify audit log was written to DB
-        # Wait a moment for fire-and-forget background task to complete
-        await asyncio.sleep(0.5)
-        # Run query to find the AuditLog entry
-        stmt = select(AuditLog).where(AuditLog.request_id == request_id)
-        result = await db_session.execute(stmt)
-        log = result.scalars().first()
+        # Wait a moment for fire-and-forget background task to complete (poll for up to 5 seconds due to potential database latency)
+        log = None
+        for _ in range(50):
+            await asyncio.sleep(0.1)
+            stmt = select(AuditLog).where(AuditLog.request_id == request_id)
+            result = await db_session.execute(stmt)
+            log = result.scalars().first()
+            if log is not None:
+                break
 
         assert log is not None
         assert log.question == question

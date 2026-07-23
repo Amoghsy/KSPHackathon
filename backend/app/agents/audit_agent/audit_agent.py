@@ -83,7 +83,7 @@ class AuditAgent:
             await client.expire(f"audit:investigations:{today}", 86400 * 2)
 
             # Feature usage counter
-            feature = api.strip("/").split("/")[0] if api else "chat"
+            feature = api.strip("/").split("/")[0] if isinstance(api, str) and api else "chat"
             await client.hincrby(f"audit:features:{today}", feature, 1)
             await client.expire(f"audit:features:{today}", 86400 * 2)
 
@@ -96,11 +96,14 @@ class AuditAgent:
             # District viewed tracking (most active district)
             # Extracted from query/question or URL parameters
             district = None
-            if "mysuru" in question.lower() or (district and "mysuru" in district.lower()):
+            question_str = question.lower() if isinstance(question, str) else ""
+            district_id_str = district_id.lower() if isinstance(district_id, str) else ""
+
+            if "mysuru" in question_str or "mysuru" in district_id_str:
                 district = "Mysuru"
-            elif "bengaluru" in question.lower() or (district and "bengaluru" in district.lower()):
+            elif "bengaluru" in question_str or "bengaluru" in district_id_str:
                 district = "Bengaluru"
-            elif "mangalooru" in question.lower() or "mangaluru" in question.lower():
+            elif "mangalooru" in question_str or "mangaluru" in question_str or "mangalooru" in district_id_str or "mangaluru" in district_id_str:
                 district = "Mangaluru"
 
             if district:
@@ -108,7 +111,7 @@ class AuditAgent:
                 await client.expire(f"audit:districts:{today}", 86400 * 2)
 
             # Report generation tracking
-            if "export" in api or "report" in api:
+            if isinstance(api, str) and ("export" in api or "report" in api):
                 await client.incr(f"audit:reports:{today}")
                 await client.expire(f"audit:reports:{today}", 86400 * 2)
 
