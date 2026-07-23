@@ -179,3 +179,104 @@ def test_api_v1_network_endpoint_success(supervisor_user):
                 
             finally:
                 app.dependency_overrides.clear()
+
+
+def test_detect_repeat_offenders_comprehensive():
+    # 1. Normal graph + various node types (case, victim, location, account)
+    G = nx.Graph()
+    
+    # Accused with multiple cases (repeat offender)
+    G.add_node("U1", kind="accused", label="Accused One", metadata={"person_id": "U1"})
+    G.add_node("C1", kind="case", label="Case One")
+    G.add_node("C2", kind="case", label="Case Two")
+    G.add_node("C3", kind="case", label="Case Three")
+    G.add_edge("U1", "C1")
+    G.add_edge("U1", "C2")
+    G.add_edge("U1", "C3")
+
+    # Accused with one case (not repeat offender on case count alone)
+    G.add_node("U2", kind="accused", label="Accused Two", metadata={"person_id": "U2"})
+    G.add_edge("U2", "C1")
+
+    # Disconnected Accused (no cases/neighbors)
+    G.add_node("U3", kind="accused", label="Accused Three", metadata={"person_id": "U3"})
+
+    # Accused missing optional attributes (like label, metadata)
+    G.add_node("U4", kind="accused")  # missing label and metadata entirely
+    G.add_edge("U4", "C1")
+
+    # Victim node
+    G.add_node("V1", kind="victim", label="Victim One")
+    G.add_edge("V1", "C1")
+
+    # Location nodes
+    G.add_node("L1", kind="location", label="Station One", metadata={"type": "police_station", "district": "District A"})
+    G.add_node("L2", kind="location", label="Station Two", metadata={"type": "police_station", "district": "District B"})
+    G.add_edge("C1", "L1")
+    G.add_edge("C2", "L2")
+
+    # Account node (should not be treated as accused)
+    G.add_node("ACC1", kind="account", label="Account One")
+
+    # Degree centrality missing node "U4" and "U3"
+    degree_centrality = {"U1": 0.9, "U2": 0.1}
+
+    # Run repeat offenders detection
+    offenders = GraphAnalyzer.detect_repeat_offenders(G, degree_centrality)
+
+    # U1 is a repeat offender (3 cases, multi-district, multi-station)
+    # U2 is not (1 case, 1 district, 1 station)
+    # U3 is disconnected, not repeat
+    # U4 is not repeat (1 case, 1 district, 1 station)
+    assert len(offenders) == 1
+    assert offenders[0]["id"] == "U1"
+    assert offenders[0]["name"] == "Accused One"
+    assert offenders[0]["crime_count"] == 3
+    assert offenders[0]["network_degree"] == 0.9
+
+    # 2. Check empty graph returns valid empty list
+    G_empty = nx.Graph()
+    assert GraphAnalyzer.detect_repeat_offenders(G_empty, {}) == []
+
+    # 3. Check None values do not crash
+    assert GraphAnalyzer.detect_repeat_offenders(None, None) == []
+
+
+def test_pagerank_fallback_values_exist_for_every_node():
+    G = nx.Graph()
+    G.add_node("A")
+    G.add_node("B")
+    G.add_node("C")
+    G.add_edge("A", "B")
+    
+    with patch("networkx.pagerank", side_effect=Exception("missing scipy")):
+        centrality = GraphAnalyzer.calculate_centrality(G)
+        pr = centrality["pagerank"]
+        assert isinstance(pr, dict)
+        # Ensure it contains values for every graph node
+        for node in G.nodes:
+            assert node in pr
+            assert isinstance(pr[node], float)
+
+
+async def test_graph_service_exception_logging():
+    from app.services.graph.graph_service import GraphService
+    from fastapi import HTTPException
+    
+    # Mock GraphBuilder to raise ValueError, and mock GraphRepository to return empty lists so it doesn't query DB
+    with patch("app.services.graph.graph_service.GraphBuilder.build_criminal_network", side_effect=ValueError("Simulated graph build failure")), \
+         patch("app.services.graph.graph_service.GraphRepository") as mock_repo_class:
+        
+        mock_repo = mock_repo_class.return_value
+        mock_repo.get_filtered_cases = AsyncMock(return_value=[])
+        mock_repo.get_accused_for_cases = AsyncMock(return_value=[])
+        mock_repo.get_victims_for_cases = AsyncMock(return_value=[])
+        mock_repo.get_financial_transactions = AsyncMock(return_value=[])
+        
+        service = GraphService(AsyncMock())
+        with pytest.raises(HTTPException) as exc_info:
+            await service.get_criminal_network_data()
+        
+        assert exc_info.value.status_code == 500
+        assert exc_info.value.detail == "Internal server error during graph analytics."
+

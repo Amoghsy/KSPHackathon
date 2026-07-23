@@ -162,16 +162,40 @@ class GraphAnalyzer:
             degree_centralities = {}
 
         offenders = []
-        accused_nodes = [
-            n for n, data in G.nodes(data=True) if data.get("kind") == "accused"
-        ]
+        
+        # Safely extract accused nodes
+        accused_nodes = []
+        for n, data in G.nodes(data=True):
+            if n is None:
+                continue
+            if not isinstance(data, dict):
+                continue
+            if data.get("kind") == "accused":
+                accused_nodes.append(n)
 
         for u in accused_nodes:
-            name = G.nodes[u].get("label", u)
+            u_data = G.nodes.get(u)
+            if not isinstance(u_data, dict):
+                continue
+            
+            name = u_data.get("label", u) or u
 
             # 1. Find connected Cases
-            cases_u = [v for v in G.neighbors(u) if G.nodes[v].get("kind") == "case"]
-            case_labels = [G.nodes[c].get("label", c) for c in cases_u]
+            cases_u = []
+            try:
+                for v in G.neighbors(u):
+                    v_data = G.nodes.get(v)
+                    if isinstance(v_data, dict) and v_data.get("kind") == "case":
+                        cases_u.append(v)
+            except Exception as exc:
+                logger.warning("Error finding neighbors for node %s: %s", u, exc)
+                continue
+
+            case_labels = []
+            for c in cases_u:
+                c_data = G.nodes.get(c)
+                lbl = c_data.get("label", c) if isinstance(c_data, dict) else c
+                case_labels.append(lbl)
 
             # 2. Extract locations (Stations, Districts) and crime types
             districts_u = set()
@@ -179,24 +203,36 @@ class GraphAnalyzer:
             crime_types_u = set()
 
             for c in cases_u:
-                for nbr in G.neighbors(c):
-                    nbr_data = G.nodes[nbr]
-                    if nbr_data.get("kind") == "location":
-                        meta = nbr_data.get("metadata", {})
-                        nbr_type = meta.get("type")
-                        if nbr_type == "police_station":
-                            stations_u.add(nbr_data.get("label", nbr))
-                            if meta.get("district"):
-                                districts_u.add(meta.get("district"))
-                        elif nbr_type == "crime_type":
-                            crime_types_u.add(nbr_data.get("label", nbr))
+                try:
+                    for nbr in G.neighbors(c):
+                        nbr_data = G.nodes.get(nbr)
+                        if not isinstance(nbr_data, dict):
+                            continue
+                        
+                        if nbr_data.get("kind") == "location":
+                            meta = nbr_data.get("metadata")
+                            if not isinstance(meta, dict):
+                                meta = {}
+                            nbr_type = meta.get("type")
+                            if nbr_type == "police_station":
+                                stations_u.add(nbr_data.get("label", nbr) or nbr)
+                                district_val = meta.get("district")
+                                if district_val:
+                                    districts_u.add(district_val)
+                            elif nbr_type == "crime_type":
+                                crime_types_u.add(nbr_data.get("label", nbr) or nbr)
+                except Exception as exc:
+                    logger.warning("Error traversing neighbors of case node %s: %s", c, exc)
 
             # 3. Find known associates (other accused nodes sharing co-offending links)
-            associates = [
-                G.nodes[v].get("label", v)
-                for v in G.neighbors(u)
-                if G.nodes[v].get("kind") == "accused"
-            ]
+            associates = []
+            try:
+                for v in G.neighbors(u):
+                    v_data = G.nodes.get(v)
+                    if isinstance(v_data, dict) and v_data.get("kind") == "accused":
+                        associates.append(v_data.get("label", v) or v)
+            except Exception as exc:
+                logger.warning("Error finding associates for node %s: %s", u, exc)
 
             crime_count = len(cases_u)
             num_districts = len(districts_u)
@@ -205,11 +241,17 @@ class GraphAnalyzer:
 
             # Check financial links count
             financial_links_count = 0
-            for v in G.neighbors(u):
-                if G.nodes[v].get("kind") == "accused":
-                    edge_data = G[u][v]
-                    if "financial transaction" in edge_data.get("label", ""):
-                        financial_links_count += 1
+            try:
+                for v in G.neighbors(u):
+                    v_data = G.nodes.get(v)
+                    if isinstance(v_data, dict) and v_data.get("kind") == "accused":
+                        edge_data = G.get_edge_data(u, v)
+                        if isinstance(edge_data, dict):
+                            lbl = edge_data.get("label") or ""
+                            if "financial transaction" in str(lbl).lower():
+                                financial_links_count += 1
+            except Exception as exc:
+                logger.warning("Error computing financial links for node %s: %s", u, exc)
 
             # Criteria: 3+ FIRs OR cases in multiple districts OR multiple stations
             # OR has financial links OR multiple crime categories
@@ -253,7 +295,7 @@ class GraphAnalyzer:
                 )
 
         # Sort repeat offenders by risk score descending
-        offenders.sort(key=lambda o: o["risk_score"], reverse=True)
+        offenders.sort(key=lambda o: o.get("risk_score", 0.0), reverse=True)
         return offenders
 
     @staticmethod

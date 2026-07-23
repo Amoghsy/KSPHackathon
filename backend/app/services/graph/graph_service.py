@@ -1,4 +1,6 @@
 import logging
+import traceback
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 import networkx as nx
 
@@ -69,10 +71,29 @@ class GraphService:
                 case_ids=case_ids, accused_ids=accused_ids
             )
 
-            G_full = GraphBuilder.build_criminal_network(cases, accused, victims, transactions)
-            centrality = GraphAnalyzer.calculate_centrality(G_full)
-            communities = GraphAnalyzer.detect_communities(G_full, centrality["pagerank"])
-            repeat_offenders = GraphAnalyzer.detect_repeat_offenders(G_full, centrality["degree"])
+            try:
+                G_full = GraphBuilder.build_criminal_network(cases, accused, victims, transactions)
+            except Exception as exc:
+                logger.error("Error in stage 'Graph Construction': %s: %s\nTraceback:\n%s", type(exc).__name__, exc, traceback.format_exc())
+                raise HTTPException(status_code=500, detail="Internal server error during graph analytics.")
+
+            try:
+                centrality = GraphAnalyzer.calculate_centrality(G_full)
+            except Exception as exc:
+                logger.error("Error in stage 'Centrality Calculation': %s: %s\nTraceback:\n%s", type(exc).__name__, exc, traceback.format_exc())
+                raise HTTPException(status_code=500, detail="Internal server error during graph analytics.")
+
+            try:
+                communities = GraphAnalyzer.detect_communities(G_full, centrality["pagerank"])
+            except Exception as exc:
+                logger.error("Error in stage 'Community Detection': %s: %s\nTraceback:\n%s", type(exc).__name__, exc, traceback.format_exc())
+                raise HTTPException(status_code=500, detail="Internal server error during graph analytics.")
+
+            try:
+                repeat_offenders = GraphAnalyzer.detect_repeat_offenders(G_full, centrality["degree"])
+            except Exception as exc:
+                logger.error("Error in stage 'Repeat Offender Detection': %s: %s\nTraceback:\n%s", type(exc).__name__, exc, traceback.format_exc())
+                raise HTTPException(status_code=500, detail="Internal server error during graph analytics.")
 
             node_degrees = dict(G_full.degree())
             degree_values = list(node_degrees.values())
@@ -239,9 +260,23 @@ class GraphService:
         G = self._trim_graph(G_full, center_node, max_nodes=40, max_edges=75)
 
         # 4. Calculate centralities on trimmed graph
-        centrality = GraphAnalyzer.calculate_centrality(G)
-        communities = GraphAnalyzer.detect_communities(G, centrality["pagerank"])
-        repeat_offenders = GraphAnalyzer.detect_repeat_offenders(G, centrality["degree"])
+        try:
+            centrality = GraphAnalyzer.calculate_centrality(G)
+        except Exception as exc:
+            logger.error("Error in stage 'Centrality Calculation': %s: %s\nTraceback:\n%s", type(exc).__name__, exc, traceback.format_exc())
+            raise HTTPException(status_code=500, detail="Internal server error during graph analytics.")
+
+        try:
+            communities = GraphAnalyzer.detect_communities(G, centrality["pagerank"])
+        except Exception as exc:
+            logger.error("Error in stage 'Community Detection': %s: %s\nTraceback:\n%s", type(exc).__name__, exc, traceback.format_exc())
+            raise HTTPException(status_code=500, detail="Internal server error during graph analytics.")
+
+        try:
+            repeat_offenders = GraphAnalyzer.detect_repeat_offenders(G, centrality["degree"])
+        except Exception as exc:
+            logger.error("Error in stage 'Repeat Offender Detection': %s: %s\nTraceback:\n%s", type(exc).__name__, exc, traceback.format_exc())
+            raise HTTPException(status_code=500, detail="Internal server error during graph analytics.")
 
         # 5. Format Graph Response
         formatted_graph = NetworkResponseFormatter.format_graph(G, centrality, communities, repeat_offenders)
@@ -368,9 +403,23 @@ class GraphService:
             G_sub = G
             
         # Calculate local centralities and format
-        centrality = GraphAnalyzer.calculate_centrality(G_sub)
-        communities = GraphAnalyzer.detect_communities(G_sub, centrality["pagerank"])
-        repeat_offenders = GraphAnalyzer.detect_repeat_offenders(G_sub, centrality["degree"])
+        try:
+            centrality = GraphAnalyzer.calculate_centrality(G_sub)
+        except Exception as exc:
+            logger.error("Error in stage 'Centrality Calculation': %s: %s\nTraceback:\n%s", type(exc).__name__, exc, traceback.format_exc())
+            raise HTTPException(status_code=500, detail="Internal server error during graph analytics.")
+
+        try:
+            communities = GraphAnalyzer.detect_communities(G_sub, centrality["pagerank"])
+        except Exception as exc:
+            logger.error("Error in stage 'Community Detection': %s: %s\nTraceback:\n%s", type(exc).__name__, exc, traceback.format_exc())
+            raise HTTPException(status_code=500, detail="Internal server error during graph analytics.")
+
+        try:
+            repeat_offenders = GraphAnalyzer.detect_repeat_offenders(G_sub, centrality["degree"])
+        except Exception as exc:
+            logger.error("Error in stage 'Repeat Offender Detection': %s: %s\nTraceback:\n%s", type(exc).__name__, exc, traceback.format_exc())
+            raise HTTPException(status_code=500, detail="Internal server error during graph analytics.")
         
         formatted = NetworkResponseFormatter.format_graph(G_sub, centrality, communities, repeat_offenders)
         return formatted.model_dump()
@@ -429,10 +478,18 @@ class GraphService:
         )
 
         # 2. Build financial graph using NetworkX
-        G_fin = GraphBuilder.build_financial_network(transactions, cases)
+        try:
+            G_fin = GraphBuilder.build_financial_network(transactions, cases)
+        except Exception as exc:
+            logger.error("Error in stage 'Financial Graph Construction': %s: %s\nTraceback:\n%s", type(exc).__name__, exc, traceback.format_exc())
+            raise HTTPException(status_code=500, detail="Internal server error during graph analytics.")
 
         # 3. Detect financial patterns (cycles, high-value transfers, shared accounts)
-        patterns = GraphAnalyzer.detect_financial_patterns(G_fin)
+        try:
+            patterns = GraphAnalyzer.detect_financial_patterns(G_fin)
+        except Exception as exc:
+            logger.error("Error in stage 'Financial Pattern Detection': %s: %s\nTraceback:\n%s", type(exc).__name__, exc, traceback.format_exc())
+            raise HTTPException(status_code=500, detail="Internal server error during graph analytics.")
 
         # 4. Format Graph Response
         formatted_graph = NetworkResponseFormatter.format_graph(G_fin)
