@@ -229,18 +229,25 @@ env_origins = [
 
 allowed_origins = list(dict.fromkeys(default_origins + env_origins))
 
-logger.info(
-    "CORS allowed origins: %s",
-    allowed_origins,
-)
+is_catalyst = "X_ZOHO_CATALYST_LISTEN_PORT" in os.environ
+disable_cors = os.getenv("DISABLE_CORS", "true" if is_catalyst else "false").lower() == "true"
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+if not disable_cors:
+    logger.info(
+        "Enabling CORS middleware. Allowed origins: %s",
+        allowed_origins,
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    logger.info(
+        "CORS middleware is disabled (running on Zoho Catalyst AppSail or DISABLE_CORS is true)."
+    )
 
 
 # ===========================================================================
