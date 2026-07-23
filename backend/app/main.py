@@ -7,6 +7,7 @@ Development:
 Production / Zoho Catalyst AppSail:
     python3 -u app_start.py
 
+IMPORTANT:
 Database initialization is intentionally NOT performed during application
 startup.
 
@@ -22,6 +23,16 @@ Operational endpoints:
 
     /health/ready
         Readiness check that verifies PostgreSQL connectivity.
+
+CORS strategy:
+
+    Local development:
+        FastAPI CORSMiddleware handles CORS.
+
+    Zoho Catalyst AppSail:
+        Catalyst handles CORS.
+        FastAPI CORSMiddleware is NOT registered to prevent duplicate
+        Access-Control-Allow-Origin headers.
 """
 
 from __future__ import annotations
@@ -38,18 +49,19 @@ from typing import AsyncGenerator
 # ===========================================================================
 # WINDOWS EVENT LOOP COMPATIBILITY
 # ===========================================================================
+
+# Psycopg 3 async connections on Windows work correctly with
+# WindowsSelectorEventLoopPolicy.
 #
-# Psycopg 3 async connections on Windows work with SelectorEventLoop.
-#
-# This only affects local Windows development.
-# Zoho Catalyst AppSail runs on Linux, so this block has no effect there.
-# ===========================================================================
+# Catalyst AppSail runs Linux, so this does nothing in production.
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(
         asyncio.WindowsSelectorEventLoopPolicy()
     )
 
+
+# Import FastAPI after Windows event-loop configuration.
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -63,7 +75,6 @@ from app.config import settings
 
 LOGGING_CONFIG: dict = {
     "version": 1,
-
     "disable_existing_loggers": False,
 
     "formatters": {
@@ -74,7 +85,6 @@ LOGGING_CONFIG: dict = {
                 "%(name)s | "
                 "%(message)s"
             ),
-
             "datefmt": "%Y-%m-%dT%H:%M:%S",
         },
     },
@@ -82,9 +92,7 @@ LOGGING_CONFIG: dict = {
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-
             "stream": "ext://sys.stdout",
-
             "formatter": "standard",
         },
     },
@@ -95,21 +103,33 @@ LOGGING_CONFIG: dict = {
             if settings.app_env == "local"
             else "INFO"
         ),
-
-        "handlers": [
-            "console",
-        ],
+        "handlers": ["console"],
     },
 }
 
 
-logging.config.dictConfig(
-    LOGGING_CONFIG
+logging.config.dictConfig(LOGGING_CONFIG)
+
+logger = logging.getLogger(__name__)
+
+
+# ===========================================================================
+# ENVIRONMENT DETECTION
+# ===========================================================================
+
+# Catalyst AppSail automatically provides this environment variable.
+#
+# If it exists, the application is considered to be running behind
+# the Catalyst/AppSail gateway.
+
+IS_CATALYST = bool(
+    os.getenv("X_ZOHO_CATALYST_LISTEN_PORT")
 )
 
 
-logger = logging.getLogger(
-    __name__
+logger.info(
+    "Runtime environment detected: %s",
+    "Zoho Catalyst AppSail" if IS_CATALYST else "Local / External",
 )
 
 
@@ -121,14 +141,13 @@ logger = logging.getLogger(
 async def lifespan(
     app: FastAPI,
 ) -> AsyncGenerator[None, None]:
+
     """
     FastAPI application lifecycle handler.
 
-    IMPORTANT FOR ZOHO CATALYST APPSAIL:
+    Startup MUST remain lightweight for Catalyst AppSail.
 
-    Startup must remain lightweight.
-
-    We intentionally DO NOT perform:
+    Do NOT perform the following before yielding:
 
         - PostgreSQL connection verification
         - Alembic migrations
@@ -139,20 +158,15 @@ async def lifespan(
         - SMTP initialization
         - External API calls
 
-    before yielding control to FastAPI.
-
-    This ensures AppSail can start the application immediately and
-    successfully perform its liveness checks.
-
-    Database initialization is handled separately:
+    Database initialization must be performed separately:
 
         python -m alembic upgrade head
 
-    Demo/initial data is seeded separately:
+    Demo data:
 
         python scripts/seed_db.py
 
-    PostgreSQL availability can be checked through:
+    Dependency health can be checked using:
 
         GET /health/ready
     """
@@ -168,20 +182,8 @@ async def lifespan(
         "External dependency checks are not blocking startup."
     )
 
-    # -----------------------------------------------------------------------
-    # IMPORTANT:
-    #
-    # Application becomes live here.
-    #
-    # Nothing that depends on PostgreSQL, Redis, Gemini, SMTP, etc.
-    # should run before this yield.
-    # -----------------------------------------------------------------------
-
+    # Application becomes available immediately.
     yield
-
-    # -----------------------------------------------------------------------
-    # Shutdown
-    # -----------------------------------------------------------------------
 
     logger.info(
         "Shutting down %s",
@@ -194,7 +196,6 @@ async def lifespan(
 # ===========================================================================
 
 app = FastAPI(
-
     title=settings.app_name,
 
     version="0.1.0",
@@ -211,40 +212,138 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
 # ===========================================================================
-# CORS MIDDLEWARE
+# CORS CONFIGURATION
+# ===========================================================================
+#
+# IMPORTANT:
+#
+# LOCAL:
+#
+#     Browser
+#        ↓
+#     FastAPI CORSMiddleware
+#        ↓
+#     API
+#
+#
+# CATALYST:
+#
+#     Browser
+#        ↓
+#     Catalyst Gateway / Authentication CORS
+#        ↓
+#     AppSail
+#        ↓
+#     FastAPI
+#
+#
+# FastAPI CORSMiddleware MUST NOT also add CORS headers on Catalyst.
+#
+# Otherwise the response becomes:
+#
+#     Access-Control-Allow-Origin: frontend-url
+#     Access-Control-Allow-Origin: frontend-url
+#
+# Browsers combine this into:
+#
+#     frontend-url, frontend-url
+#
+# which is invalid CORS and causes:
+#
+#     "The Access-Control-Allow-Origin header contains multiple values"
+#
 # ===========================================================================
 
-default_origins = [
+
+LOCAL_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:8080",
-    ]
-env_origins = [
+]
+
+
+# Optional additional origins for non-Catalyst environments.
+#
+# Example:
+#
+# ALLOWED_ORIGINS=https://example.com,https://staging.example.com
+
+ENV_ORIGINS = [
     origin.strip().rstrip("/")
-    for origin in os.getenv("ALLOWED_ORIGINS", "").split(",")
+    for origin in os.getenv(
+        "ALLOWED_ORIGINS",
+        "",
+    ).split(",")
     if origin.strip()
 ]
 
-allowed_origins = list(dict.fromkeys(default_origins + env_origins))
 
-is_catalyst = "X_ZOHO_CATALYST_LISTEN_PORT" in os.environ
-disable_cors = os.getenv("DISABLE_CORS", "true" if is_catalyst else "false").lower() == "true"
+# Remove duplicate origins while preserving order.
 
-if not disable_cors:
-    logger.info(
-        "Enabling CORS middleware. Allowed origins: %s",
-        allowed_origins,
+ALLOWED_ORIGINS = list(
+    dict.fromkeys(
+        LOCAL_ORIGINS + ENV_ORIGINS
     )
+)
+
+
+# Optional explicit override.
+#
+# Normally:
+#
+# Catalyst:
+#     CORS_MANAGED_BY_PLATFORM=true
+#
+# Local:
+#     CORS_MANAGED_BY_PLATFORM=false
+#
+# If the variable is not configured, Catalyst is detected automatically.
+
+cors_platform_env = os.getenv(
+    "CORS_MANAGED_BY_PLATFORM"
+)
+
+
+if cors_platform_env is not None:
+
+    CORS_MANAGED_BY_PLATFORM = (
+        cors_platform_env.strip().lower()
+        in {"1", "true", "yes", "on"}
+    )
+
+else:
+
+    # Automatically use Catalyst CORS when deployed on AppSail.
+
+    CORS_MANAGED_BY_PLATFORM = IS_CATALYST
+
+
+if CORS_MANAGED_BY_PLATFORM:
+
+    logger.info(
+        "FastAPI CORSMiddleware DISABLED. "
+        "CORS is managed by the hosting platform."
+    )
+
+else:
+
+    logger.info(
+        "FastAPI CORSMiddleware ENABLED. "
+        "Allowed origins: %s",
+        ALLOWED_ORIGINS,
+    )
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=allowed_origins,
+
+        allow_origins=ALLOWED_ORIGINS,
+
         allow_credentials=True,
+
         allow_methods=["*"],
+
         allow_headers=["*"],
-    )
-else:
-    logger.info(
-        "CORS middleware is disabled (running on Zoho Catalyst AppSail or DISABLE_CORS is true)."
     )
 
 
@@ -278,6 +377,7 @@ app.add_middleware(
     summary="Application liveness check",
 )
 async def health() -> dict:
+
     """
     Lightweight application liveness endpoint.
 
@@ -290,40 +390,33 @@ async def health() -> dict:
         - External APIs
         - Catalyst services
 
-    It only verifies:
+    It verifies only:
 
-        AppSail
-            ↓
-        Python
-            ↓
-        Uvicorn
-            ↓
-        FastAPI
-
-    are running successfully.
-
-    This endpoint should remain lightweight.
+        Catalyst/AppSail
+              ↓
+            Python
+              ↓
+            Uvicorn
+              ↓
+            FastAPI
     """
 
     return {
-
         "status": "ok",
 
-        "service": (
-            "scrb-intelligence-backend"
+        "service": "scrb-intelligence-backend",
+
+        "app": settings.app_name,
+
+        "environment": settings.app_env,
+
+        "runtime": (
+            "catalyst-appsail"
+            if IS_CATALYST
+            else "local-or-external"
         ),
 
-        "app": (
-            settings.app_name
-        ),
-
-        "environment": (
-            settings.app_env
-        ),
-
-        "version": (
-            "0.1.0"
-        ),
+        "version": "0.1.0",
     }
 
 
@@ -337,80 +430,61 @@ async def health() -> dict:
     summary="Application readiness check",
 )
 async def readiness() -> dict:
+
     """
-    Application readiness endpoint.
+    Verify that critical external dependencies are available.
 
-    Unlike /health, this endpoint checks critical external dependencies.
-
-    Current dependency:
+    Currently verifies:
 
         PostgreSQL
 
-    Expected responses:
+    HTTP 200:
+        Database reachable.
 
-        HTTP 200
-            PostgreSQL is reachable.
+    HTTP 503:
+        Database unavailable.
 
-        HTTP 503
-            PostgreSQL is unavailable.
-
-    A readiness failure does NOT mean that FastAPI or AppSail itself
-    has failed.
+    A readiness failure does NOT necessarily mean FastAPI or AppSail
+    itself has failed.
     """
 
-    # Import lazily so database modules are not required during
-    # application startup.
-    from app.db.init_db import (
-        verify_db_connection,
-    )
+    # Lazy import prevents DB initialization during FastAPI import/startup.
+
+    from app.db.init_db import verify_db_connection
 
     try:
 
         await verify_db_connection()
 
         return {
+            "status": "ready",
 
-            "status": (
-                "ready"
-            ),
+            "service": "scrb-intelligence-backend",
 
-            "service": (
-                "scrb-intelligence-backend"
-            ),
+            "app": settings.app_name,
 
-            "app": (
-                settings.app_name
-            ),
+            "environment": settings.app_env,
 
-            "environment": (
-                settings.app_env
-            ),
-
-            "version": (
-                "0.1.0"
-            ),
+            "version": "0.1.0",
 
             "dependencies": {
-
                 "database": {
-
-                    "status": (
-                        "connected"
-                    ),
-
-                    "provider": (
-                        "postgresql"
-                    ),
+                    "status": "connected",
+                    "provider": "postgresql",
                 },
             },
         }
 
     except Exception as exc:  # noqa: BLE001
 
-        # Log the real exception internally.
+        # Log actual exception internally.
         #
-        # Do not expose raw database errors to clients because they may
-        # contain hostnames, ports, usernames, or infrastructure details.
+        # Never expose raw DB connection details because they may contain:
+        #
+        # - hostnames
+        # - usernames
+        # - ports
+        # - infrastructure information
 
         logger.exception(
             "Application readiness check failed: %s",
@@ -418,30 +492,17 @@ async def readiness() -> dict:
         )
 
         raise HTTPException(
-
             status_code=503,
 
             detail={
+                "status": "not_ready",
 
-                "status": (
-                    "not_ready"
-                ),
-
-                "service": (
-                    "scrb-intelligence-backend"
-                ),
+                "service": "scrb-intelligence-backend",
 
                 "dependencies": {
-
                     "database": {
-
-                        "status": (
-                            "unavailable"
-                        ),
-
-                        "provider": (
-                            "postgresql"
-                        ),
+                        "status": "unavailable",
+                        "provider": "postgresql",
                     },
                 },
             },
@@ -458,53 +519,44 @@ async def readiness() -> dict:
     summary="Application information",
 )
 async def read_root() -> dict:
+
     """
-    Return basic application information and operational endpoint paths.
+    Return basic application and operational information.
     """
 
     return {
-
         "message": (
             f"Welcome to {settings.app_name}"
         ),
 
-        "service": (
-            "scrb-intelligence-backend"
+        "service": "scrb-intelligence-backend",
+
+        "version": "0.1.0",
+
+        "api_version": "v1",
+
+        "environment": settings.app_env,
+
+        "runtime": (
+            "catalyst-appsail"
+            if IS_CATALYST
+            else "local-or-external"
         ),
 
-        "version": (
-            "0.1.0"
-        ),
-
-        "api_version": (
-            "v1"
-        ),
-
-        "environment": (
-            settings.app_env
-        ),
+        "cors": {
+            "managed_by": (
+                "platform"
+                if CORS_MANAGED_BY_PLATFORM
+                else "fastapi"
+            ),
+        },
 
         "endpoints": {
-
-            "docs": (
-                "/docs"
-            ),
-
-            "redoc": (
-                "/redoc"
-            ),
-
-            "health": (
-                "/health"
-            ),
-
-            "readiness": (
-                "/health/ready"
-            ),
-
-            "api": (
-                "/api/v1"
-            ),
+            "docs": "/docs",
+            "redoc": "/redoc",
+            "health": "/health",
+            "readiness": "/health/ready",
+            "api": "/api/v1",
         },
     }
 
@@ -512,38 +564,32 @@ async def read_root() -> dict:
 # ===========================================================================
 # API V1 ROUTER
 # ===========================================================================
-#
-# Existing application APIs remain available under:
-#
-#     /api/v1/*
-#
-# Examples:
-#
-#     /api/v1/auth/login
-#     /api/v1/cases/
-#     /api/v1/dashboard/
-#     /api/v1/chat/
-#     /api/v1/network/
-#
-# ===========================================================================
 
 from app.api.v1.router import api_router  # noqa: E402
 
 
 app.include_router(
-
     api_router,
-
     prefix="/api/v1",
 )
 
 
 # ===========================================================================
-# IMPORT-TIME DIAGNOSTIC
+# IMPORT-TIME DIAGNOSTICS
 # ===========================================================================
 
 logger.info(
     "FastAPI application imported successfully."
+)
+
+
+logger.info(
+    "CORS manager: %s",
+    (
+        "hosting-platform"
+        if CORS_MANAGED_BY_PLATFORM
+        else "fastapi"
+    ),
 )
 
 
