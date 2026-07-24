@@ -80,5 +80,9 @@ export async function askAssistant(
     };
   }
 
+  if (resp.statistics) {
+    message.statistics = resp.statistics;
+  }
+
   return message;
 }

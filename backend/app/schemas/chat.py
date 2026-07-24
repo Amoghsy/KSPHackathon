@@ -59,6 +59,9 @@ class ChatResponse(BaseModel):
     explain: Optional[dict[str, Any]] = Field(
         default=None, description="Explainable AI reasoning and execution details."
     )
+    statistics: Optional[dict[str, Any]] = Field(
+        default=None, description="Optional statistics/chart/metric card data."
+    )
 
 
 

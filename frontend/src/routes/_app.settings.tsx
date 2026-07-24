@@ -47,6 +47,19 @@ function DeviceIcon({ type, className }: { type: string; className?: string }) {
 
 // ─── Active Sessions Panel ───────────────────────────────────────────────────
 
+function formatSessionDate(dateStr: string): string {
+  if (!dateStr) return "Unknown";
+  let cleaned = dateStr;
+  if (dateStr.endsWith("Z") && (dateStr.includes("+") || dateStr.lastIndexOf("-") > 10)) {
+    cleaned = dateStr.slice(0, -1);
+  }
+  const d = new Date(cleaned);
+  if (isNaN(d.getTime())) {
+    return dateStr;
+  }
+  return d.toLocaleString();
+}
+
 function ActiveSessionsPanel() {
   const [sessions, setSessions] = useState<ActiveSession[]>([]);
   const [loading, setLoading] = useState(false);
@@ -179,7 +192,7 @@ function ActiveSessionsPanel() {
                     {s.ip_address}
                   </span>
                   <span className="text-[11px] text-muted-foreground">
-                    Active {new Date(s.last_activity_at).toLocaleString()}
+                    Active {formatSessionDate(s.last_activity_at)}
                   </span>
                 </div>
               </div>

@@ -349,6 +349,15 @@ function ChatPage() {
     setSelectedVoice,
   } = useSpeechSynthesis();
 
+  // Keep TTS language in sync with chatbot language preference
+  useEffect(() => {
+    if (language === "en" && ttsLanguage !== "en-IN") {
+      setTtsLanguage("en-IN");
+    } else if (language === "kn" && ttsLanguage !== "kn-IN") {
+      setTtsLanguage("kn-IN");
+    }
+  }, [language, ttsLanguage, setTtsLanguage]);
+
   const SR = useMemo(() => getSpeechRecognition(), []);
   const speechSupported = !!SR;
 
@@ -1099,7 +1108,10 @@ function ChatPage() {
                   >
                     <button
                       type="button"
-                      onClick={() => setTtsLanguage("en-IN")}
+                      onClick={() => {
+                        setTtsLanguage("en-IN");
+                        setLanguage("en");
+                      }}
                       className={cn(
                         "flex-1 font-medium transition-colors",
                         ttsLanguage === "en-IN" ? "bg-primary text-primary-foreground" : "hover:bg-accent",
@@ -1111,7 +1123,10 @@ function ChatPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setTtsLanguage("kn-IN")}
+                      onClick={() => {
+                        setLanguage("kn");
+                        setTtsLanguage("kn-IN");
+                      }}
                       className={cn(
                         "flex-1 font-medium transition-colors",
                         ttsLanguage === "kn-IN" ? "bg-primary text-primary-foreground" : "hover:bg-accent",
@@ -1326,23 +1341,29 @@ function ChatPage() {
                           )}
                         </div>
                         {/* Stop / Replay intro button */}
-                        {isPlaying || isPaused ? (
+                        {isPlaying && !isPaused ? (
                           <button
-                            onClick={() => stop()}
-                            className="ml-auto h-6 w-6 rounded-full flex items-center justify-center text-primary hover:text-destructive hover:bg-destructive/10 transition-colors"
-                            aria-label="Stop introduction speech"
-                            title="Stop speaking"
+                            onClick={() => pause()}
+                            className="ml-auto h-6 w-6 rounded-full flex items-center justify-center text-primary hover:bg-primary/10 transition-colors"
+                            aria-label="Mute introduction speech"
+                            title="Mute"
                           >
-                            <VolumeX className="h-3 w-3" />
+                            <Volume2 className="h-3.5 w-3.5" />
                           </button>
                         ) : (
                           <button
-                            onClick={() => speak(introText)}
+                            onClick={() => {
+                              if (isPaused) {
+                                resume();
+                              } else {
+                                speak(introText);
+                              }
+                            }}
                             className="ml-auto h-6 w-6 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                            aria-label="Replay introduction"
-                            title="Replay introduction"
+                            aria-label="Unmute introduction speech"
+                            title="Unmute"
                           >
-                            <RotateCcw className="h-3 w-3" />
+                            <VolumeX className="h-3.5 w-3.5" />
                           </button>
                         )}
                       </div>
@@ -1629,13 +1650,34 @@ function ChatPage() {
                         }
                         if (s.conversation_history?.length > 0) {
                           const hydratedMessages: ChatMessage[] = s.conversation_history.map(
-                            (h, i) => ({
-                              id: `${s.conversation_id}-${i}`,
-                              role: h.role,
-                              text: h.content,
-                              ts: new Date(h.timestamp * 1000).toISOString(),
-                              sql: h.generated_sql ?? undefined,
-                            }),
+                            (h, i) => {
+                              const msg: ChatMessage = {
+                                id: `${s.conversation_id}-${i}`,
+                                role: h.role,
+                                text: h.content,
+                                ts: new Date(h.timestamp * 1000).toISOString(),
+                                sql: h.generated_sql ?? undefined,
+                                explain: h.explain ?? undefined,
+                              };
+                              if (h.statistics) {
+                                msg.statistics = h.statistics;
+                              }
+                              if (h.rows && h.rows.length > 0 && h.columns && h.columns.length > 0) {
+                                msg.data = {
+                                  kind: "table",
+                                  title: `Query results (${h.rows.length} rows)`,
+                                  columns: h.columns,
+                                  rows: h.rows.map((row: any) =>
+                                    h.columns.map((col: string) => {
+                                      const val = row[col];
+                                      if (typeof val === "boolean") return val ? "True" : "False";
+                                      return val ?? "";
+                                    })
+                                  ),
+                                };
+                              }
+                              return msg;
+                            }
                           );
                           setMessages(hydratedMessages);
                         }
@@ -1737,6 +1779,11 @@ function MessageRow({
           )}
         >
           <div className="whitespace-pre-wrap leading-relaxed">{m.text}</div>
+          {m.statistics && (
+            <div className="mt-3">
+              <RichCard data={m.statistics} />
+            </div>
+          )}
           {m.data && (
             <div className="mt-3">
               <RichCard data={m.data} />

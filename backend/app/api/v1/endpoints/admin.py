@@ -58,8 +58,8 @@ async def get_user_sessions_admin(
             "os": s.operating_system,
             "device_type": s.device_type,
             "ip_address": s.ip_address,
-            "created_at": s.created_at.isoformat() + "Z",
-            "last_activity_at": s.last_activity_at.isoformat() + "Z",
+            "created_at": (s.created_at.astimezone(datetime.timezone.utc).replace(tzinfo=None) if s.created_at.tzinfo else s.created_at).isoformat() + "Z",
+            "last_activity_at": (s.last_activity_at.astimezone(datetime.timezone.utc).replace(tzinfo=None) if s.last_activity_at.tzinfo else s.last_activity_at).isoformat() + "Z",
             "is_current": False  # Not the admin's current session
         })
 

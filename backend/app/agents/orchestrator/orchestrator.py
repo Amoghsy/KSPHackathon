@@ -159,6 +159,10 @@ class Orchestrator:
                 "timestamp": datetime.datetime.utcnow().timestamp(),
                 "generated_sql": response.get("generated_sql"),
                 "resolved_entities": entities_dict,
+                "rows": response.get("rows"),
+                "columns": response.get("columns"),
+                "explain": response.get("explain"),
+                "statistics": response.get("statistics"),
             }
 
             # 5. Fire-and-forget: Redis session update + audit log — user gets response NOW.

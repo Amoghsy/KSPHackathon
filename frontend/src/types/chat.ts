@@ -25,6 +25,7 @@ export interface ChatMessage {
   role: ChatRole;
   text: string;
   data?: RichData;
+  statistics?: RichData;
   sql?: string;
   rows?: number;
   agent?: AgentKind;
