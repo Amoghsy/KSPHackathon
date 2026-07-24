@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     smtp_from_email: str = "noreply@ksp.gov.in"
     smtp_from_name: str = "SCRB Intelligence Platform"
     frontend_url: str = "http://localhost:8080"
+    otp_bypass_usernames: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",

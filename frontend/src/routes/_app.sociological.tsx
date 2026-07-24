@@ -72,10 +72,10 @@ function SociologicalPage() {
       <div className="mb-4">
         <Badge
           variant="outline"
-          className="gap-1.5 border-primary/40 bg-primary/10 text-primary-foreground"
+          className="gap-2 border-primary/40 bg-primary/10 text-primary py-1.5 px-3 rounded-lg font-medium text-xs"
         >
-          <ShieldAlert className="h-3.5 w-3.5" />
-          Live demographic insights compiled from active criminal registries.
+          <ShieldAlert className="h-3.5 w-3.5 flex-shrink-0" />
+          <span>Live demographic insights compiled from active criminal registries.</span>
         </Badge>
       </div>
 

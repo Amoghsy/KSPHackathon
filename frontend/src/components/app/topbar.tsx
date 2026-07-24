@@ -129,7 +129,7 @@ export function Topbar() {
               </Badge>
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 glass-strong">
+          <DropdownMenuContent align="end" className="w-56 glass-strong z-[9999]">
             <DropdownMenuLabel>
               <div className="text-sm font-medium">{user?.name}</div>
               <div className="text-xs text-muted-foreground">{user?.station}</div>

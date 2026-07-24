@@ -103,6 +103,84 @@ function useCountdown(seconds: number, running: boolean) {
   return remaining;
 }
 
+// ─── Animated Admin Background ─────────────────────────────────────────────
+
+function AdminLoginBackground() {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden select-none">
+      {/* Base animated moving background color gradient */}
+      <div className="admin-animated-bg absolute inset-0" />
+
+      {/* Animated Glow 1: Primary Crimson (Upper-left / Left-center) */}
+      <div
+        className="admin-glow-1 absolute rounded-full blur-[95px] pointer-events-none"
+        style={{
+          width: "75vw",
+          height: "75vw",
+          maxWidth: "950px",
+          maxHeight: "950px",
+          top: "-20%",
+          left: "-15%",
+          background:
+            "radial-gradient(circle at center, oklch(0.51 0.16 355 / 0.85), oklch(0.38 0.11 10 / 0.35) 55%, transparent 80%)",
+        }}
+      />
+
+      {/* Animated Glow 2: Secondary Indigo/Navy (Right-center / Lower-right) */}
+      <div
+        className="admin-glow-2 absolute rounded-full blur-[100px] pointer-events-none"
+        style={{
+          width: "70vw",
+          height: "70vw",
+          maxWidth: "900px",
+          maxHeight: "900px",
+          top: "15%",
+          right: "-15%",
+          background:
+            "radial-gradient(circle at center, oklch(0.48 0.13 235 / 0.80), oklch(0.35 0.09 245 / 0.30) 55%, transparent 80%)",
+        }}
+      />
+
+      {/* Animated Glow 3: Deep Burgundy (Center-bottom / Ambient) */}
+      <div
+        className="admin-glow-3 absolute rounded-full blur-[110px] pointer-events-none"
+        style={{
+          width: "65vw",
+          height: "65vw",
+          maxWidth: "850px",
+          maxHeight: "850px",
+          bottom: "-20%",
+          left: "20%",
+          background:
+            "radial-gradient(circle at center, oklch(0.43 0.13 15 / 0.70), oklch(0.30 0.07 262 / 0.25) 55%, transparent 80%)",
+        }}
+      />
+
+      {/* Shimmer Light Sweep Layer */}
+      <div className="admin-shimmer-sweep absolute -inset-y-1/2 w-1/3 pointer-events-none bg-gradient-to-r from-transparent via-red-400/18 to-transparent" />
+
+      {/* Subtle grid overlay */}
+      <div
+        className="login-grid-drift absolute inset-0 opacity-[0.075]"
+        style={{
+          backgroundImage:
+            "linear-gradient(oklch(1 0 0 / 0.4) 1px, transparent 1px), linear-gradient(90deg, oklch(1 0 0 / 0.4) 1px, transparent 1px)",
+          backgroundSize: "48px 48px",
+        }}
+      />
+
+      {/* Dark vignette & contrast protection layer for center UI - Medium balanced depth */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse at 50% 50%, transparent 25%, oklch(0.14 0.03 262 / 0.48) 70%, oklch(0.11 0.02 262 / 0.75) 100%)",
+        }}
+      />
+    </div>
+  );
+}
+
 function AdminLoginPage() {
   const initiateLogin = useAuthStore((s) => s.initiateLogin);
   const verifyOTP = useAuthStore((s) => s.verifyOTP);
@@ -148,7 +226,12 @@ function AdminLoginPage() {
     clearError();
     try {
       await initiateLogin({ username: username.trim(), password });
-      toast.info("Verification code sent to your admin email.");
+      const currentUser = useAuthStore.getState().user;
+      if (!currentUser) {
+        toast.info("Verification code sent to your admin email.");
+      } else {
+        toast.success("Administrator session verified");
+      }
     } catch {
       toast.error("Authentication failed", {
         description: authError ?? "Invalid administrator credentials.",
@@ -200,22 +283,9 @@ function AdminLoginPage() {
   }
 
   return (
-    <div
-      className="dark relative min-h-screen w-full flex flex-col text-slate-100 overflow-hidden"
-      style={{
-        background:
-          "radial-gradient(1000px 700px at 15% 10%, oklch(0.35 0.1 360 / 0.9), transparent 60%), radial-gradient(900px 600px at 90% 90%, oklch(0.4 0.08 240 / 0.7), transparent 60%), linear-gradient(180deg, oklch(0.18 0.04 262), oklch(0.1 0.02 262))",
-      }}
-    >
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.06]"
-        style={{
-          backgroundImage:
-            "linear-gradient(oklch(1 0 0 / 0.4) 1px, transparent 1px), linear-gradient(90deg, oklch(1 0 0 / 0.4) 1px, transparent 1px)",
-          backgroundSize: "48px 48px",
-        }}
-      />
-      <div className="flex-1 flex items-center justify-center px-4 py-10 relative">
+    <div className="dark relative min-h-screen w-full flex flex-col text-slate-100 overflow-hidden">
+      <AdminLoginBackground />
+      <div className="flex-1 flex items-center justify-center px-4 py-10 relative z-10">
         <div className="w-full max-w-md">
           <div className="flex flex-col items-center text-center mb-8">
             <div
@@ -360,7 +430,7 @@ function AdminLoginPage() {
           </div>
         </div>
       </div>
-      <footer className="border-t border-white/10 py-3 text-center text-[11px] text-slate-400">
+      <footer className="relative z-10 border-t border-white/10 py-3 text-center text-[11px] text-slate-400">
         CONFIDENTIAL SECURITY SYSTEMS — INCIDENTS LOGGED TO AUDIT LOGS.
       </footer>
     </div>

@@ -210,7 +210,7 @@ function ActiveSessionsPanel() {
 function SettingsPage() {
   const user = useAuthStore((s) => s.user);
   const { language, setLanguage } = useLanguage();
-  const { theme, toggleTheme } = usePrefs();
+  const { lang, setLang, theme, toggleTheme } = usePrefs();
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
@@ -246,10 +246,33 @@ function SettingsPage() {
         <section className="rounded-xl glass p-5">
           <h2 className="text-sm font-semibold mb-4">Preferences</h2>
           <div className="space-y-4">
+            {/* Display Language */}
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-medium">Language</div>
-                <div className="text-xs text-muted-foreground">Interface language and query response preferences.</div>
+                <div className="text-sm font-medium">Display Language</div>
+                <div className="text-xs text-muted-foreground">Language of the application interface, menus, and labels.</div>
+              </div>
+              <div className="flex rounded-md border border-input overflow-hidden text-xs">
+                <button
+                  onClick={() => setLang("en")}
+                  className={"px-3 py-1.5 font-medium " + (lang === "en" ? "bg-primary text-primary-foreground" : "hover:bg-accent")}
+                >
+                  English
+                </button>
+                <button
+                  onClick={() => setLang("kn")}
+                  className={"px-3 py-1.5 font-medium " + (lang === "kn" ? "bg-primary text-primary-foreground" : "hover:bg-accent")}
+                >
+                  ಕನ್ನಡ
+                </button>
+              </div>
+            </div>
+
+            {/* Chatbot Language */}
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium">Chatbot Language</div>
+                <div className="text-xs text-muted-foreground">Preferred language for query responses and spoken voice greeting.</div>
               </div>
               <div className="flex rounded-md border border-input overflow-hidden text-xs">
                 <button

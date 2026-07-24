@@ -23,6 +23,8 @@ export function Masked({ children, className }: { children: ReactNode; className
   );
 }
 
+import { useTranslateHeader } from "@/lib/i18n";
+
 export function PageHeader({
   title,
   subtitle,
@@ -32,13 +34,17 @@ export function PageHeader({
   subtitle?: string;
   actions?: ReactNode;
 }) {
+  const tHeader = useTranslateHeader();
+  const translatedTitle = tHeader(title);
+  const translatedSubtitle = subtitle ? tHeader(subtitle) : undefined;
+
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between pb-5 mb-5 border-b border-border/60">
       <div className="min-w-0">
         <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground truncate">
-          {title}
+          {translatedTitle}
         </h1>
-        {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
+        {translatedSubtitle && <p className="text-sm text-muted-foreground mt-1">{translatedSubtitle}</p>}
       </div>
       {actions && <div className="flex items-center gap-2 shrink-0 flex-wrap">{actions}</div>}
     </div>

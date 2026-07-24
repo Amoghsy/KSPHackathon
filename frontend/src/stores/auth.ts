@@ -128,16 +128,34 @@ export const useAuthStore = create<AuthState>()(
         try {
           const resp = await apiPost<{
             otp_required: boolean;
-            challenge_id: string;
-            expires_in: number;
-            message: string;
+            challenge_id?: string;
+            expires_in?: number;
+            message?: string;
+            access_token?: string;
+            token_type?: string;
+            session_id?: string;
+            role?: string;
+            refresh_token?: string;
+            user?: any;
           }>("/auth/login", { username, password });
+
+          if (resp.otp_required === false && resp.access_token) {
+            set({
+              isLoading: false,
+              token: resp.access_token,
+              refreshToken: resp.refresh_token ?? null,
+              sessionId: resp.session_id ?? null,
+              user: resp.user ?? null,
+              otpChallenge: null,
+            });
+            return;
+          }
 
           set({
             isLoading: false,
             otpChallenge: {
-              challengeId: resp.challenge_id,
-              expiresIn: resp.expires_in,
+              challengeId: resp.challenge_id!,
+              expiresIn: resp.expires_in!,
               issuedAt: Date.now(),
             },
           });

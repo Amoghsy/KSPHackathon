@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { usePrefs } from "@/stores/prefs";
 
 export type Language = "auto" | "en" | "kn";
 export type ResolvedLanguage = "en" | "kn";
@@ -16,7 +15,6 @@ const LanguageContext = createContext<LanguageContextProps | undefined>(undefine
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguageState] = useState<Language>("auto");
-  const setPrefLang = usePrefs((s) => s.setLang);
 
   // Initialize from Local Storage on mount (client-side only)
   useEffect(() => {
@@ -51,9 +49,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       resolved = language;
     }
     setResolvedLanguage(resolved);
-    // Keep the UI labels store in sync
-    setPrefLang(resolved);
-  }, [language, setPrefLang]);
+  }, [language]);
 
   const recognitionLanguage: RecognitionLanguage = resolvedLanguage === "kn" ? "kn-IN" : "en-IN";
 

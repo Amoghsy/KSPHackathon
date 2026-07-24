@@ -33,6 +33,7 @@ class VerifyOTPRequest(BaseModel):
 
 
 class VerifyOTPResponse(BaseModel):
+    otp_required: bool = False
     access_token: str
     token_type: str = "bearer"
     session_id: str

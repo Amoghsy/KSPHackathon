@@ -31,6 +31,7 @@ from app.services.auth.otp_service import OTPService
 from app.services.session.session_service import SessionService
 from app.services.email.email_service import EmailService
 from app.services.audit.audit_service import log_security_event
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -45,7 +46,7 @@ def get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "127.0.0.1"
 
 
-@router.post("/login", response_model=LoginOTPResponse)
+@router.post("/login", response_model=LoginOTPResponse | VerifyOTPResponse)
 async def login(
     credentials: LoginRequest,
     request: Request,
@@ -127,7 +128,93 @@ async def login(
         user_agent=user_agent,
     )
 
-    # Generate OTP Challenge
+    # Generate OTP Challenge or Bypass
+    bypass_usernames = [u.strip() for u in settings.otp_bypass_usernames.split(",") if u.strip()]
+    if db_user.username in bypass_usernames:
+        # Create server-side session
+        session_service = SessionService(db)
+        session = await session_service.create_session(
+            user_id=db_user.id,
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+
+        # Generate JWT with session_id claim
+        normalized_role = normalize_role(db_user.role) or db_user.role
+        token_payload = {
+            "sub": db_user.username,
+            "role": normalized_role,
+            "id": db_user.id,
+            "session_id": session.id
+        }
+        access_token = create_access_token(token_payload)
+
+        # Optional refresh token
+        refresh_payload = {
+            "sub": db_user.username,
+            "type": "refresh",
+            "id": db_user.id,
+            "session_id": session.id
+        }
+        refresh_token = create_access_token(
+            refresh_payload, expires_delta=datetime.timedelta(days=7)
+        )
+
+        # Audit login success
+        await log_security_event(
+            db=db,
+            event_type="LOGIN_SUCCESS",
+            user_id=db_user.id,
+            username=db_user.username,
+            role=normalized_role,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            summary=f"Successful login (OTP bypassed). Session: {session.id}"
+        )
+
+        # Cache user session details in Redis
+        try:
+            from app.models.district_assignment import UserDistrictAssignment
+            stmt_dists = select(UserDistrictAssignment.district).where(
+                UserDistrictAssignment.user_id == db_user.id,
+                UserDistrictAssignment.is_active == True
+            )
+            res_dists = await db.execute(stmt_dists)
+            assigned_dists = [r[0] for r in res_dists.fetchall()]
+            districts_str = ",".join(assigned_dists) if assigned_dists else None
+
+            from app.core.redis import get_redis_client
+            import json
+            client = get_redis_client()
+            user_info = {
+                "id": db_user.id,
+                "username": db_user.username,
+                "role": normalized_role,
+                "districts": districts_str,
+                "session_id": session.id
+            }
+            await client.setex(f"session:{db_user.username}", 24 * 3600, json.dumps(user_info))
+        except Exception:
+            pass
+
+        return {
+            "otp_required": False,
+            "access_token": access_token,
+            "token_type": "bearer",
+            "session_id": session.id,
+            "username": db_user.username,
+            "role": normalized_role,
+            "refresh_token": refresh_token,
+            "user": {
+                "id": str(db_user.id),
+                "name": db_user.full_name or db_user.username,
+                "username": db_user.username,
+                "role": normalized_role,
+                "badgeNo": db_user.employee_id or f"KSP-{db_user.id + 10000}",
+                "station": "SCRB HQ, Bengaluru"
+            }
+        }
+
     otp_service = OTPService()
     otp_data = await otp_service.generate_otp(db_user.id)
     challenge_id = otp_data["challenge_id"]

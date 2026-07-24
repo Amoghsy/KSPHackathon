@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { DynamicSidebar } from "@/components/app/sidebar";
 import { Topbar } from "@/components/app/topbar";
 import { AccessRequestModal } from "@/components/app/AccessRequestModal";
@@ -7,6 +8,7 @@ import { usePrefs } from "@/stores/prefs";
 import { cn } from "@/lib/utils";
 import { canAccessRoute, findRouteAccess, requiredRoleLabel, ROLE_DEFAULT_LANDING } from "@/lib/rbac";
 import { SessionSyncProvider } from "@/components/providers/SessionSyncProvider";
+import { DOMTranslateProvider } from "@/components/providers/DOMTranslateProvider";
 
 export const Route = createFileRoute("/_app")({
   ssr: false,
@@ -38,8 +40,17 @@ export const Route = createFileRoute("/_app")({
 });
 
 function AppShell() {
+  const lang = usePrefs((s) => s.lang);
   const mobileNavOpen = usePrefs((s) => s.mobileNavOpen);
   const setMobileNavOpen = usePrefs((s) => s.setMobileNavOpen);
+
+  useEffect(() => {
+    if (lang === "kn") {
+      document.documentElement.classList.add("lang-kn");
+    } else {
+      document.documentElement.classList.remove("lang-kn");
+    }
+  }, [lang]);
 
   return (
     <SessionSyncProvider>
@@ -107,7 +118,9 @@ function AppShell() {
       <div className="flex flex-1 flex-col min-w-0">
         <Topbar />
         <main className="flex-1 overflow-y-auto scrollbar-thin">
-          <Outlet />
+          <DOMTranslateProvider>
+            <Outlet />
+          </DOMTranslateProvider>
         </main>
         <AccessRequestModal />
       </div>

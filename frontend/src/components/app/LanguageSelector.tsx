@@ -1,6 +1,6 @@
 import React from "react";
 import { Globe, Check } from "lucide-react";
-import { useLanguage, Language } from "@/context/LanguageContext";
+import { usePrefs, Lang } from "@/stores/prefs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,15 +10,15 @@ import {
 import { Button } from "@/components/ui/button";
 
 export const LanguageSelector: React.FC = () => {
-  const { language, setLanguage, resolvedLanguage } = useLanguage();
+  const lang = usePrefs((s) => s.lang);
+  const setLang = usePrefs((s) => s.setLang);
 
-  const options: { value: Language; label: string }[] = [
-    { value: "auto", label: "Auto Detect" },
+  const options: { value: Lang; label: string }[] = [
     { value: "en", label: "English" },
     { value: "kn", label: "ಕನ್ನಡ (Kannada)" },
   ];
 
-  const currentLabel = options.find((opt) => opt.value === language)?.label || "Language";
+  const currentLabel = options.find((opt) => opt.value === lang)?.label || "Language";
 
   return (
     <DropdownMenu>
@@ -30,18 +30,18 @@ export const LanguageSelector: React.FC = () => {
         >
           <Globe className="h-3.5 w-3.5 text-muted-foreground" />
           <span className="hidden sm:inline">{currentLabel}</span>
-          <span className="sm:hidden uppercase">{language === "auto" ? `AUTO (${resolvedLanguage})` : language}</span>
+          <span className="sm:hidden uppercase">{lang}</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-40 glass-strong">
+      <DropdownMenuContent align="end" className="w-40 glass-strong z-[9999]">
         {options.map((opt) => (
           <DropdownMenuItem
             key={opt.value}
-            onClick={() => setLanguage(opt.value)}
+            onClick={() => setLang(opt.value)}
             className="flex items-center justify-between text-xs cursor-pointer"
           >
             <span>{opt.label}</span>
-            {language === opt.value && <Check className="h-3.5 w-3.5 text-primary" />}
+            {lang === opt.value && <Check className="h-3.5 w-3.5 text-primary" />}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

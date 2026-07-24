@@ -25,6 +25,7 @@ import {
   User,
   FileText
 } from "lucide-react";
+import { useTranslateHeader } from "@/lib/i18n";
 
 const ForceGraph2D = lazy(() => import("react-force-graph-2d"));
 
@@ -58,6 +59,7 @@ const DEFAULT_COLORS: Record<string, string> = {
 };
 
 function NetworkPage() {
+  const t = useTranslateHeader();
   const navigate = useNavigate({ from: Route.fullPath });
   const filters = Route.useSearch();
   const rbac = useRBAC();
@@ -244,8 +246,8 @@ function NetworkPage() {
 
       <div className="px-6 pt-6 border-b border-border pb-4 bg-background/40">
         <PageHeader
-          title="Criminal Intelligence Network"
-          subtitle="Workspace for co-offending links, Modularity gang clustering, and visual tracing."
+          title={t("Criminal Intelligence Network")}
+          subtitle={t("Workspace for co-offending links, Modularity gang clustering, and visual tracing.")}
           actions={
             <div className="flex items-center gap-3">
               {isWorkspace && (
@@ -253,7 +255,7 @@ function NetworkPage() {
                   {/* Slider control */}
                   <div className="flex flex-col gap-1 w-44 bg-background/60 p-2 rounded-lg border border-border">
                     <div className="flex justify-between text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
-                      <span>Min Link Weight</span>
+                      <span>{t("Min Link Weight")}</span>
                       <span className="text-primary font-mono">{minWeight}</span>
                     </div>
                     <input
@@ -278,7 +280,7 @@ function NetworkPage() {
                     title="Close active investigation"
                   >
                     <X className="h-4 w-4 mr-2" />
-                    Close
+                    {t("Close")}
                   </Button>
                 </>
               )}
@@ -306,18 +308,18 @@ function NetworkPage() {
             <div className="rounded-xl glass border border-border p-6 shadow-sm relative overflow-hidden bg-card text-card-foreground">
               <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
                 <Search className="h-4 w-4 text-primary" />
-                Target Configurator (Investigation Mode)
+                {t("Target Configurator (Investigation Mode)")}
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Search accused */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase">Search Accused</label>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase">{t("Search Accused")}</label>
                   <div className="flex gap-2">
                     <div className="relative flex-1">
                       <User className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                       <Input
-                        placeholder="Accused name or ID..."
+                        placeholder={t("Accused name or ID...")}
                         value={searchAccused}
                         onChange={(e) => setSearchAccused(e.target.value)}
                         onKeyDown={(e) => {
@@ -337,19 +339,19 @@ function NetworkPage() {
                         }
                       }}
                     >
-                      Search
+                      {t("Search")}
                     </Button>
                   </div>
                 </div>
 
                 {/* Search Case */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase">Search FIR / Case No</label>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase">{t("Search FIR / Case No")}</label>
                   <div className="flex gap-2">
                     <div className="relative flex-1">
                       <FileText className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                       <Input
-                        placeholder="FIR / Case number..."
+                        placeholder={t("FIR / Case number...")}
                         value={searchCase}
                         onChange={(e) => setSearchCase(e.target.value)}
                         onKeyDown={(e) => {
@@ -369,14 +371,14 @@ function NetworkPage() {
                         }
                       }}
                     >
-                      Search
+                      {t("Search")}
                     </Button>
                   </div>
                 </div>
 
                 {/* Geographic & Crime Type Filters */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase">Filter District</label>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase">{t("Filter District")}</label>
                   <div className="flex gap-2">
                     <select
                       value={selDistrict}
@@ -388,7 +390,7 @@ function NetworkPage() {
                       }}
                       className="w-full bg-background/50 border border-border rounded-lg text-xs px-2.5 py-1.5 h-8 focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
                     >
-                      <option value="">Select District…</option>
+                      <option value="">{t("Select District...")}</option>
                       {isSuperOrAdmin && <option value="All">All Districts</option>}
                       {isSuperOrAdmin ? (
                         <>
@@ -413,9 +415,9 @@ function NetworkPage() {
               <div className="rounded-xl glass border border-border p-4 shadow-sm bg-card text-card-foreground">
                 <div className="flex justify-between items-start">
                   <div>
-                    <span className="text-[10px] text-muted-foreground font-bold uppercase">Most Connected Criminal</span>
+                    <span className="text-[10px] text-muted-foreground font-bold uppercase">{t("MOST CONNECTED CRIMINAL")}</span>
                     <h3 className="text-xs font-bold mt-1 text-foreground">
-                      {data?.most_connected?.[0] || "None Identified"}
+                      {data?.most_connected?.[0] || t("None Identified")}
                     </h3>
                   </div>
                   <Award className="h-4 w-4 text-amber-500" />
@@ -425,9 +427,9 @@ function NetworkPage() {
               <div className="rounded-xl glass border border-border p-4 shadow-sm bg-card text-card-foreground">
                 <div className="flex justify-between items-start">
                   <div>
-                    <span className="text-[10px] text-muted-foreground font-bold uppercase">Connected PS</span>
+                    <span className="text-[10px] text-muted-foreground font-bold uppercase">{t("CONNECTED PS")}</span>
                     <h3 className="text-xs font-bold mt-1 text-foreground">
-                      {data?.most_connected_police_station || "None"}
+                      {data?.most_connected_police_station || t("None")}
                     </h3>
                   </div>
                   <MapPin className="h-4 w-4 text-blue-500" />
@@ -437,9 +439,9 @@ function NetworkPage() {
               <div className="rounded-xl glass border border-border p-4 shadow-sm bg-card text-card-foreground">
                 <div className="flex justify-between items-start">
                   <div>
-                    <span className="text-[10px] text-muted-foreground font-bold uppercase">Communities Detected</span>
+                    <span className="text-[10px] text-muted-foreground font-bold uppercase">{t("COMMUNITIES DETECTED")}</span>
                     <h3 className="text-xs font-bold mt-1 text-foreground">
-                      {data?.communities?.length || 0} gang clusters
+                      {data?.communities?.length || 0} {t("3 gang clusters").replace("3", "").replace("೩", "").trim()}
                     </h3>
                   </div>
                   <Users className="h-4 w-4 text-teal-500" />
@@ -449,7 +451,7 @@ function NetworkPage() {
               <div className="rounded-xl glass border border-border p-4 shadow-sm bg-card text-card-foreground">
                 <div className="flex justify-between items-start">
                   <div>
-                    <span className="text-[10px] text-muted-foreground font-bold uppercase">Density Ratio</span>
+                    <span className="text-[10px] text-muted-foreground font-bold uppercase">{t("DENSITY RATIO")}</span>
                     <h3 className="text-xs font-bold mt-1 text-foreground font-mono">
                       {data?.density || "0.00"}
                     </h3>
@@ -465,7 +467,7 @@ function NetworkPage() {
               <div className="lg:col-span-2 rounded-xl glass border border-border p-6 shadow-sm bg-card text-card-foreground">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-foreground mb-4 flex items-center gap-2 border-b border-border pb-2">
                   <Award className="h-4 w-4 text-red-500" />
-                  Top Repeat Offenders (High Priority)
+                  {t("TOP REPEAT OFFENDERS (HIGH PRIORITY)")}
                 </h3>
                 {isLoading ? (
                   <div className="space-y-3">
@@ -482,14 +484,14 @@ function NetworkPage() {
                             {off.name}
                           </div>
                           <div className="text-[10px] text-muted-foreground flex items-center gap-2">
-                            <span>{off.crime_count} Cases</span>
+                            <span>{off.crime_count} {t("Cases")}</span>
                             <span>·</span>
-                            <span>{off.known_associates?.length || 0} Associates</span>
+                            <span>{off.known_associates?.length || 0} {t("Associates")}</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="text-right">
-                            <div className="text-[10px] font-bold text-muted-foreground">RISK SCORE</div>
+                            <div className="text-[10px] font-bold text-muted-foreground">{t("RISK SCORE")}</div>
                             <div className={`text-xs font-mono font-bold ${off.risk_score > 70 ? 'text-red-500' : 'text-amber-500'}`}>
                               {off.risk_score}%
                             </div>
@@ -499,7 +501,7 @@ function NetworkPage() {
                             className="bg-primary text-primary-foreground hover:opacity-90 text-[10px] h-7 px-3"
                             onClick={() => handleStartInvestigation(off.id, "accused")}
                           >
-                            Investigate
+                            {t("Investigate")}
                           </Button>
                         </div>
                       </div>
@@ -514,7 +516,7 @@ function NetworkPage() {
                 <div className="rounded-xl glass border border-border p-6 shadow-sm bg-card text-card-foreground">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-foreground mb-4 flex items-center gap-2 border-b border-border pb-2">
                     <Users className="h-4 w-4 text-teal-500" />
-                    Top Crime Gangs
+                    {t("TOP CRIME GANGS")}
                   </h3>
                   <div className="space-y-3">
                     {data?.communities?.slice(0, 3).map((comm: any) => (
@@ -524,13 +526,13 @@ function NetworkPage() {
                       >
                         <div className="space-y-1">
                           <span className="text-[9px] font-bold text-teal-600 dark:text-teal-400 uppercase tracking-widest">
-                            Gang #{comm.community_id}
+                            {t("Gang")} #{comm.community_id}
                           </span>
                           <div className="text-xs font-semibold text-foreground">
-                            Leader: {comm.leader}
+                            {t("Leader")}: {comm.leader}
                           </div>
                           <div className="text-[9px] text-muted-foreground">
-                            {comm.members?.length || 0} Members
+                            {comm.members?.length || 0} {t("Members")}
                           </div>
                         </div>
                         <Button
@@ -551,7 +553,7 @@ function NetworkPage() {
                   <div className="rounded-xl glass border border-border p-6 shadow-sm bg-card text-card-foreground">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-foreground mb-3 flex items-center gap-2 border-b border-border pb-2">
                       <History className="h-4 w-4 text-purple-500" />
-                      Recent Investigations
+                      {t("Recent Investigations")}
                     </h3>
                     <div className="space-y-2">
                       {recent.map((rec: any, idx: number) => (

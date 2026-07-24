@@ -27,25 +27,77 @@ export const Route = createFileRoute("/login")({
 
 function LoginBackground() {
   return (
-    <>
-      {/* Gradient backdrop */}
+    <div className="pointer-events-none absolute inset-0 overflow-hidden select-none">
+      {/* Base animated moving background color gradient */}
+      <div className="login-animated-bg absolute inset-0" />
+
+      {/* Animated Glow 1: Primary Teal (Upper-left / Left-center) */}
       <div
-        className="pointer-events-none absolute inset-0"
+        className="login-glow-1 absolute rounded-full blur-[90px] pointer-events-none"
         style={{
+          width: "75vw",
+          height: "75vw",
+          maxWidth: "950px",
+          maxHeight: "950px",
+          top: "-20%",
+          left: "-15%",
           background:
-            "radial-gradient(1000px 700px at 15% 10%, oklch(0.4 0.1 220 / 0.9), transparent 60%), radial-gradient(900px 600px at 90% 90%, oklch(0.45 0.1 190 / 0.7), transparent 60%), linear-gradient(180deg, oklch(0.22 0.06 262), oklch(0.14 0.04 262))",
+            "radial-gradient(circle at center, oklch(0.55 0.16 200 / 0.85), oklch(0.42 0.14 215 / 0.35) 50%, transparent 75%)",
         }}
       />
-      {/* Grid */}
+
+      {/* Animated Glow 2: Secondary Cyan/Teal (Right-center / Lower-right) */}
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.07]"
+        className="login-glow-2 absolute rounded-full blur-[100px] pointer-events-none"
+        style={{
+          width: "70vw",
+          height: "70vw",
+          maxWidth: "900px",
+          maxHeight: "900px",
+          top: "15%",
+          right: "-15%",
+          background:
+            "radial-gradient(circle at center, oklch(0.58 0.17 185 / 0.80), oklch(0.45 0.13 195 / 0.30) 50%, transparent 75%)",
+        }}
+      />
+
+      {/* Animated Glow 3: Deep Royal Blue (Center-bottom / Ambient) */}
+      <div
+        className="login-glow-3 absolute rounded-full blur-[110px] pointer-events-none"
+        style={{
+          width: "65vw",
+          height: "65vw",
+          maxWidth: "850px",
+          maxHeight: "850px",
+          bottom: "-20%",
+          left: "20%",
+          background:
+            "radial-gradient(circle at center, oklch(0.48 0.15 245 / 0.75), oklch(0.35 0.10 255 / 0.25) 50%, transparent 75%)",
+        }}
+      />
+
+      {/* Shimmer Light Sweep Layer */}
+      <div className="login-shimmer-sweep absolute -inset-y-1/2 w-1/3 pointer-events-none bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent" />
+
+      {/* Subtle grid overlay */}
+      <div
+        className="login-grid-drift absolute inset-0 opacity-[0.08]"
         style={{
           backgroundImage:
             "linear-gradient(oklch(1 0 0 / 0.4) 1px, transparent 1px), linear-gradient(90deg, oklch(1 0 0 / 0.4) 1px, transparent 1px)",
           backgroundSize: "48px 48px",
         }}
       />
-    </>
+
+      {/* Dark vignette & contrast protection layer for center UI */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse at 50% 50%, transparent 20%, oklch(0.14 0.04 262 / 0.55) 65%, oklch(0.11 0.03 262 / 0.90) 100%)",
+        }}
+      />
+    </div>
   );
 }
 
@@ -182,7 +234,12 @@ function LoginPage() {
     clearError();
     try {
       await initiateLogin({ username: username.trim(), password });
-      toast.info("Verification code sent to your registered email.");
+      const currentUser = useAuthStore.getState().user;
+      if (!currentUser) {
+        toast.info("Verification code sent to your registered email.");
+      } else {
+        toast.success("Signed in successfully");
+      }
     } catch {
       toast.error("Sign in failed", {
         description: authError ?? "Check your credentials and try again.",

@@ -16,6 +16,7 @@ import {
 } from "recharts";
 import { PageHeader, StatCard } from "@/components/app/primitives";
 import { getDashboard, getAlerts } from "@/services/api";
+import { useTranslateHeader } from "@/lib/i18n";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -80,6 +81,7 @@ function normalizeRoleKey(role: string | undefined): string {
 }
 
 export function DynamicDashboard() {
+  const t = useTranslateHeader();
   const rbac = useRBAC();
   const currentRole = normalizeRoleKey(rbac.role);
   const config = ROLE_DASHBOARDS[currentRole] ?? ROLE_DASHBOARDS.Investigator;
@@ -104,8 +106,8 @@ export function DynamicDashboard() {
   return (
     <div className="p-6 max-w-[1600px] mx-auto animate-in fade-in duration-300">
       <PageHeader
-        title={config.title}
-        subtitle={`${config.subtitle} - logged in as ${rbac.user?.name || "Officer"}`}
+        title={t(config.title)}
+        subtitle={`${t(config.subtitle)} - ${t("logged in as")} ${rbac.user?.name || t("Officer")}`}
       />
 
       {/* Role Workspace Cards */}
@@ -116,9 +118,9 @@ export function DynamicDashboard() {
             className="rounded-xl border border-white/5 bg-card/60 backdrop-blur-md p-3.5 text-card-foreground shadow-sm hover:border-primary/20 hover:translate-y-[-1px] transition-all duration-200"
           >
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground/80 font-semibold">
-              Workspace module
+              {t("Workspace module")}
             </div>
-            <div className="mt-1 text-sm font-bold text-foreground">{card}</div>
+            <div className="mt-1 text-sm font-bold text-foreground">{t(card)}</div>
           </div>
         ))}
       </div>
@@ -128,7 +130,7 @@ export function DynamicDashboard() {
         {isLoading || !data
           ? Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)
           : data.kpis.map((k) => (
-              <StatCard key={k.label} label={k.label} value={k.value.toLocaleString()} delta={k.delta} />
+              <StatCard key={k.label} label={t(k.label)} value={k.value.toLocaleString()} delta={k.delta} />
             ))}
       </div>
 
@@ -293,13 +295,13 @@ export function DynamicDashboard() {
           {canViewAudit ? (
             <Panel title="System compliance audit logs" caption="Recent administrative action audits">
               <div className="text-xs text-muted-foreground leading-relaxed space-y-3">
-                <p>System audit trail is active and monitoring platform interactions.</p>
+                <p>{t("System audit trail is active and monitoring platform interactions.")}</p>
                 <div className="bg-muted/40 rounded-xl p-3 border border-border/40">
-                  <div className="font-semibold text-foreground">Audit Compliance Level 1</div>
-                  <div className="mt-1 text-[11px]">All data exports, role modifications, and PII views are registered.</div>
+                  <div className="font-semibold text-foreground">{t("Audit Compliance Level 1")}</div>
+                  <div className="mt-1 text-[11px]">{t("All data exports, role modifications, and PII views are registered.")}</div>
                 </div>
                 <Badge variant="secondary" className="font-semibold">
-                  SECURE AUDIT CHANNEL
+                  {t("SECURE AUDIT CHANNEL")}
                 </Badge>
               </div>
             </Panel>
@@ -325,11 +327,12 @@ function Panel({
   caption?: string;
   children: React.ReactNode;
 }) {
+  const t = useTranslateHeader();
   return (
     <div className="rounded-xl border border-white/5 bg-card/45 backdrop-blur-lg p-5 shadow-sm">
       <div className="mb-4">
-        <div className="text-sm font-bold text-foreground">{title}</div>
-        {caption && <div className="text-[11px] text-muted-foreground mt-0.5">{caption}</div>}
+        <div className="text-sm font-bold text-foreground">{t(title)}</div>
+        {caption && <div className="text-[11px] text-muted-foreground mt-0.5">{t(caption)}</div>}
       </div>
       {children}
     </div>
