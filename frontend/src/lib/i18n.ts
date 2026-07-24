@@ -47,7 +47,7 @@ const en = {
   // suggestion chips
   s1: "Show robbery cases in Bengaluru",
   s2: "Which accused have 3+ FIRs?",
-  s3: "Show network around Accused A12",
+  s3: "Show me the statistics of murder cases in karnataka",
   s4: "Crime trend for cybercrime this year",
   s5: "Total open cases this month?",
 };
@@ -115,7 +115,7 @@ const headerTranslations: Record<string, Record<string, string>> = {
   en: {
     // Dashboard
     "Dashboard": "Dashboard",
-    
+
     // Settings
     "Settings": "Settings",
     "Profile, security and notification preferences.": "Profile, security and notification preferences.",

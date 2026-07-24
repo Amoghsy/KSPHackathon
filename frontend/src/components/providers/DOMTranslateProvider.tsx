@@ -157,6 +157,16 @@ const domDictionary: Record<string, string> = {
   "Male": "ಪುರುಷ",
   "Crime rate vs. socio-economic index": "ಅಪರಾಧ ದರ ಮತ್ತು ಸಾಮಾಜಿಕ-ಆರ್ಥಿಕ ಸೂಚ್ಯಂಕ",
 
+  // Callout cards
+  "Urban migration → property crime": "ನಗರೀಕರಣ ಮತ್ತು ವಲಸೆ → ಆಸ್ತಿ ಅಪರಾಧ ಪ್ರವೃತ್ತಿ",
+  "Districts with >15% inbound migration show 18% higher property-crime rate; Bengaluru Urban and Mangaluru lead.": "ಶೇ ೧೫ ಕ್ಕಿಂತ ಹೆಚ್ಚು ವಲಸೆ ಹೊಂದಿರುವ ಜಿಲ್ಲೆಗಳು ಶೇ ೧೮ ರಷ್ಟು ಹೆಚ್ಚಿನ ಆಸ್ತಿ ಅಪರಾಧ ದರವನ್ನು ಹೊಂದಿವೆ; ಬೆಂಗಳೂರು ನಗರ ಮತ್ತು ಮಂಗಳೂರು ಮುಂಚೂಣಿಯಲ್ಲಿವೆ.",
+  "Youth unemployment correlation": "ಯುವ ನಿರುದ್ಯೋಗ ಮತ್ತು ಅಪರಾಧಗಳ ಲಿಂಕ್",
+  "Sub-districts with youth unemployment above 12% correlate with a 24% uplift in petty theft FIRs.": "ಶೇ ೧೨ ಕ್ಕಿಂತ ಹೆಚ್ಚು ಯುವ ನಿರುದ್ಯೋಗ ಹೊಂದಿರುವ ಉಪಜಿಲ್ಲೆಗಳು ಸಣ್ಣ ಕಳ್ಳತನದ ಪ್ರಕರಣಗಳಲ್ಲಿ ಶೇ ೨೪ ರಷ್ಟು ಹೆಚ್ಚಳವನ್ನು ಹೊಂದಿವೆ.",
+  "Digital literacy gap": "ಡಿಜಿಟಲ್ ಸಾಕ್ಷರತೆ ಮತ್ತು ಸೈಬರ್ ವಂಚನೆ",
+  "Cyber-fraud victimisation is 2.1× higher in senior-citizen cohorts in tier-2 districts.": "ದ್ವಿತೀಯ ದರ್ಜೆಯ ಜಿಲ್ಲೆಗಳಲ್ಲಿ ಹಿರಿಯ ನಾಗರಿಕರಲ್ಲಿ ಸೈಬರ್ ವಂಚನೆ ಪ್ರಕರಣಗಳು ೨.೧ ಪಟ್ಟು ಹೆಚ್ಚಾಗಿದೆ.",
+  "Nightlife density": "ನೈಟ್‌ಲೈಫ್ ಸಾಂದ್ರತೆ ಮತ್ತು ಕಾನೂನು ಸುವ್ಯವಸ್ಥೆ",
+  "Assault FIRs cluster within 500m of licensed nightlife venues on Fri–Sat between 22:00–02:00.": "ಶುಕ್ರವಾರ ಮತ್ತು ಶನಿವಾರ ರಾತ್ರಿ ೧೦ ರಿಂದ ಮುಂಜಾನೆ ೨ ರವರೆಗೆ ಲೈಸೆನ್ಸ್ ಪಡೆದ ನೈಟ್‌ಲೈಫ್ ಸ್ಥಳಗಳ ೫೦೦ ಮೀಟರ್ ವ್ಯಾಪ್ತಿಯಲ್ಲಿ ಹಲ್ಲೆ ಪ್ರಕರಣಗಳು ಹೆಚ್ಚು ದಾಖಲಾಗಿವೆ.",
+
   // Early Warning Center (Alerts Page)
   "Early Warning Center": "ಮುನ್ನೆಚ್ಚರಿಕೆ ಕೇಂದ್ರ",
   "AI-generated alerts from anomaly detection across FIR feeds.": "ಎಫ್‌ಐಆರ್ ಫೀಡ್‌ಗಳಾದ್ಯಂತ ಅಸಂಗತತೆ ಪತ್ತೆಯಿಂದ AI-ರಚಿತ ಎಚ್ಚರಿಕೆಗಳು.",

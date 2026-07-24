@@ -116,13 +116,17 @@ class RiskService:
                     if grouped_offenders[pid]["max_gravity"] is None or case.gravity_offence_id > grouped_offenders[pid]["max_gravity"]:
                         grouped_offenders[pid]["max_gravity"] = case.gravity_offence_id
                 
-                # Check recent activity (180 days)
                 if case.crime_registered_date:
-                    # Convert to datetime if it's not
+                    # Convert to date robustly
                     reg_date = case.crime_registered_date
                     if isinstance(reg_date, str):
-                        reg_date = datetime.datetime.fromisoformat(reg_date)
-                    days_diff = (datetime.datetime.utcnow() - reg_date).days
+                        reg_date = datetime.datetime.fromisoformat(reg_date).date()
+                    elif isinstance(reg_date, datetime.datetime):
+                        reg_date = reg_date.date()
+                    elif isinstance(reg_date, datetime.date):
+                        pass
+                    
+                    days_diff = (datetime.date.today() - reg_date).days
                     if days_diff <= 180:
                         grouped_offenders[pid]["recently_active"] = True
                 
