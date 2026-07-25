@@ -4,7 +4,6 @@ app/services/conversation package.
 
 from __future__ import annotations
 
-from app.repositories.conversation import ConversationRepository
 from app.services.conversation.context_injector import ContextInjector
 from app.services.conversation.context_store import ContextStore, ConversationContext
 from app.services.conversation.conversation_manager import ConversationManager
@@ -29,5 +28,4 @@ __all__ = [
     "ResolvedEntity",
     "ContextInjector",
     "ConversationService",
-    "ConversationRepository",
 ]

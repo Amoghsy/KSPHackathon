@@ -46,21 +46,44 @@ class ConversationRepository:
                 keys.extend(batch)
                 if cursor == 0:
                     break
-
-            for key in keys:
-                session_id = key[len(prefix) :]
-                context = await self.manager.get_conversation(session_id)
-                if context:
-                    contexts.append(context)
         except Exception as e:
             logger.warning(
-                "Redis connection error during get_all. Falling back to in-memory: %s",
+                "Redis connection error during get_all scan. Falling back to in-memory: %s",
                 e,
             )
             fallback_db = self.manager.store.session_manager._fallback_db
             for session_id, data in fallback_db.items():
-                context = ConversationContext.from_dict(data)
-                contexts.append(context)
+                try:
+                    context = ConversationContext.from_dict(data)
+                    if context:
+                        contexts.append(context)
+                except Exception as fe:
+                    logger.warning("Failed to parse fallback session %s: %s", session_id, fe)
+            
+            # Sort
+            reverse = sort_order.lower() == "desc"
+            if sort_by in ["updated_at", "timestamp"]:
+                contexts.sort(key=lambda c: c.updated_at, reverse=reverse)
+            elif sort_by in ["created_at"]:
+                contexts.sort(key=lambda c: c.created_at, reverse=reverse)
+            else:
+                contexts.sort(key=lambda c: c.updated_at, reverse=reverse)
+
+            # Paginate
+            return contexts[offset : offset + limit]
+
+        for key in keys:
+            session_id = key[len(prefix) :]
+            try:
+                context = await self.manager.get_conversation(session_id)
+                if context:
+                    contexts.append(context)
+            except Exception as e:
+                logger.warning(
+                    "Error parsing conversation key %s: %s",
+                    key,
+                    e,
+                )
 
         # Sort
         reverse = sort_order.lower() == "desc"

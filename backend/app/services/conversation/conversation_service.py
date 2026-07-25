@@ -6,7 +6,6 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from app.repositories.conversation import ConversationRepository
 from app.services.conversation.context_store import ConversationContext
 
 
@@ -17,7 +16,11 @@ class ConversationService:
     """
 
     def __init__(self, repository: Optional[ConversationRepository] = None) -> None:
-        self.repository = repository or ConversationRepository()
+        if repository is None:
+            from app.repositories.conversation import ConversationRepository
+            self.repository = ConversationRepository()
+        else:
+            self.repository = repository
 
     async def list_conversations(
         self,

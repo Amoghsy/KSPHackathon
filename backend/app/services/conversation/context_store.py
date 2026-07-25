@@ -90,8 +90,10 @@ class ConversationContext:
         return d
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> ConversationContext:
+    def from_dict(cls, data: Dict[str, Any]) -> Optional[ConversationContext]:
         """Instantiate a ConversationContext from a dictionary."""
+        if not data or "conversation_id" not in data:
+            return None
         history = data.get("conversation_history")
         if history is None:
             history = data.get("messages")
