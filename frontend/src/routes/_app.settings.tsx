@@ -65,6 +65,7 @@ function ActiveSessionsPanel() {
   const [loading, setLoading] = useState(false);
   const [revoking, setRevoking] = useState<string | null>(null);
   const logout = useAuthStore((s) => s.logout);
+  const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
 
   const fetchSessions = useCallback(async () => {

@@ -52,7 +52,7 @@ export async function askAssistant(
   }
 
   // Build the message that the chat UI expects
-  const message: ChatMessage & { conversationId?: string } = {
+  const message: ChatMessage & { conversationId?: string; statistics?: any } = {
     id: crypto.randomUUID(),
     role: "assistant",
     text: resp.summary ?? resp.error ?? "No response from backend.",
@@ -80,8 +80,8 @@ export async function askAssistant(
     };
   }
 
-  if (resp.statistics) {
-    message.statistics = resp.statistics;
+  if ((resp as any).statistics) {
+    message.statistics = (resp as any).statistics;
   }
 
   return message;

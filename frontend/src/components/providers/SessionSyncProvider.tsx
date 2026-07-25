@@ -91,8 +91,8 @@ export function SessionSyncProvider({ children }: SessionSyncProviderProps) {
       }
     };
 
-    window.addEventListener("auth:force-logout", handleForceLogout as EventListener);
-    return () => window.removeEventListener("auth:force-logout", handleForceLogout as EventListener);
+    window.addEventListener("auth:force-logout", handleForceLogout as unknown as EventListener);
+    return () => window.removeEventListener("auth:force-logout", handleForceLogout as unknown as EventListener);
   }, [isLoggedIn, logout, navigate]);
 
   return <>{children}</>;

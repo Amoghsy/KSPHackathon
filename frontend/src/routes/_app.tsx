@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { canAccessRoute, findRouteAccess, requiredRoleLabel, ROLE_DEFAULT_LANDING } from "@/lib/rbac";
 import { SessionSyncProvider } from "@/components/providers/SessionSyncProvider";
 import { DOMTranslateProvider } from "@/components/providers/DOMTranslateProvider";
+import { apiGet } from "@/lib/api/axios";
 
 export const Route = createFileRoute("/_app")({
   ssr: false,
@@ -43,6 +44,24 @@ function AppShell() {
   const lang = usePrefs((s) => s.lang);
   const mobileNavOpen = usePrefs((s) => s.mobileNavOpen);
   const setMobileNavOpen = usePrefs((s) => s.setMobileNavOpen);
+  const user = useAuthStore((s) => s.user);
+
+  // Refresh district assignments from the server on every app load.
+  // This ensures that district reassignments (done by admins) are reflected
+  // immediately, fixing stale data from the persisted Zustand store.
+  useEffect(() => {
+    if (!user) return;
+    apiGet<{ assignedDistricts: string[] }>("/auth/me")
+      .then((profile) => {
+        if (profile.assignedDistricts !== undefined) {
+          useAuthStore.setState((s) => ({
+            user: s.user ? { ...s.user, assignedDistricts: profile.assignedDistricts } : s.user,
+          }));
+        }
+      })
+      .catch(() => { /* Non-critical — fail silently */ });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once on mount
 
   useEffect(() => {
     if (lang === "kn") {
@@ -51,6 +70,7 @@ function AppShell() {
       document.documentElement.classList.remove("lang-kn");
     }
   }, [lang]);
+
 
   return (
     <SessionSyncProvider>

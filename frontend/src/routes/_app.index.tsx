@@ -1651,24 +1651,24 @@ function ChatPage() {
                         if (s.conversation_history?.length > 0) {
                           const hydratedMessages: ChatMessage[] = s.conversation_history.map(
                             (h, i) => {
-                              const msg: ChatMessage = {
+                              const msg: any = {
                                 id: `${s.conversation_id}-${i}`,
                                 role: h.role,
                                 text: h.content,
                                 ts: new Date(h.timestamp * 1000).toISOString(),
                                 sql: h.generated_sql ?? undefined,
-                                explain: h.explain ?? undefined,
+                                explain: (h as any).explain ?? undefined,
                               };
-                              if (h.statistics) {
-                                msg.statistics = h.statistics;
+                              if ((h as any).statistics) {
+                                msg.statistics = (h as any).statistics;
                               }
-                              if (h.rows && h.rows.length > 0 && h.columns && h.columns.length > 0) {
+                              if ((h as any).rows && (h as any).rows.length > 0 && (h as any).columns && (h as any).columns.length > 0) {
                                 msg.data = {
                                   kind: "table",
-                                  title: `Query results (${h.rows.length} rows)`,
-                                  columns: h.columns,
-                                  rows: h.rows.map((row: any) =>
-                                    h.columns.map((col: string) => {
+                                  title: `Query results (${(h as any).rows.length} rows)`,
+                                  columns: (h as any).columns,
+                                  rows: (h as any).rows.map((row: any) =>
+                                    (h as any).columns.map((col: string) => {
                                       const val = row[col];
                                       if (typeof val === "boolean") return val ? "True" : "False";
                                       return val ?? "";

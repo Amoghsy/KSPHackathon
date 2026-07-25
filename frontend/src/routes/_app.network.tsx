@@ -835,7 +835,7 @@ function NetworkPage() {
                     variant="outline"
                     className="w-full border-border hover:bg-muted text-foreground text-xs py-1.5 h-8"
                     onClick={() => {
-                      navigate({ search: (old) => ({ ...old, focusId: selected.id }) });
+                      navigate({ search: (old: any) => ({ ...old, focusId: selected.id }) });
                       setSelected(null);
                     }}
                   >

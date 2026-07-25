@@ -57,16 +57,13 @@ export const Route = createFileRoute("/_app/supervisor")({
 });
 
 const KARNATAKA_DISTRICTS = [
-  "Bengaluru Urban",
-  "Bengaluru Rural",
-  "Mysuru",
-  "Hubballi-Dharwad",
-  "Belagavi",
-  "Kalaburagi",
-  "Ballari",
-  "Shivamogga",
-  "Tumakuru",
-  "Udupi",
+  "Bagalkote", "Ballari", "Belagavi", "Bengaluru Rural", "Bengaluru Urban",
+  "Bidar", "Chamarajanagara", "Chikkaballapura", "Chikkamagaluru", "Chitradurga",
+  "Dakshina Kannada", "Davanagere", "Dharwad", "Gadag", "Hassan",
+  "Haveri", "Hubballi-Dharwad", "Kalaburagi", "Kodagu", "Kolar",
+  "Koppal", "Mandya", "Mysuru", "Raichur", "Ramanagara",
+  "Shivamogga", "Tumakuru", "Udupi", "Uttara Kannada", "Vijayapura",
+  "Yadgir",
 ];
 
 function SupervisorPage() {
@@ -87,19 +84,39 @@ function SupervisorPage() {
   const [reviewComment, setReviewComment] = useState("");
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
+  const [supervisorDistricts, setSupervisorDistricts] = useState<string[]>([]);
+
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [assignUserId, setAssignUserId] = useState("");
-  const [assignDistrict, setAssignDistrict] = useState(KARNATAKA_DISTRICTS[0]);
+  const [assignDistrict, setAssignDistrict] = useState("");
   const [isSubmittingAssign, setIsSubmittingAssign] = useState(false);
 
   const [reassignDialogTarget, setReassignDialogTarget] = useState<any | null>(null);
-  const [reassignNewDistrict, setReassignNewDistrict] = useState(KARNATAKA_DISTRICTS[0]);
+  const [reassignNewDistrict, setReassignNewDistrict] = useState("");
   const [isSubmittingReassign, setIsSubmittingReassign] = useState(false);
+
+  const loadSupervisorDistricts = async () => {
+    if (!currentUser) return;
+    try {
+      const res = await apiClient.get<any[]>(`/security/district-assignments/user/${currentUser.id}`);
+      const dists = res.data.map((d: any) => d.district);
+      const isStateWide = dists.some((d: string) => d === "All" || d === "__ALL__");
+      const finalDists = isStateWide ? ["All", ...KARNATAKA_DISTRICTS] : dists;
+      setSupervisorDistricts(finalDists);
+      if (finalDists.length > 0) {
+        setAssignDistrict(finalDists[0]);
+        setReassignNewDistrict(finalDists[0]);
+      }
+    } catch (err) {
+      console.error("Failed to load supervisor districts:", err);
+    }
+  };
 
   useEffect(() => {
     if (currentUser && currentUser.role === "SUPERVISOR") {
       loadRequests();
       loadAssignments();
+      loadSupervisorDistricts();
     }
   }, [currentUser]);
 
@@ -132,9 +149,10 @@ function SupervisorPage() {
   const loadUsers = async () => {
     try {
       const res = await apiClient.get<any[]>("/users/");
-      const filtered = res.data.filter(
-        (u: any) => u.role !== "ADMINISTRATOR" && u.role !== "SUPERVISOR"
-      );
+      const filtered = res.data.filter((u: any) => {
+        const r = String(u.role).toUpperCase();
+        return r !== "ADMINISTRATOR" && r !== "SUPERVISOR" && r !== "ADMIN";
+      });
       setUsersList(filtered);
     } catch (err) {
       console.error("Failed to load users:", err);
@@ -496,7 +514,7 @@ function SupervisorPage() {
                   <SelectValue placeholder="Select district" />
                 </SelectTrigger>
                 <SelectContent>
-                  {KARNATAKA_DISTRICTS.map((d) => (
+                  {supervisorDistricts.map((d: string) => (
                     <SelectItem key={d} value={d}>{d}</SelectItem>
                   ))}
                 </SelectContent>
@@ -513,7 +531,7 @@ function SupervisorPage() {
           </form>
         </DialogContent>
       </Dialog>
-
+ 
       {/* Reassign Dialog */}
       <Dialog open={!!reassignDialogTarget} onOpenChange={(open) => !open && setReassignDialogTarget(null)}>
         <DialogContent>
@@ -532,7 +550,7 @@ function SupervisorPage() {
                   <SelectValue placeholder="Select new district" />
                 </SelectTrigger>
                 <SelectContent>
-                  {KARNATAKA_DISTRICTS.map((d) => (
+                  {supervisorDistricts.map((d: string) => (
                     <SelectItem key={d} value={d}>{d}</SelectItem>
                   ))}
                 </SelectContent>

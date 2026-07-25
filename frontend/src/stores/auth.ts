@@ -209,13 +209,8 @@ export const useAuthStore = create<AuthState>()(
               username: resp.username,
               role,
               permissions: getPermissionsForRole(role),
-              assignedDistricts:
-                role === "INVESTIGATOR"
-                  ? ["Bengaluru Urban"]
-                  : role === "SENIOR_INVESTIGATOR"
-                    ? ["Bengaluru Urban", "Bengaluru Rural", "Mysuru"]
-                    : [],
-              assignedPoliceStations: role === "INVESTIGATOR" ? ["SCRB HQ, Bengaluru"] : [],
+              assignedDistricts: (resp.user as any)?.assignedDistricts ?? [],
+              assignedPoliceStations: (resp.user as any)?.assignedPoliceStations ?? [],
               badgeNo: resp.user?.badgeNo ?? `KSP-10001`,
               station: resp.user?.station ?? "SCRB HQ, Bengaluru",
             },

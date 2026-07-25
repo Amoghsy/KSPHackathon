@@ -102,8 +102,13 @@ function MapPage() {
   useEffect(() => {
     if (!canSelectAll && districtOptions.length > 0) {
       if (filters.selDistrict === "All" || !districtOptions.includes(filters.selDistrict)) {
-        filters.setSelDistrict(districtOptions[0]);
-        setSelectedDistrict(districtOptions[0]);
+        const defaultD = districtOptions[0];
+        filters.setSelDistrict(defaultD);
+        setSelectedDistrict(defaultD);
+        setAppliedFilters((prev) => ({
+          ...prev,
+          district: defaultD,
+        }));
       }
     }
   }, [canSelectAll, districtOptions, filters.selDistrict]);
