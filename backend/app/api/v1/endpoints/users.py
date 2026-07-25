@@ -31,12 +31,23 @@ async def check_admin(current_user: dict = Depends(get_current_user)):
     return current_user
 
 
+async def check_admin_or_supervisor(current_user: dict = Depends(get_current_user)):
+    """Dependency to check if current user is an Admin or Supervisor."""
+    role = normalize_role(current_user.get("role"))
+    if role not in (UserRole.ADMINISTRATOR.value, UserRole.SUPERVISOR.value):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Permission denied. Admin or Supervisor role required.",
+        )
+    return current_user
+
+
 @router.get("/", response_model=list[UserOut])
 async def list_users(
     db: AsyncSession = Depends(get_db),
-    admin_user: dict = Depends(check_admin),
+    current_user: dict = Depends(check_admin_or_supervisor),
 ):
-    """List all registered users. Only accessible by Admins."""
+    """List all registered users. Accessible by Admins and Supervisors."""
     stmt = select(User).order_by(User.id.asc())
     result = await db.execute(stmt)
     users = result.scalars().all()

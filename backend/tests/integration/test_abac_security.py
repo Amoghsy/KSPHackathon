@@ -6,7 +6,7 @@ import sys
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import SessionLocal
@@ -21,16 +21,6 @@ from fastapi import HTTPException
 pytestmark = pytest.mark.anyio
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    """Create selector event loop for Windows compatibility."""
-    if sys.platform == "win32":
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
-
-
 @pytest.fixture
 def anyio_backend():
     return "asyncio"
@@ -40,6 +30,82 @@ def anyio_backend():
 async def db_session():
     async with SessionLocal() as session:
         yield session
+
+
+@pytest.fixture(autouse=True)
+async def setup_temp_permission(db_session: AsyncSession):
+    from app.models.access_request import DistrictAccessRequest, TemporaryDistrictPermission
+    from app.models.user import User
+    from sqlalchemy import delete
+    import datetime
+
+    # Load test users
+    stmt1 = select(User).where(User.username == "insp_mysuru")
+    res1 = await db_session.execute(stmt1)
+    insp = res1.scalar_one_or_none()
+
+    stmt2 = select(User).where(User.username == "supervisor_ramesh")
+    res2 = await db_session.execute(stmt2)
+    ramesh = res2.scalar_one_or_none()
+
+    if not insp or not ramesh:
+        pytest.skip("insp_mysuru or supervisor_ramesh not found in DB")
+
+    # Clean up any existing records
+    await db_session.execute(delete(TemporaryDistrictPermission).where(TemporaryDistrictPermission.user_id == insp.id))
+    await db_session.execute(delete(DistrictAccessRequest).where(DistrictAccessRequest.requester_id == insp.id))
+    # Remove any permanent assignments other than Mysuru for insp_mysuru to prevent DB contamination
+    from app.models.district_assignment import UserDistrictAssignment
+    await db_session.execute(
+        delete(UserDistrictAssignment).where(
+            UserDistrictAssignment.user_id == insp.id,
+            UserDistrictAssignment.district != "Mysuru"
+        )
+    )
+    # Remove any permanent assignments other than Bengalur Urban, Mysuru, Tumakuru for supervisor_ramesh to prevent DB contamination
+    await db_session.execute(
+        delete(UserDistrictAssignment).where(
+            UserDistrictAssignment.user_id == ramesh.id,
+            UserDistrictAssignment.district.notin_(["Bengaluru Urban", "Mysuru", "Tumakuru"])
+        )
+    )
+    await db_session.commit()
+
+    # Insert fresh active temporary permission
+    now = datetime.datetime.utcnow()
+    req = DistrictAccessRequest(
+        requester_id=insp.id,
+        requested_district="Bengaluru Urban",
+        reason="Test integration active temp permission",
+        duration_hours=2,
+        status="APPROVED",
+        requested_at=now - datetime.timedelta(minutes=30),
+        reviewed_by=ramesh.id,
+        reviewed_at=now - datetime.timedelta(minutes=30),
+        review_comment="Approved for test"
+    )
+    db_session.add(req)
+    await db_session.flush()
+
+    perm = TemporaryDistrictPermission(
+        user_id=insp.id,
+        district="Bengaluru Urban",
+        access_request_id=req.id,
+        approved_by=ramesh.id,
+        approved_at=now - datetime.timedelta(minutes=30),
+        expires_at=now + datetime.timedelta(hours=2),
+        is_revoked=False
+    )
+    db_session.add(perm)
+    await db_session.commit()
+
+    yield
+
+    # Clean up after test runs
+    await db_session.execute(delete(TemporaryDistrictPermission).where(TemporaryDistrictPermission.user_id == insp.id))
+    await db_session.execute(delete(DistrictAccessRequest).where(DistrictAccessRequest.requester_id == insp.id))
+    await db_session.commit()
+
 
 
 async def get_user_by_username(username: str, db: AsyncSession) -> dict:

@@ -331,17 +331,18 @@ async def verify_otp(
         summary=f"Successful 2FA login. Session: {session.id}"
     )
 
+    # Fetch assigned districts from DB — always needed for the response
+    from app.models.district_assignment import UserDistrictAssignment
+    stmt_dists = select(UserDistrictAssignment.district).where(
+        UserDistrictAssignment.user_id == db_user.id,
+        UserDistrictAssignment.is_active == True
+    )
+    res_dists = await db.execute(stmt_dists)
+    assigned_dists = [r[0] for r in res_dists.fetchall()]
+
     # Cache user session details in Redis for backwards compatibility with legacy routes
     try:
-        from app.models.district_assignment import UserDistrictAssignment
-        stmt_dists = select(UserDistrictAssignment.district).where(
-            UserDistrictAssignment.user_id == db_user.id,
-            UserDistrictAssignment.is_active == True
-        )
-        res_dists = await db.execute(stmt_dists)
-        assigned_dists = [r[0] for r in res_dists.fetchall()]
         districts_str = ",".join(assigned_dists) if assigned_dists else None
-
         from app.core.redis import get_redis_client
         import json
         client = get_redis_client()
@@ -369,7 +370,8 @@ async def verify_otp(
             "username": db_user.username,
             "role": normalized_role,
             "badgeNo": db_user.employee_id or f"KSP-{db_user.id + 10000}",
-            "station": "SCRB HQ, Bengaluru"
+            "station": "SCRB HQ, Bengaluru",
+            "assignedDistricts": assigned_dists,
         }
     }
 
@@ -650,3 +652,44 @@ async def refresh(
         "role": normalize_role(db_user.role),
         "refresh_token": new_refresh,
     }
+
+
+@router.get("/me")
+async def get_current_user_profile(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Return the authenticated user's profile including dynamically-fetched assigned districts.
+    The frontend uses this to hydrate the auth store with accurate district data on app load.
+    """
+    user_id = current_user.get("id")
+
+    # Fetch user record
+    stmt = select(User).where(User.id == user_id)
+    res = await db.execute(stmt)
+    db_user = res.scalar_one_or_none()
+    if not db_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+
+    # Fetch active district assignments
+    from app.models.district_assignment import UserDistrictAssignment
+    stmt_dists = select(UserDistrictAssignment.district).where(
+        UserDistrictAssignment.user_id == user_id,
+        UserDistrictAssignment.is_active == True
+    )
+    res_dists = await db.execute(stmt_dists)
+    assigned_districts = [r[0] for r in res_dists.fetchall()]
+
+    normalized_role = normalize_role(db_user.role) or db_user.role
+
+    return {
+        "id": str(db_user.id),
+        "name": db_user.full_name or db_user.username,
+        "username": db_user.username,
+        "role": normalized_role,
+        "badgeNo": db_user.employee_id or f"KSP-{db_user.id + 10000}",
+        "station": "SCRB HQ, Bengaluru",
+        "assignedDistricts": assigned_districts,
+    }
+

@@ -49,10 +49,18 @@ async def get_financial_network(
         authorized_districts=resolve_authorized_districts(auth_districts),
     )
 
-    # Masking: Mask bank accounts if lacking sensitive access (mostly fallback)
+    # Masking: Mask bank accounts if lacking sensitive access and local district scope
     has_sensitive_access = check_permission(current_user["role"], Permission.SENSITIVE_CASE_ACCESS)
+    from app.core.permissions import _ALL_DISTRICTS_SENTINEL
+    is_district_authorized = False
+    if auth_districts == [_ALL_DISTRICTS_SENTINEL]:
+        is_district_authorized = True
+    elif allowed_district and auth_districts:
+        is_district_authorized = any(d.lower() == allowed_district.lower() for d in auth_districts)
+
+    user_has_sensitive_or_local = has_sensitive_access or is_district_authorized
     nodes = data["graph"]["nodes"]
-    if not has_sensitive_access:
+    if not user_has_sensitive_or_local:
         for node in nodes:
             if node.get("kind") in ("financial", "account"):
                 node["label"] = mask_account(node["label"])
@@ -160,9 +168,18 @@ async def search_financial_network(
         authorized_districts=resolve_authorized_districts(auth_districts),
     )
 
+    # Masking: Mask bank accounts if lacking sensitive access and local district scope
     has_sensitive_access = check_permission(current_user["role"], Permission.SENSITIVE_CASE_ACCESS)
+    from app.core.permissions import _ALL_DISTRICTS_SENTINEL
+    is_district_authorized = False
+    if auth_districts == [_ALL_DISTRICTS_SENTINEL]:
+        is_district_authorized = True
+    elif allowed_district and auth_districts:
+        is_district_authorized = any(d.lower() == allowed_district.lower() for d in auth_districts)
+
+    user_has_sensitive_or_local = has_sensitive_access or is_district_authorized
     nodes = data["graph"]["nodes"]
-    if not has_sensitive_access:
+    if not user_has_sensitive_or_local:
         for node in nodes:
             if node.get("kind") in ("financial", "account"):
                 node["label"] = mask_account(node["label"])

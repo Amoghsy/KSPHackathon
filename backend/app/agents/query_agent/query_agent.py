@@ -78,8 +78,16 @@ class QueryAgent:
         """
         start = time.perf_counter()
 
+        # ---- Load authorized districts and compute cache scope ----
+        from app.core.permissions import get_user_authorized_districts, resolve_authorized_districts
+        from app.core.rbac import normalize_role
+
+        role_str = normalize_role(current_user.get("role")) if current_user else "ANONYMOUS"
+        auth_districts_raw = await get_user_authorized_districts(current_user, session)
+        scope_str = f"{role_str}::" + ",".join(sorted(auth_districts_raw)) if auth_districts_raw else f"{role_str}::"
+
         # ---- Cache check — skip LLM + DB on cache hit ----
-        cached = await self._cache.get(question)
+        cached = await self._cache.get(question, scope=scope_str)
         if cached is not None:
             cached["cache_hit"] = True
             cached["execution_time_ms"] = round((time.perf_counter() - start) * 1000, 2)
@@ -110,8 +118,6 @@ class QueryAgent:
             )
 
         # ---- Deterministic ABAC Scope Enforcement (Query Rewriting) ----
-        from app.core.permissions import get_user_authorized_districts, resolve_authorized_districts
-        auth_districts_raw = await get_user_authorized_districts(current_user, session)
         # resolve_authorized_districts returns None for unrestricted roles (SUPERVISOR, ANALYST, POLICY_MAKER)
         # and a list for district-scoped roles (INVESTIGATOR, SENIOR_INVESTIGATOR)
         auth_districts = resolve_authorized_districts(auth_districts_raw)
@@ -215,7 +221,7 @@ class QueryAgent:
         )
 
         # Populate cache in the background — do not block the response.
-        asyncio.create_task(self._cache.set(question, response))
+        asyncio.create_task(self._cache.set(question, response, scope=scope_str))
 
         response["cache_hit"] = False
         return response

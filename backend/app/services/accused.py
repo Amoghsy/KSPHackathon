@@ -83,6 +83,11 @@ class AccusedService:
             if cases and cases[0].police_station:
                 last_known = cases[0].police_station.district
 
+            districts = set()
+            for c in cases:
+                if c.police_station and c.police_station.district:
+                    districts.add(c.police_station.district)
+
             items.append({
                 "id": StringOrId(a.person_id or str(a.accused_master_id)),
                 "name": a.accused_name or "Unknown Accused",
@@ -93,6 +98,7 @@ class AccusedService:
                 "modusOperandi": modus_operandi[:3],
                 "aliases": [],
                 "lastKnown": last_known,
+                "districts": list(districts),
                 "factors": [
                     {"label": "Prior Convictions", "value": min(100, linked_cases_count * 20)},
                     {"label": "Case Severity", "value": int(risk_score * 0.8)}
@@ -214,6 +220,7 @@ class AccusedService:
             "modusOperandi": modus_operandi,
             "aliases": [f"Alias {acc_name.split()[0]}"] if len(acc_name.split()) > 0 else [],
             "lastKnown": last_known,
+            "districts": list(districts),
             "factors": [
                 {"label": "Prior Convictions", "value": min(100, linked_cases_count * 20)},
                 {"label": "Case Severity", "value": int(risk_score * 0.8)},

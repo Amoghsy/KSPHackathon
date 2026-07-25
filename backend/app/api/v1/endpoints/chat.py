@@ -266,6 +266,12 @@ async def chat_endpoint(
     4. Summarise results (Gemini)
     5. Return structured response with confidence score
     """
+    # Enforce CHAT_ASSISTANT permission
+    from app.core.permissions import require_permission
+    from app.core.rbac import Permission
+    check_perm = require_permission(Permission.CHAT_ASSISTANT)
+    await check_perm(current_user)
+
     request_id = str(uuid.uuid4())
 
     logger.info(
@@ -275,6 +281,17 @@ async def chat_endpoint(
     )
 
     user_id = current_user.get("id")
+
+    # Enforce IDOR protection: check conversation owner
+    if request.conversation_id:
+        from app.services.conversation.conversation_manager import ConversationManager
+        conv_manager = ConversationManager()
+        conv_context = await conv_manager.get_conversation(request.conversation_id)
+        if conv_context and conv_context.user_id and conv_context.user_id != user_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Permission denied. You do not own this conversation.",
+            )
 
     try:
         response = await handle_chat(
@@ -310,20 +327,20 @@ async def chat_endpoint(
         "in English and stitched into the same audio stream."
     ),
 )
-async def tts_endpoint(text: str, lang: str = "en"):
+async def tts_endpoint(
+    text: str,
+    lang: str = "en",
+    current_user: dict = Depends(get_current_user),
+):
     """
     Synthesize natural-language text into speech.
-
-    Mixed Kannada+English text (lang=kn):
-    ┌─────────────────┬──────────────────────────────────────────────┐
-    │ Segment type    │ Handling                                     │
-    ├─────────────────┼──────────────────────────────────────────────┤
-    │ Kannada script  │ gTTS(lang="kn")                              │
-    │ English words   │ gTTS(lang="en") — natural English accent     │
-    │ Numbers/digits  │ Converted to Kannada words → gTTS(lang="kn")│
-    └─────────────────┴──────────────────────────────────────────────┘
-    All segments are concatenated into a single MP3 stream.
     """
+    # Enforce CHAT_ASSISTANT permission
+    from app.core.permissions import require_permission
+    from app.core.rbac import Permission
+    check_perm = require_permission(Permission.CHAT_ASSISTANT)
+    await check_perm(current_user)
+
     if not text or not text.strip():
         raise HTTPException(status_code=400, detail="Text parameter is required.")
 

@@ -37,17 +37,28 @@ async def get_cases(
         q=q, status=status, district=allowed_district, page=page, page_size=pageSize
     )
 
-    # Sensitive Data Masking: Mask brief facts and victimName if user lacks sensitive case access
+    # Sensitive Data Masking: Mask brief facts and victimName if user lacks sensitive case access and local district scope
     # Bypassed only if export permission is present and bypass_masking is requested
     has_sensitive_access = check_permission(current_user["role"], Permission.SENSITIVE_CASE_ACCESS)
     has_export_access = check_permission(current_user["role"], Permission.EXPORT_REPORTS)
     
-    should_mask = not has_sensitive_access
-    if bypass_masking and has_export_access:
-        should_mask = False
+    from app.core.permissions import get_user_authorized_districts, _ALL_DISTRICTS_SENTINEL
+    authorized_districts = await get_user_authorized_districts(current_user, db)
 
-    if should_mask:
-        for item in result.get("items", []):
+    for item in result.get("items", []):
+        case_district = item.get("district")
+        is_district_authorized = False
+        if authorized_districts == [_ALL_DISTRICTS_SENTINEL]:
+            is_district_authorized = True
+        elif case_district and authorized_districts:
+            is_district_authorized = any(d.lower() == case_district.lower() for d in authorized_districts)
+
+        user_has_sensitive_or_local = has_sensitive_access or is_district_authorized
+        should_mask_item = not user_has_sensitive_or_local
+        if bypass_masking and has_export_access:
+            should_mask_item = False
+
+        if should_mask_item:
             if "narrative" in item:
                 item["narrative"] = mask_brief_facts(item["narrative"])
             if "victimName" in item and item["victimName"]:
@@ -85,9 +96,19 @@ async def get_case_by_id(
     # ABAC: Enforce district access containment
     await verify_district_access(current_user, case_detail.get("district"), db)
 
-    # Sensitive Data Masking: Mask victim names, narratives, complainant, and demographics if user lacks sensitive case access
+    # Sensitive Data Masking: Mask victim names, narratives, complainant, and demographics if user lacks sensitive case access and local district scope
     has_sensitive_access = check_permission(current_user["role"], Permission.SENSITIVE_CASE_ACCESS)
-    if not has_sensitive_access:
+    from app.core.permissions import get_user_authorized_districts, _ALL_DISTRICTS_SENTINEL
+    authorized_districts = await get_user_authorized_districts(current_user, db)
+    case_district = case_detail.get("district")
+    is_district_authorized = False
+    if authorized_districts == [_ALL_DISTRICTS_SENTINEL]:
+        is_district_authorized = True
+    elif case_district and authorized_districts:
+        is_district_authorized = any(d.lower() == case_district.lower() for d in authorized_districts)
+
+    user_has_sensitive_or_local = has_sensitive_access or is_district_authorized
+    if not user_has_sensitive_or_local:
         if "victims" in case_detail:
             for v in case_detail["victims"]:
                 v["name"] = mask_name(v["name"])

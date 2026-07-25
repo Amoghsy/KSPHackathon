@@ -13,6 +13,7 @@ from app.api.v1.endpoints.conversations import get_conversation_service
 from app.main import app
 from app.services.conversation.context_store import ConversationContext
 from app.services.conversation.conversation_service import ConversationService
+from app.core.security import get_current_user
 
 
 @pytest.fixture
@@ -32,6 +33,12 @@ def mock_service():
 def override_dependency(mock_service):
     """Autouse fixture to override FastAPI dependency."""
     app.dependency_overrides[get_conversation_service] = lambda: mock_service
+    app.dependency_overrides[get_current_user] = lambda: {
+        "id": 1,
+        "username": "testuser",
+        "role": "SUPERVISOR",
+        "districts": "Mysuru",
+    }
     yield
     app.dependency_overrides.clear()
 
@@ -82,6 +89,7 @@ class TestConversationAPI:
             last_question="hello",
             conversation_history=[],
         )
+        mock_service.get_conversation = AsyncMock(return_value=context_mock)
         mock_service.update_conversation_metadata = AsyncMock(return_value=context_mock)
 
         response = client.patch(
@@ -96,6 +104,13 @@ class TestConversationAPI:
         )
 
     def test_delete_conversation(self, mock_service, client):
+        context_mock = ConversationContext(
+            conversation_id="conv_test_1",
+            user_id=1,
+            last_question="hello",
+            conversation_history=[],
+        )
+        mock_service.get_conversation = AsyncMock(return_value=context_mock)
         mock_service.delete_conversation = AsyncMock(return_value=True)
 
         response = client.delete("/api/v1/conversations/conv_test_1")

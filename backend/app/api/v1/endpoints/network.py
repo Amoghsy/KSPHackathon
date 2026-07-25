@@ -45,9 +45,17 @@ async def get_network(
         authorized_districts=resolve_authorized_districts(auth_districts),
     )
 
-    # Sensitive data masking: mask victim names and accused names if no sensitive access
+    # Sensitive data masking: mask victim names and accused names if no sensitive access and local district scope
     has_sensitive_access = check_permission(current_user["role"], Permission.SENSITIVE_CASE_ACCESS)
-    if not has_sensitive_access:
+    from app.core.permissions import _ALL_DISTRICTS_SENTINEL
+    is_district_authorized = False
+    if auth_districts == [_ALL_DISTRICTS_SENTINEL]:
+        is_district_authorized = True
+    elif allowed_district and auth_districts:
+        is_district_authorized = any(d.lower() == allowed_district.lower() for d in auth_districts)
+
+    user_has_sensitive_or_local = has_sensitive_access or is_district_authorized
+    if not user_has_sensitive_or_local:
         for node in data.get("graph", {}).get("nodes", []):
             if node.get("kind") in ("accused", "victim"):
                 node["label"] = mask_name(node["label"])
@@ -78,13 +86,23 @@ async def expand_node(
     """
     Get 1-degree neighbors of a node for lazy-loading.
     """
+    # Enforce permission
+    check_perm = require_permission(Permission.CRIMINAL_NETWORK)
+    await check_perm(current_user)
+
     auth_districts = await get_user_authorized_districts(current_user, db)
     service = GraphService(db)
     data = await service.get_node_expansion_data(node_id, kind, authorized_districts=resolve_authorized_districts(auth_districts))
 
     # Mask if necessary
     has_sensitive_access = check_permission(current_user["role"], Permission.SENSITIVE_CASE_ACCESS)
-    if not has_sensitive_access:
+    from app.core.permissions import _ALL_DISTRICTS_SENTINEL
+    is_district_authorized = False
+    if auth_districts == [_ALL_DISTRICTS_SENTINEL] or len(auth_districts) > 0:
+        is_district_authorized = True
+
+    user_has_sensitive_or_local = has_sensitive_access or is_district_authorized
+    if not user_has_sensitive_or_local:
         for node in data.get("nodes", []):
             if node.get("kind") in ("accused", "victim"):
                 node["label"] = mask_name(node["label"])
@@ -149,7 +167,16 @@ async def get_accused_network(
 
     # Mask if necessary
     has_sensitive_access = check_permission(current_user["role"], Permission.SENSITIVE_CASE_ACCESS)
-    if not has_sensitive_access:
+    auth_districts = await get_user_authorized_districts(current_user, db)
+    from app.core.permissions import _ALL_DISTRICTS_SENTINEL
+    is_district_authorized = False
+    if auth_districts == [_ALL_DISTRICTS_SENTINEL]:
+        is_district_authorized = True
+    elif district and auth_districts:
+        is_district_authorized = any(d.lower() == district.lower() for d in auth_districts)
+
+    user_has_sensitive_or_local = has_sensitive_access or is_district_authorized
+    if not user_has_sensitive_or_local:
         for node in filtered_nodes:
             if node.get("kind") in ("accused", "victim"):
                 node["label"] = mask_name(node["label"])

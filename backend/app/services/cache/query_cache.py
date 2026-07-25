@@ -62,8 +62,11 @@ def _normalise(question: str) -> str:
     return re.sub(r"\s+", " ", question.strip().lower())
 
 
-def _cache_key(question: str) -> str:
-    digest = hashlib.sha256(_normalise(question).encode()).hexdigest()
+def _cache_key(question: str, scope: str | None = None) -> str:
+    raw_str = _normalise(question)
+    if scope:
+        raw_str += f"::{scope}"
+    digest = hashlib.sha256(raw_str.encode()).hexdigest()
     return f"{_KEY_PREFIX}{digest}"
 
 
@@ -103,16 +106,16 @@ class QueryCache:
     # Public API
     # ------------------------------------------------------------------
 
-    async def get(self, question: str) -> dict[str, Any] | None:
+    async def get(self, question: str, scope: str | None = None) -> dict[str, Any] | None:
         """
-        Return a cached response dict for *question*, or ``None`` on a miss.
+        Return a cached response dict for *question* and *scope*, or ``None`` on a miss.
 
         The returned dict is a **copy** — callers may safely mutate it.
         """
         if not self._enabled:
             return None
 
-        key = _cache_key(question)
+        key = _cache_key(question, scope)
         try:
             client = get_redis_client()
             raw = await client.get(key)
@@ -122,9 +125,10 @@ class QueryCache:
 
             payload = json.loads(raw)
             logger.info(
-                "QueryCache HIT  key=%.16s…  question=%.80s",
+                "QueryCache HIT  key=%.16s…  question=%.80s  scope=%s",
                 key[len(_KEY_PREFIX):],
                 question,
+                scope,
             )
             return dict(payload)  # return a copy
 
@@ -132,9 +136,9 @@ class QueryCache:
             logger.warning("QueryCache.get error (non-fatal): %s", exc)
             return None
 
-    async def set(self, question: str, response: dict[str, Any]) -> None:
+    async def set(self, question: str, response: dict[str, Any], scope: str | None = None) -> None:
         """
-        Store *response* in the cache under the hash of *question*.
+        Store *response* in the cache under the hash of *question* and *scope*.
 
         Transient per-request keys (``request_id``, ``conversation_id``, etc.)
         are stripped before storage so cached payloads are reusable.
@@ -142,31 +146,32 @@ class QueryCache:
         if not self._enabled:
             return
 
-        key = _cache_key(question)
+        key = _cache_key(question, scope)
         payload = {k: v for k, v in response.items() if k not in self._EXCLUDE_KEYS}
 
         try:
             client = get_redis_client()
             await client.set(key, json.dumps(payload, default=str), ex=_get_ttl())
             logger.info(
-                "QueryCache SET   key=%.16s…  ttl=%ds  question=%.80s",
+                "QueryCache SET   key=%.16s…  ttl=%ds  question=%.80s  scope=%s",
                 key[len(_KEY_PREFIX):],
                 _get_ttl(),
                 question,
+                scope,
             )
 
         except Exception as exc:  # noqa: BLE001
             logger.warning("QueryCache.set error (non-fatal): %s", exc)
 
-    async def invalidate(self, question: str) -> bool:
+    async def invalidate(self, question: str, scope: str | None = None) -> bool:
         """
-        Explicitly evict the cached entry for *question*.  Returns True if
+        Explicitly evict the cached entry for *question* and *scope*.  Returns True if
         a key was deleted.
         """
         if not self._enabled:
             return False
 
-        key = _cache_key(question)
+        key = _cache_key(question, scope)
         try:
             client = get_redis_client()
             deleted = await client.delete(key)

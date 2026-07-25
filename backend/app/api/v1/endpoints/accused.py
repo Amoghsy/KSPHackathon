@@ -41,10 +41,21 @@ async def get_accused_list(
         q=q, page=page, page_size=pageSize, authorized_districts=authorized_districts
     )
 
-    # Apply sensitive name masking if lacking permission
+    # Apply sensitive name masking if lacking permission and local district scope
     has_sensitive_access = check_permission(current_user["role"], Permission.SENSITIVE_CASE_ACCESS)
+    from app.core.permissions import _ALL_DISTRICTS_SENTINEL
     for item in result.get("items", []):
-        if not has_sensitive_access:
+        offender_districts = item.get("districts", [])
+        is_district_authorized = False
+        if auth_districts_raw == [_ALL_DISTRICTS_SENTINEL]:
+            is_district_authorized = True
+        elif offender_districts and auth_districts_raw:
+            is_district_authorized = any(
+                any(d.lower() == od.lower() for d in auth_districts_raw)
+                for od in offender_districts
+            )
+
+        if not (has_sensitive_access or is_district_authorized):
             item["name"] = mask_name(item["name"])
             
     return result
@@ -73,12 +84,28 @@ async def get_offender_by_id(
     if not profile:
         raise HTTPException(status_code=404, detail=f"Suspect with ID {id} not found.")
 
-    # ABAC check
-    await verify_district_access(current_user, profile.get("lastKnown"), db)
+    # ABAC check — allow access if the user is authorized for any district the offender has cases in
+    from app.core.permissions import get_user_authorized_districts, _ALL_DISTRICTS_SENTINEL
+    auth_districts_raw = await get_user_authorized_districts(current_user, db)
+    offender_districts = profile.get("districts", [])
 
-    # Mask if lacking sensitive access
+    is_district_authorized = False
+    if auth_districts_raw == [_ALL_DISTRICTS_SENTINEL]:
+        is_district_authorized = True
+    elif offender_districts and auth_districts_raw:
+        is_district_authorized = any(
+            any(d.lower() == od.lower() for d in auth_districts_raw)
+            for od in offender_districts
+        )
+
+    if not is_district_authorized:
+        # Trigger default restriction error on lastKnown district to raise proper 403 Forbidden
+        await verify_district_access(current_user, profile.get("lastKnown"), db)
+
+    # Mask if lacking sensitive access and local district scope
     has_sensitive_access = check_permission(current_user["role"], Permission.SENSITIVE_CASE_ACCESS)
-    if not has_sensitive_access:
+    user_has_sensitive_or_local = has_sensitive_access or is_district_authorized
+    if not user_has_sensitive_or_local:
         profile["name"] = mask_name(profile["name"])
         if "associates" in profile:
             for assoc in profile["associates"]:

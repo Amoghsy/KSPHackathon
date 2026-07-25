@@ -138,7 +138,7 @@ async def get_pending_requests(
     requests = result.scalars().all()
 
     # Filter to supervisor scope if role is SUPERVISOR
-    if role == "SUPERVISOR":
+    if role == "SUPERVISOR" and "__ALL__" not in supervisor_districts:
         requests = [r for r in requests if r.requested_district in supervisor_districts]
 
     return requests
@@ -361,6 +361,11 @@ async def get_all_investigator_assignments(
         User, UserDistrictAssignment.user_id == User.id
     ).where(UserDistrictAssignment.is_active == True)
 
+    if role == "SUPERVISOR":
+        stmt = stmt.where(
+            User.role.notin_(["SUPERVISOR", "ADMINISTRATOR", "supervisor", "administrator", "admin", "ADMIN"])
+        )
+
     result = await db.execute(stmt)
     records = []
     for row in result.all():
@@ -375,7 +380,7 @@ async def get_all_investigator_assignments(
         })
 
     # Scope filtering if Supervisor
-    if role == "SUPERVISOR":
+    if role == "SUPERVISOR" and "__ALL__" not in supervisor_districts:
         records = [r for r in records if r["district"] in supervisor_districts]
 
     return records
@@ -419,6 +424,22 @@ async def create_district_assignment(
     target_user = res_user.scalar_one_or_none()
     if not target_user:
         raise HTTPException(status_code=404, detail="Target user not found.")
+
+    role = normalize_role(current_user.get("role"))
+    if role == "SUPERVISOR":
+        # 1. Prevent supervisor from assigning themselves
+        if body.user_id == current_user.get("id"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Supervisors cannot assign districts to themselves."
+            )
+        # 2. Prevent supervisor from assigning to other supervisors or admins
+        target_role = normalize_role(target_user.role)
+        if target_role in ("SUPERVISOR", "ADMINISTRATOR"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Supervisors cannot manage assignments for other Supervisors or Administrators."
+            )
 
     # Prevent duplicate active assignments programmatically (enforces unique partial constraint)
     stmt_chk = select(UserDistrictAssignment).where(
@@ -483,6 +504,17 @@ async def delete_district_assignment(
     # Enforce supervisor boundary check
     await verify_supervisor_scope(current_user, assignment.district, db)
 
+    role = normalize_role(current_user.get("role"))
+    if role == "SUPERVISOR":
+        stmt_target = select(User.role).where(User.id == assignment.user_id)
+        res_target = await db.execute(stmt_target)
+        target_role = normalize_role(res_target.scalar_one_or_none())
+        if target_role in ("SUPERVISOR", "ADMINISTRATOR"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Supervisors cannot delete assignments for other Supervisors or Administrators."
+            )
+
     assignment.is_active = False
     assignment.removed_at = datetime.datetime.utcnow()
     assignment.removed_by = current_user.get("id")
@@ -530,6 +562,24 @@ async def reassign_district(
     # Enforce supervisor boundary check on old AND new district
     await verify_supervisor_scope(current_user, assignment.district, db)
     await verify_supervisor_scope(current_user, body.new_district, db)
+
+    role = normalize_role(current_user.get("role"))
+    if role == "SUPERVISOR":
+        # 1. Prevent reassigning themselves
+        if assignment.user_id == current_user.get("id"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Supervisors cannot reassign themselves."
+            )
+        # 2. Prevent reassigning other supervisors/admins
+        stmt_target = select(User.role).where(User.id == assignment.user_id)
+        res_target = await db.execute(stmt_target)
+        target_role = normalize_role(res_target.scalar_one_or_none())
+        if target_role in ("SUPERVISOR", "ADMINISTRATOR"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Supervisors cannot reassign other Supervisors or Administrators."
+            )
 
     now = datetime.datetime.utcnow()
     old_district = assignment.district
