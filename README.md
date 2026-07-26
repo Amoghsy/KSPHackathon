@@ -461,6 +461,22 @@ Every operational user is assigned to one or more specific districts. ABAC filte
 
 ---
 
+## 🚀 Future Roadmap & Development
+
+To scale and enhance the capabilities of the **KSP Crime Intelligence Platform**, the following future developments are planned:
+
+*   **AI-Based FIR Photo Intelligence**: Integrate computer vision algorithms to analyze photos uploaded with FIRs, enabling automatic facial recognition, object detection (weapons, vehicles), and matches against database-linked suspects.
+*   **CCTV & ANPR (Automatic Number Plate Recognition) Integration**: Ingest real-time camera feeds to automatically identify vehicle numbers and match them against suspected escape routes.
+*   **Mobile App Integration**: Deploy a secure, lightweight mobile application for field officers enabling voice assistant querying, direct photo uploads, and on-field case retrieval.
+*   **Enhanced RBAC & ABAC**: Extend the access boundaries using dynamic geo-fencing (location-bound access) and temporal limits (access allowed only during shift hours).
+*   **Push Notifications for Real-Time Alerts**: Provide live desktop and mobile alert channels notifying officers of critical updates, newly discovered network links, or cross-district access request updates.
+*   **Advanced GIS & Crime Heatmaps**: Expand current leaflet integrations with automated predictive hot spot analysis, geographic crime path tracking, and optimal patrol route recommendations.
+*   **Inter-State Intelligence Sharing**: Implement secure external REST interfaces to share and receive intelligence queries with neighboring states and national databases (CCTNS/NCRB).
+*   **Officer Performance Analytics**: Visual dashboards measuring investigation lifecycles, closure times, and workload metrics to assist police supervisors in resource management.
+*   **Scalable Statewide Deployment**: Transition system services into a distributed Kubernetes microservice cluster utilizing cloud-managed PostgreSQL and Redis setups for high availability and failover resilience.
+
+---
+
 ## 👥 Contributors
 
 This platform was developed as part of the **Karnataka State Police Datathon 2026 ** by team Xentrix:
