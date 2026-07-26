@@ -1,270 +1,466 @@
-# SCRB Intelligence Platform — Backend
+# Karnataka State Police — AI-Powered Crime Intelligence Platform (Backend)
 
-> **SCRB Intelligent Conversational AI & Crime Analytics Platform**  
-> Karnataka State Police Hackathon — FastAPI backend.
-
----
-
-## Project Overview
-
-The SCRB backend is a FastAPI application that powers a conversational crime analytics
-assistant for the Karnataka State Police.  It exposes a versioned REST API (`/api/v1`)
-consumed by the `frontend` Vite/TanStack frontend.
-
-Key capabilities (built across 12 days):
-
-| Day | Feature |
-|-----|---------|
-| 1 | Backend foundation — FastAPI, DB session, config |
-| 2 | NL → SQL query agent (Claude) |
-| 3 | Orchestrator + Redis conversation memory |
-| 4 | Frontend wired to real backend (chat screen) |
-| 5–12 | Network analysis, pattern detection, maps, auth, deployment |
+Welcome to the backend server repository for the **Karnataka State Police (KSP) Crime Intelligence Platform**. This backend is built using **FastAPI**, **PostgreSQL**, and **Redis**, leveraging **Google Gemini** to power an agentic crime analysis and natural language query processing system.
 
 ---
 
-## Folder Structure
+## 📋 Table of Contents
+1. [Problem Statement](#-problem-statement)
+2. [Key Features](#-key-features)
+3. [System Architecture & Design](#-system-architecture--design)
+4. [Technology Stack & Dependency Versions](#-technology-stack--dependency-versions)
+5. [Project Modules & Directory Structure](#-project-modules--directory-structure)
+6. [Database ER Diagram & Schema](#-database-er-diagram--schema)
+7. [Setup & Execution Instructions](#-setup--execution-instructions)
+    - [Running with Docker (Recommended)](#1-running-with-docker-recommended)
+    - [Running Locally (Manual Setup)](#2-running-locally-manual-setup)
+8. [API Documentation](#-api-documentation)
+
+---
+
+## 🔍 Problem Statement
+Develop an **AI-powered Crime Intelligence Platform** that enables the **Karnataka State Police** to perform intelligent crime analysis, multilingual natural language querying, criminal network visualization, pattern detection, and secure district-level data access for faster and data-driven investigations.
+
+---
+
+## 🌟 Key Features
+
+*   **AI Chat Assistant**: Provides police officers with the ability to retrieve crime information using natural language queries in English, Kannada, or code-mixed formats.
+*   **Intelligent Crime Search**: Searches through FIRs, accused profiles, victim statements, police stations, and crime records using AI-enabled translation and SQL translation.
+*   **Criminal Network Intelligence**: Automatically visualizes relationships between accused, victims, cases, and financial transactions using graph network mapping to uncover criminal syndicates.
+*   **Pattern Intelligence**: Identifies repeat offenders, recurring crime trends, and emerging hot spots for proactive policing.
+*   **Financial Crime Intelligence**: Analyzes suspicious transaction records, mapping bank accounts and monetary flows linked to investigations.
+*   **Crime Map & Heatmaps**: Provides interactive geographic visualisations of district-wise crime distributions and density hotspots.
+*   **Crime Analytics Dashboard**: Displays real-time crime statistics, forecasts, charts, and reports for supervisors and policymakers.
+*   **Secure Access Control (RBAC & ABAC)**: Secures operations using Role-Based and Attribute-Based Access Control, enforcing district-level boundaries and providing temporary cross-district request workflows.
+*   **Multilingual Voice Integration**: Features Speech-to-Text (STT) on the client and custom segmented Text-to-Speech (TTS) on the server, stitching English and Kannada audio inputs/outputs.
+*   **Audit Logging & Security Monitoring**: Enforces strict accountability by auditing all database accesses, SQL executions, exports, and administration actions.
+
+---
+
+## 🏗️ System Architecture & Design
+
+The platform uses a **three-tier architecture** designed to meet enterprise police standards for security, speed, and intelligence.
+
+```
+       ┌────────────────────────────────────────────────────────┐
+       │                 Frontend Client (React)                │
+       └───────────────────────────┬────────────────────────────┘
+                                   │
+                           HTTP / REST APIs
+                                   │
+                                   ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                        Backend API (FastAPI)                           │
+│                                                                        │
+│  ┌──────────────────────┐ ┌──────────────────────┐ ┌────────────────┐  │
+│  │    REST Endpoints    │ │  Orchestrator Agent  │ │ Security/RBAC  │  │
+│  └──────────┬───────────┘ └──────────┬───────────┘ └───────┬────────┘  │
+│             │                        │                     │           │
+│             │                ┌───────┴───────┐             │           │
+│             │                ▼               ▼             │           │
+│             │        ┌──────────────┐ ┌──────────────┐     │           │
+│             │        │ Query Agent  │ │Network Agent │     │           │
+│             │        └──────┬───────┘ └──────────────┘     │           │
+│             │               │                              │           │
+└─────────────┼───────────────┼──────────────────────────────┼───────────┘
+              │               │ (NL-to-SQL)                  │
+              ▼               ▼                              ▼
+     ┌──────────────────────────────────┐         ┌─────────────────────┐
+     │           Cache & State          │         │ Relational Database │
+     │             (Redis)              │         │    (PostgreSQL)     │
+     └──────────────────────────────────┘         └─────────────────────┘
+```
+
+### Architectural Components
+
+1.  **FastAPI Gateway Gateway (REST API)**: Exposes secure, asynchronous endpoints for authentication, analytics, map hotspots, graph data, and chat sessions.
+2.  **Multi-Agent Orchestrator**:
+    *   **Orchestrator**: Manages conversation history in Redis, parses relative pronouns, and routes requests.
+    *   **Query Agent**: Uses Google Gemini to translate natural language into SQL queries, executes them safely after validation, and outputs structured, summarized text.
+    *   **Network Agent**: Analyzes relations across cases using `NetworkX`, revealing shared bank accounts, recurring partners, and victim overlaps.
+    *   **Pattern Agent & Risk Agent**: Clusters occurrences using geographic coordinates and time windows to generate forecasts.
+    *   **Audit Agent**: Log actions into the `audit_log` table for compliance checks.
+3.  **Language & Voice Processing Engine**:
+    *   Kannada Text-to-Speech uses a hybrid chunking algorithm. Since standard TTS engines fail when speaking mixed English codes or numbers in Kannada context, the backend parses text into chunks, formats numeric strings into spoken Kannada words (e.g. `302` becomes `ಮೂರು ನೂರು ಎರಡು`), compiles them, and outputs unified audio.
+4.  **Security Architecture (RBAC & ABAC)**:
+    *   **RBAC**: Roles (`Investigator`, `Senior Investigator`, `Analyst`, `Supervisor`, `Policymaker`, `Admin`) determine page access, actions allowed, and sensitivity masking.
+    *   **ABAC**: Restricts queries to the investigator's assigned district. Investigators requesting cross-district details must submit an `Access Request`, which supervisors approve for a specific duration, writing active temporary grants.
+
+---
+
+## 🛠️ Technology Stack & Dependency Versions
+
+### Relational Database & Caching
+*   **PostgreSQL 16**: Central transactional database.
+*   **Redis 7**: Session manager, conversation memory cache, and rate-limiting store.
+
+### Backend Stack
+*   **Python 3.11** (Development Base) / **Python 3.12** (Zoho Catalyst AppSail Production Stack)
+*   **FastAPI v0.115.5**: High-performance asynchronous web framework.
+*   **Uvicorn v0.32.1**: ASGI server.
+*   **SQLAlchemy v2.0.36**: SQL Toolkit and Object Relational Mapper (ORM).
+*   **Alembic v1.14.0**: Database migration tool.
+*   **Psycopg v3.2.3 (psycopg[binary])**: PostgreSQL adapter.
+*   **Pydantic Settings v2.6.1**: Settings validation using environment files.
+*   **Bcrypt v4.2.0** & **PyJWT v2.10.1**: Secure password hashing and JSON Web Token generation.
+
+### AI, NLP & Speech
+*   **Google GenAI SDK (google-genai >= 1.0.0)**: Interfaces with Gemini model configurations for SQL generation and query summarization.
+*   **gTTS v2.5.1**: Text-to-Speech engine.
+*   **Sqlparse v0.5.3**: AST SQL parsing and validation checks.
+
+### Graph & Analytics
+*   **NetworkX >= 3.0**: Graphs and network analytics.
+*   **NumPy >= 1.20**: High-level mathematical operations.
+
+---
+
+## 📂 Project Modules & Directory Structure
 
 ```
 backend/
-├── alembic/              # Migration environment & versions
-│   ├── env.py
-│   └── versions/
+├── alembic/                # Database migrations
+│   └── versions/           # Migration revisions scripts
 ├── app/
+│   ├── agents/             # Multi-Agent Framework
+│   │   ├── audit_agent/
+│   │   ├── network_agent/
+│   │   ├── orchestrator/   # Context manager and orchestrator agent
+│   │   ├── pattern_agent/
+│   │   └── query_agent/     # NL-to-SQL engine & validator
 │   ├── api/
 │   │   └── v1/
-│   │       ├── endpoints/    # Feature routers (chat, cases, …)
-│   │       └── router.py     # Aggregates all v1 routers
-│   ├── agents/               # AI query/orchestrator agents (Day 2+)
-│   ├── db/
-│   │   ├── base.py           # SQLAlchemy DeclarativeBase
-│   │   ├── init_db.py        # Startup DB check
-│   │   ├── seed_data/        # Faker-based seed scripts
-│   │   └── session.py        # Engine + get_db() dependency
-│   ├── models/               # ORM models (Day 2+)
-│   ├── schemas/              # Pydantic request/response schemas
-│   ├── services/             # Business logic layer
-│   ├── utils/                # Shared utilities (redis_client, etc.)
-│   ├── config.py             # Pydantic Settings
-│   └── main.py               # FastAPI app + lifespan
-├── docker/
-│   └── docker-compose.yml    # Postgres 16 + Redis 7 (local only)
-├── scripts/
-│   └── seed_db.py            # Populate DB with sample data
-├── tests/
-├── .env.example              # Environment variable template
-├── alembic.ini
-└── requirements.txt
+│   │       └── endpoints/  # REST route controllers (auth, cases, network, security, etc.)
+│   ├── core/               # App configuration, security helpers, RBAC/ABAC middleware
+│   ├── db/                 # Database initialization, sessions, and seed generators
+│   ├── models/             # SQLAlchemy ORM Models
+│   ├── nlp/                # Multilingual translations and Speech (TTS) modules
+│   ├── schemas/            # Pydantic Schemas (Request/Response validation)
+│   ├── services/           # Business logic services (Conversations, Entity resolution)
+│   └── main.py             # FastAPI App Entry point & CORS/security configurations
+├── docker/                 # Container configs (Dockerfile, compose)
+├── scripts/                # Utility scripts (Seeding, role normalization, migrations)
+├── requirements.txt        # Production Python dependencies
+└── run.py                  # Local runner script
 ```
 
 ---
 
-## Environment Variables
+## 📊 Database ER Diagram & Schema
 
-Copy `.env.example` to `.env` and fill in your values:
+Below is the database relationship model of the Crime Intelligence Platform.
 
-```bash
-cp .env.example .env
+### Mermaid Diagram
+
+```mermaid
+erDiagram
+    USERS {
+        int id PK
+        string username UK
+        string email UK
+        string employee_id UK
+        string full_name
+        string hashed_password
+        string role
+        string account_status
+        boolean must_change_password
+        datetime created_at
+        datetime updated_at
+    }
+    USER_SESSIONS {
+        string id PK
+        int user_id FK
+        string token_identifier
+        string device_name
+        string device_type
+        string browser
+        string operating_system
+        string ip_address
+        text user_agent
+        datetime created_at
+        datetime last_activity_at
+        datetime expires_at
+        datetime revoked_at
+        int revoked_by FK
+        string revoke_reason
+        boolean is_active
+    }
+    POLICE_STATION {
+        int police_station_id PK
+        string name
+        string district
+    }
+    CRIME_TYPE {
+        int crime_type_id PK
+        string name
+    }
+    CASE_MASTER {
+        int case_master_id PK
+        string crime_no UK
+        string case_no
+        date crime_registered_date
+        int police_station_id FK
+        int crime_type_id FK
+        int police_person_id
+        int case_category_id
+        int gravity_offence_id
+        int crime_major_head_id
+        int crime_minor_head_id
+        int case_status_id
+        int court_id
+        datetime incident_from_date
+        datetime incident_to_date
+        datetime info_received_ps_date
+        decimal latitude
+        decimal longitude
+        text brief_facts
+    }
+    ACCUSED_MASTER {
+        int accused_master_id PK
+        int case_master_id FK
+        string accused_name
+        int age_year
+        int gender_id
+        string person_id
+    }
+    VICTIM_MASTER {
+        int victim_master_id PK
+        int case_master_id FK
+        string victim_name
+        int age_year
+        int gender_id
+        boolean victim_police
+    }
+    CASTE_MASTER {
+        int caste_master_id PK
+        string caste_master_name
+    }
+    OCCUPATION_MASTER {
+        int occupation_id PK
+        string occupation_name
+    }
+    RELIGION_MASTER {
+        int religion_id PK
+        string religion_name
+    }
+    COMPLAINANT_DETAILS {
+        int complainant_id PK
+        int case_master_id FK
+        string complainant_name
+        int age_year
+        int gender_id
+        int occupation_id FK
+        int religion_id FK
+        int caste_id FK
+    }
+    FINANCIAL_TRANSACTION {
+        int financial_transaction_id PK
+        string source_account
+        string destination_account
+        string bank_name
+        decimal amount
+        datetime transaction_date
+        boolean is_suspicious
+        string reason
+        int case_master_id FK
+        int accused_master_id FK
+    }
+    USER_DISTRICT_ASSIGNMENTS {
+        int id PK
+        int user_id FK
+        string district
+        int assigned_by FK
+        datetime assigned_at
+        boolean is_active
+        datetime removed_at
+        int removed_by FK
+    }
+    DISTRICT_ACCESS_REQUESTS {
+        int id PK
+        int requester_id FK
+        string requested_district
+        int related_case_id FK
+        text reason
+        int duration_hours
+        string status
+        datetime requested_at
+        int reviewed_by FK
+        datetime reviewed_at
+        text review_comment
+    }
+    TEMPORARY_DISTRICT_PERMISSIONS {
+        int id PK
+        int user_id FK
+        string district
+        int access_request_id FK
+        int approved_by FK
+        datetime approved_at
+        datetime expires_at
+        int related_case_id FK
+        boolean is_revoked
+        datetime revoked_at
+        int revoked_by FK
+        text revocation_reason
+    }
+    INVESTIGATION_HISTORY {
+        int id PK
+        int user_id FK
+        datetime timestamp
+        string investigation_name
+        string entity_type
+        string entity_id
+    }
+    AUDIT_LOG {
+        int id PK
+        text question
+        text generated_sql
+        float execution_time_ms
+        datetime timestamp
+        text summary
+        int user_id
+        string username
+        string role
+        string api
+        int response_size
+        string ip_address
+        string status
+        string request_id
+        string action
+        int target_user_id
+        int supervisor_id
+        string district_id
+        int case_id
+        text reason
+        string user_agent
+    }
+
+    USERS ||--o{ USER_SESSIONS : "authenticates"
+    USERS ||--o{ USER_DISTRICT_ASSIGNMENTS : "has"
+    USERS ||--o{ DISTRICT_ACCESS_REQUESTS : "submits"
+    USERS ||--o{ TEMPORARY_DISTRICT_PERMISSIONS : "holds"
+    CASE_MASTER ||--o{ ACCUSED_MASTER : "accuses"
+    CASE_MASTER ||--o{ VICTIM_MASTER : "victimizes"
+    CASE_MASTER ||--o{ COMPLAINANT_DETAILS : "reports"
+    CASE_MASTER ||--o{ FINANCIAL_TRANSACTION : "involves"
+    POLICE_STATION ||--o{ CASE_MASTER : "records"
+    CRIME_TYPE ||--o{ CASE_MASTER : "categorizes"
+    ACCUSED_MASTER ||--o{ FINANCIAL_TRANSACTION : "initiates"
+    COMPLAINANT_DETAILS }o--|| OCCUPATION_MASTER : "works_as"
+    COMPLAINANT_DETAILS }o--|| RELIGION_MASTER : "belongs_to"
+    COMPLAINANT_DETAILS }o--|| CASTE_MASTER : "belongs_to"
+    DISTRICT_ACCESS_REQUESTS ||--|| TEMPORARY_DISTRICT_PERMISSIONS : "authorizes"
 ```
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string (psycopg3 format) | `postgresql+psycopg://user:pass@localhost:5432/scrb_dev` |
-| `REDIS_URL` | Redis connection string | `redis://localhost:6379/0` |
-| `APP_NAME` | Human-readable app name | `SCRB Intelligence Platform` |
-| `APP_ENV` | Runtime environment (`local` / `production`) | `local` |
-| `SECRET_KEY` | Random secret for signing tokens (keep private!) | `a-long-random-string` |
+### Table Schema Definitions
 
-> **Never commit `.env` to version control.**
+1.  **`users`**: Stores KSP personnel. Columns include email, employee_id, role, password hash, status.
+2.  **`user_sessions`**: Session-level tracking. Links to user IDs and records IP addresses, browser information, and revocation states.
+3.  **`case_master`**: Core crime cases. Contains FIR, incident dates, geolocation details, foreign keys to crime type and police station.
+4.  **`accused_master`**: Suspect details related to cases. The `person_id` matches suspects across distinct FIRs.
+5.  **`victim_master` & `complainant_details`**: Victim and complainant listings, capturing demographic parameters (caste, religion, occupations).
+6.  **`financial_transaction`**: Tracks suspect transactions, capturing bank data, amount, destination accounts, and flag markers.
+7.  **`user_district_assignments`**: Assigns police users to their default jurisdiction districts.
+8.  **`district_access_requests`**: Log requests submitted by investigators for cross-district file access.
+9.  **`temporary_district_permissions`**: Active time-bound tokens granting temporary cross-district access.
+10. **`audit_log`**: Structured records of SQL operations, API calls, and administrative actions.
 
 ---
 
-## Local Setup
+## 🚀 Setup & Execution Instructions
 
-### Prerequisites
+### 1. Running with Docker (Recommended)
 
-- Python 3.11+
-- Docker & Docker Compose
-- (Optional) `pyenv` or `virtualenv` for Python version management
+Make sure you have **Docker** and **Docker Compose** installed on your system.
 
-### 1. Clone & enter the directory
+1.  **Clone the workspace** and open a terminal inside `backend/`.
+2.  **Create `.env` file**:
+    Copy the sample file and enter your Google Gemini API key:
+    ```bash
+    cp .env.example .env
+    ```
+    Edit `.env` to configure your `GEMINI_API_KEY`:
+    ```env
+    GEMINI_API_KEY=your_actual_gemini_api_key_here
+    ```
+3.  **Start Services**:
+    Use docker-compose to spin up PostgreSQL, Redis, pgAdmin, and the FastAPI backend:
+    ```bash
+    docker compose -f docker/docker-compose.yml up --build -d
+    ```
+4.  **Run Migrations & Seed Data**:
+    Wait for the containers to pass their health checks, then execute migrations and seeding inside the backend container:
+    ```bash
+    docker exec -it scrb_backend alembic upgrade head
+    │   # Once migrations finish, run database seeding:
+    docker exec -it scrb_backend python scripts/seed_db.py
+    ```
 
-```bash
-git clone <repo-url>
-cd backend
-```
-
-### 2. Create and activate a virtual environment
-
-```bash
-python -m venv .venv
-
-# Windows PowerShell
-.venv\Scripts\Activate.ps1
-
-# macOS / Linux
-source .venv/bin/activate
-```
-
-### 3. Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Configure environment
-
-```bash
-cp .env.example .env
-# Edit .env with your credentials
-```
-
-The docker-compose services use:
-- DB user `scrb_user`, password `scrb_pass`, database `scrb_dev`
-
-So your `.env` should read:
-
-```env
-DATABASE_URL=postgresql+psycopg://scrb_user:scrb_pass@localhost:5432/scrb_dev
-REDIS_URL=redis://localhost:6379/0
-APP_NAME=SCRB Intelligence Platform
-APP_ENV=local
-SECRET_KEY=replace-with-a-real-secret
-```
-
-### 5. Start with Docker Compose
-
-You can start the entire infrastructure (and optionally the backend application itself) using Docker Compose.
-
-To build and start all services (`backend`, `postgres`, `redis`, and `pgadmin`):
-
-```bash
-docker compose -f docker/docker-compose.yml up --build -d
-```
-
-This will:
-- Build the `backend` service from `docker/Dockerfile`
-- Pull and start `postgres:16-alpine` and `redis:7-alpine`
-- Pull and start `pgadmin4:8` on port `5050`
-
-Alternatively, you can start only the databases and run the backend locally:
-
-```bash
-docker compose -f docker/docker-compose.yml up postgres redis -d
-```
-
-### 6. Run database migrations
-
-To wait for Postgres to be healthy and run database migrations:
-
-```bash
-bash scripts/run_migrations.sh
-```
+The API will now be running at `http://localhost:8000`.
 
 ---
 
-## Running Locally
+### 2. Running Locally (Manual Setup)
 
-To run the FastAPI server on the host machine:
+#### Prerequisites
+*   Python 3.11 or 3.12 installed.
+*   PostgreSQL server and Redis server running locally.
 
-```bash
-uvicorn app.main:app --reload
-```
+#### Backend Setup
 
-- API docs (Swagger): <http://localhost:8000/docs>
-- ReDoc: <http://localhost:8000/redoc>
-- Health check: <http://localhost:8000/health>
-- pgAdmin panel: <http://localhost:5050> (credentials: `admin@scrb.local` / `adminpass`)
-
----
-
-## Running Tests
-
-```bash
-pytest
-```
-
----
-
-## API Versioning
-
-All application endpoints live under `/api/v1/`.  
-The `/health` endpoint is at the root for infrastructure tooling compatibility.
-
----
-
-## Day 3: Conversational Memory & Session Management
-
-### Conversation Architecture
-The conversation flow coordinates the request through the following steps:
-1. **API Entry**: User triggers `POST /api/v1/chat` with an optional `conversation_id`.
-2. **Orchestrator**: Generates a request ID and resolves the Redis session via `ConversationManager`.
-3. **Context Injection**: Deterministically rewrites the user query using past context memory (`ContextInjector`).
-4. **Agent Execution**: Calls `QueryAgent` with the resolved question.
-5. **Entity Resolution**: Extracts entities from the query and response rows deterministically (`EntityResolver`).
-6. **Session Storage**: Updates conversation history, last generated SQL, and resolved entities in Redis.
-7. **Safe Logging**: Records request-response details to PostgreSQL `audit_log` without blocking responses.
-
-### Redis Data Structure
-Sessions are stored under `session:{conversation_id}` prefix as serialized JSON representing:
-- `conversation_id`: unique session identifier
-- `user_id`: optional user identifier
-- `created_at` & `updated_at`: timestamps
-- `last_question` & `last_generated_sql`: tracks the last turn metadata
-- `conversation_history`: list of message turns (messages with roles `user` and `assistant`)
-- `resolved_entities`: dict mapping tracking parameters (`last_case`, `last_accused`, `last_victim`, `last_station`, `last_district`, `last_crime_type`, `last_date_range`).
-
-### Conversation Lifecycle & Expiry
-- **Expiration**: Keys are written with a default Time-To-Live (TTL) of 24 hours (86,400 seconds). Any session update resets this timer.
-- **Methods**: Exposed via `ConversationManager`:
-  - `create_session(conversation_id, user_id=None)`: Starts tracking a new conversation.
-  - `get_session(conversation_id)`: Loads conversation data.
-  - `update_session(conversation_id, context)`: Updates stored state.
-  - `append_message(conversation_id, message)`: Records turn history.
-  - `delete_session(conversation_id)`: Removes the session.
-  - `expire_session(conversation_id, seconds)`: Updates custom key TTL.
-
-### Context Injection & Entity Resolution Flow
-1. **Extraction**: After an agent execution, `EntityResolver` parses:
-   - Accused IDs matching regex `\bA\d+\b`
-   - Victim IDs matching regex `\bV\d+\b`
-   - Case/FIR IDs matching regex `\b(?:FIR|case|no)\b[\s-]*#?([A-Za-z0-9_/]+)\b`
-   - Districts matching known Karnataka districts (e.g. `Mysuru`, `Bengaluru`).
-   - Crime Types (e.g. `Theft`, `Robbery`, `Cyber Crime`).
-2. **Rewriting**: When a follow-up query is received, `ContextInjector` checks if the query contains references like `he`, `she`, `his`, `her`, `that case`, `only solved ones`, or a short filter phrase like `Only Bengaluru`.
-3. **Reconstruction**: It rewrites the query into a fully-qualified natural language statement incorporating these parameters so the `QueryAgent` receives the full context without requiring user repetition.
-
-### API Documentation
-All endpoints are fully integrated with Swagger/OpenAPI docs at `http://localhost:8000/docs`:
-- `GET /api/v1/conversations`: Fetch all sessions with pagination (`limit`, `offset`) and sorting (`sort_by`, `sort_order`).
-- `GET /api/v1/conversations/{conversation_id}`: Retrieve detailed session parameters and history.
-- `PATCH /api/v1/conversations/{conversation_id}`: Update metadata manually.
-- `DELETE /api/v1/conversations/{conversation_id}`: Delete a session key from storage.
-- `POST /api/v1/chat`: Conversational chat endpoint accepting an optional `conversation_id` inside the request body.
-
-### Known Limitations
-- In-memory fallback is used in environments where Redis is not active/available (e.g., local unit test runs) to prevent backend failure.
-- Deterministic extraction uses keyword lookup; complex phrase parsing without explicitly defined keywords is not supported.
-
+1.  **Navigate to the backend directory**:
+    ```bash
+    cd backend
+    ```
+2.  **Create a Virtual Environment**:
+    ```bash
+    python -m venv .venv
+    # Activate on Windows:
+    .venv\Scripts\activate
+    # Activate on Linux/macOS:
+    source .venv/bin/activate
+    ```
+3.  **Install dependencies**:
+    ```bash
+    pip install -r requirements.txt
+    ```
+4.  **Set Environment Variables**:
+    Create `.env` based on `.env.example` and fill in local database connection parameters:
+    ```env
+    DATABASE_URL=postgresql+psycopg://postgres:yourpass@localhost:5432/scrb_dev
+    REDIS_URL=redis://localhost:6379/0
+    GEMINI_API_KEY=your_gemini_api_key
+    SECRET_KEY=some_long_random_string_here
+    ```
+5.  **Execute Database Migrations & Seeding**:
+    ```bash
+    alembic upgrade head
+    python scripts/seed_db.py
+    ```
+6.  **Run Dev Server**:
+    ```bash
+    python run.py
+    ```
+    The server starts at `http://127.0.0.1:8000`.
 
 ---
 
-## Day 6: Pattern Intelligence Agent
+## 📖 API Documentation
 
-We implemented the Pattern Intelligence Agent to analyze historical crime data across **Time**, **Location**, and **Crime Distribution**. 
+Once the backend is running, access the interactive API docs at:
+*   **Swagger UI**: [http://localhost:8000/docs](http://localhost:8000/docs)
+*   **ReDoc**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
 
-### Capabilities and Endpoints
-1. **Crime Trends** (`GET /api/v1/pattern/trends`): Calculates daily/weekly/monthly/yearly time series, moving averages (rolling 3-month window), overall case volume growth/decline rate (comparison of latest month against prior month), top crime types, and district-wise rankings.
-2. **Hotspot Detection** (`GET /api/v1/pattern/hotspots`):
-   - Runs a custom, pure-Python **DBSCAN** clustering algorithm over case coordinates (latitude/longitude) to identify density clusters (center, case count, average severity index, dominant crime).
-   - Generates stylized SVG-compatible hotspot markers (`district`, `x`, `y`, `cases`, `dominant`, `trend`, `intensity`) for drawing circles on the Karnataka state outline map.
-3. **Anomaly Detection** (`GET /api/v1/pattern/anomalies`): Runs Z-score analysis over chronological volumes to flag months/weeks with unexpected spikes ($|Z| > 2.0$), providing reason commentary and confidence scores.
-4. **Crime Distribution** (`GET /api/v1/pattern/distribution`): Computes status ratios (Solved vs Pending), temporal distribution (hour of day, day of week, weekdays vs weekends), accused demographics (age band, gender distribution), and calculates a custom **Crime Heat Index** (cases $\times$ severity) per district.
-5. **Crime Forecasting** (`GET /api/v1/pattern/forecast`): Generates next-month volume forecasts using Linear Regression ($y = mx + c$) and 3-month Moving Average, yielding projected counts and $R^2$-based confidence levels.
-6. **Gemini Intelligence Briefing** (`GET /api/v1/pattern/summary`): Compiles all calculated statistical metrics into a prompt, querying Gemini to generate a concise, government-grade narrative brief for senior officials without performing direct mathematical calculation.
+### Primary Endpoints Overview
 
-### Performance & Caching
-- **Aggregation in SQL**: Aggregates all trend counts, district groups, and temporal stats directly in PostgreSQL using indexes (e.g. `CaseMaster.crime_registered_date`, `CaseMaster.police_station_id`, `CaseMaster.crime_type_id`) to avoid loading individual rows.
-- **Redis Cache Layer**: Intercepts queries using a 15-minute Time-To-Live (TTL = 900s) on endpoint responses. Cached keys are generated from a SHA-256 hash of the query parameters.
-
-
+| Method | Endpoint | Description | Auth Required |
+| :--- | :--- | :--- | :--- |
+| **POST** | `/api/v1/auth/login` | Authenticate user & retrieve JWT token | No |
+| **POST** | `/api/v1/chat` | Send a natural language query to the Orchestrator | Yes |
+| **POST** | `/api/v1/chat/tts` | Generate text-to-speech stream (mixed en/kn) | Yes |
+| **GET** | `/api/v1/dashboard` | Retrieve dashboard KPI trends | Yes |
+| **GET** | `/api/v1/network/` | Generate criminal relationship graph nodes & links | Yes |
+| **GET** | `/api/v1/pattern/repeat-offenders` | Retrieve repeat offender analysis list | Yes |
+| **POST** | `/api/v1/security/access-requests` | Submit cross-district data permission request | Yes |
+| **POST** | `/api/v1/security/approve-request/{id}` | Approve temporary access request (Supervisors/Admins) | Yes |
+| **GET** | `/api/v1/audit/` | Retrieve system action logs for compliance | Yes |
