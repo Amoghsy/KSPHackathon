@@ -52,7 +52,7 @@ The platform consists of a three-tier setup containing:
     *   **Network Agent**: Utilizes `NetworkX` in Python to map structural dependencies and return relation arrays.
 4.  **Datastores**: PostgreSQL 16 (persistence) and Redis 7 (conversation contexts, sessions, and API rate-limiting).
 
-![System Architecture](SYSTEM DESIGN.png)
+![System Architecture](SYSTEM%20DESIGN.png)
 
 ---
 
@@ -318,7 +318,7 @@ KSP-Crime-Intelligence/
 │   │   └── styles/           # Tailwind themes
 │   ├── package.json          # Node dependencies definitions
 │   └── tsconfig.json         # TypeScript compiler configurations
-├── ER Diagram Latest white.jpg # High-resolution diagram asset
+├── ER DIAGRAM.jpg            # High-resolution diagram asset
 └── docker-compose.yml        # Orchestration configurations
 ```
 
