@@ -417,7 +417,7 @@ Ensure you have **Docker** and **Docker Compose** installed.
 
 ---
 
-## 🔒 Access & Role Permissions Matrix (RBAC & ABAC)
+## 🔒 Access & Role Permissions Matrix  (RBAC & ABAC)
 
 The platform implements fine-grained security policies using both Role-Based Access Control (RBAC) and Attribute-Based Access Control (ABAC) to enforce security and operational compliance.
 
