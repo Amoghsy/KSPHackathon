@@ -463,14 +463,13 @@ Every operational user is assigned to one or more specific districts. ABAC filte
 
 ## 👥 Contributors
 
-This platform was developed as part of the **Karnataka State Police Datathon 2026 ** by team:
+This platform was developed as part of the **Karnataka State Police Datathon 2026 ** by team Xentrix:
 
 *   **[ Amogh S Y ]** - Full Stack Developer 
 *   **[ A Jatin Ram Chowdary]** - Frontend Developer 
 *   **[ Apeksh A ]** - Backend Developer 
 *   **[ Arvadiya Om Dinesh]** - UI/UX Developer and Researcher
 
-*   **Team Xentrix**
 
 ---
 
