@@ -52,34 +52,7 @@ The platform consists of a three-tier setup containing:
     *   **Network Agent**: Utilizes `NetworkX` in Python to map structural dependencies and return relation arrays.
 4.  **Datastores**: PostgreSQL 16 (persistence) and Redis 7 (conversation contexts, sessions, and API rate-limiting).
 
-```
-   ┌────────────────────────────────────────────────────────┐
-   │             Visual Console (React 19 Frontend)         │
-   └───────────────────────────┬────────────────────────────┘
-                               │
-                       REST APIs / HTTPS
-                               │
-                               ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                        Backend API (FastAPI)                           │
-│                                                                        │
-│  ┌──────────────────────┐ ┌──────────────────────┐ ┌────────────────┐  │
-│  │    REST Endpoints    │ │  Orchestrator Agent  │ │ Security/RBAC  │  │
-│  └──────────┬───────────┘ └──────────┬───────────┘ └───────┬────────┘  │
-│             │                        │                     │           │
-│             │                ┌───────┴───────┐             │           │
-│             │                ▼               ▼             │           │
-│             │        ┌──────────────┐ ┌──────────────┐     │           │
-│             │        │ Query Agent  │ │Network Agent │     │           │
-│             │        └──────┬───────┘ └──────────────┘     │           │
-│             │               │                              │           │
-└─────────────┼───────────────┼──────────────────────────────┼───────────┘
-              │               │                              │
-              ▼               ▼                              ▼
-     ┌──────────────────────────────────┐         ┌─────────────────────┐
-     │      Redis Session Caching       │         │  PostgreSQL Database │
-     └──────────────────────────────────┘         └─────────────────────┘
-```
+![System Architecture](SYSTEM DESIGN.png)
 
 ---
 
@@ -456,3 +429,47 @@ The platform implements fine-grained security policies based on the roles of the
 | **Supervisor** | Jurisdiction control & approval | Access request approval, Case status reviews, System exports | Full access inside district scope. Approves temporary access requests. |
 | **Policymaker** | State-level executive trends | Executive dashboards, State heatmaps | State-wide analytics metrics; completely hides all PII and sensitive data. |
 | **Admin** | System administration | Complete access, User assignments, Audit logs, Health status | Full unmasked workspace control. |
+
+---
+
+## 👥 Contributors
+
+This platform was developed as part of the **Karnataka State Police Datathon 2026 ** by team:
+
+*   **[ Amogh S Y ]** - Full Stack Developer 
+*   **[ A Jatin Ram Chowdary]** - Frontend Developer 
+*   **[ Apeksh A ]** - Backend Developer 
+*   **[ Arvadiya Om Dinesh]** - UI/UX Developer and Researcher
+
+*   **Team Xentrix**
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** - see the details below:
+
+```text
+MIT License
+
+Copyright (c) 2026 Team Xentrix
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+

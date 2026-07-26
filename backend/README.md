@@ -15,6 +15,8 @@ Welcome to the backend server repository for the **Karnataka State Police (KSP) 
     - [Running with Docker (Recommended)](#1-running-with-docker-recommended)
     - [Running Locally (Manual Setup)](#2-running-locally-manual-setup)
 8. [API Documentation](#-api-documentation)
+9. [Contributors](#-contributors)
+10. [License](#-license)
 
 ---
 
@@ -42,35 +44,7 @@ Develop an **AI-powered Crime Intelligence Platform** that enables the **Karnata
 
 The platform uses a **three-tier architecture** designed to meet enterprise police standards for security, speed, and intelligence.
 
-```
-       ┌────────────────────────────────────────────────────────┐
-       │                 Frontend Client (React)                │
-       └───────────────────────────┬────────────────────────────┘
-                                   │
-                           HTTP / REST APIs
-                                   │
-                                   ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                        Backend API (FastAPI)                           │
-│                                                                        │
-│  ┌──────────────────────┐ ┌──────────────────────┐ ┌────────────────┐  │
-│  │    REST Endpoints    │ │  Orchestrator Agent  │ │ Security/RBAC  │  │
-│  └──────────┬───────────┘ └──────────┬───────────┘ └───────┬────────┘  │
-│             │                        │                     │           │
-│             │                ┌───────┴───────┐             │           │
-│             │                ▼               ▼             │           │
-│             │        ┌──────────────┐ ┌──────────────┐     │           │
-│             │        │ Query Agent  │ │Network Agent │     │           │
-│             │        └──────┬───────┘ └──────────────┘     │           │
-│             │               │                              │           │
-└─────────────┼───────────────┼──────────────────────────────┼───────────┘
-              │               │ (NL-to-SQL)                  │
-              ▼               ▼                              ▼
-     ┌──────────────────────────────────┐         ┌─────────────────────┐
-     │           Cache & State          │         │ Relational Database │
-     │             (Redis)              │         │    (PostgreSQL)     │
-     └──────────────────────────────────┘         └─────────────────────┘
-```
+![System Architecture](../SYSTEM DESIGN.png)
 
 ### Architectural Components
 
@@ -464,3 +438,42 @@ Once the backend is running, access the interactive API docs at:
 | **POST** | `/api/v1/security/access-requests` | Submit cross-district data permission request | Yes |
 | **POST** | `/api/v1/security/approve-request/{id}` | Approve temporary access request (Supervisors/Admins) | Yes |
 | **GET** | `/api/v1/audit/` | Retrieve system action logs for compliance | Yes |
+
+---
+
+## 👥 Contributors
+
+This platform was developed as part of the **Karnataka State Police Hackathon** by:
+
+*   **[Your Name / Team Name]** - Lead AI & Full-Stack Developer (feel free to update)
+*   **Karnataka State Police Hackathon Team**
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** - see below:
+
+```text
+MIT License
+
+Copyright (c) 2026 Karnataka State Police Hackathon Team
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
