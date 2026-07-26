@@ -417,18 +417,47 @@ Ensure you have **Docker** and **Docker Compose** installed.
 
 ---
 
-## 🔒 Access & Role Permissions Matrix
+## 🔒 Access & Role Permissions Matrix (RBAC & ABAC)
 
-The platform implements fine-grained security policies based on the roles of the KSP personnel.
+The platform implements fine-grained security policies using both Role-Based Access Control (RBAC) and Attribute-Based Access Control (ABAC) to enforce security and operational compliance.
 
-| Role | Core Mission | Permissions Allowed | Data Scope Constraints |
-| :--- | :--- | :--- | :--- |
-| **Investigator** | Case exploration & tracking | Search cases, Chat assistant, Crime Map hotspots | Restricted to assigned district details. Can request cross-district permissions. |
-| **Senior Investigator** | District-wide criminal networks | Cross-district cases, Criminal graphs, Financial audit tools | Accesses multi-district case files and money tracking logs. |
-| **Analyst** | State trend forecasting | Dashboard statistics, Predictive patterns, Hotspot projections | Allowed analytics dashboards; sensitive columns (names, accounts) are masked. |
-| **Supervisor** | Jurisdiction control & approval | Access request approval, Case status reviews, System exports | Full access inside district scope. Approves temporary access requests. |
-| **Policymaker** | State-level executive trends | Executive dashboards, State heatmaps | State-wide analytics metrics; completely hides all PII and sensitive data. |
-| **Admin** | System administration | Complete access, User assignments, Audit logs, Health status | Full unmasked workspace control. |
+### Role-Based Access Control (RBAC) Matrix
+RBAC governs access to specific features and modules across the platform based on the user's role:
+
+| Feature | Admin | Supervisor | Senior Inv. | Investigator | Analyst | Policy Maker |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Dashboard** | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Search FIRs** | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| **Chat Assistant** | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| **Crime Map** | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Pattern Intelligence** | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Criminal Network** | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **Financial Crime** | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **Gang Detection** | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **Sensitive Cases** | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **Export Reports** | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| **View Audit Logs** | ✅ (System) | ✅ (District) | ❌ | ❌ | ❌ | ❌ |
+| **Manage Users** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Assign Districts** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Assign Investigators** | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **System Configuration** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+
+### Attribute-Based Access Control (ABAC)
+*   **RBAC** controls feature permissions (e.g., whether a button is visible or clickable).
+*   **ABAC** controls data record scoping (e.g., which specific crime cases or suspect records can be queried or viewed).
+
+### District Assignment
+Every operational user is assigned to one or more specific districts. ABAC filters database queries and search actions to match these coordinates:
+
+| Role | Example District Assignment |
+| :--- | :--- |
+| **Supervisor** | Mysuru, Mandya |
+| **Senior Investigator** | Mysuru, Mandya |
+| **Investigator** | Mysuru |
+| **Analyst** | Mysuru |
+
+> [!NOTE]
+> The **Administrator** has no operational district assignments because they do not have access to any investigation data.
 
 ---
 
